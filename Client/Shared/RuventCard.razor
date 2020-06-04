@@ -1,0 +1,47 @@
+﻿@using Ruvents.Shared
+
+@inject NavigationManager navigation
+
+<div class="col-12 col-md-4">
+    <div class="card shadow">
+        <div class="card-body">
+            <div class="row">
+                <div class="col text-muted text-center">
+                    @ruvent.StartDate.ToString("M/d/yy")
+                </div>
+                <div class="col text-muted text-center">
+                    @ruvent.StartDate.DayOfWeek
+                </div>
+                <div class="col text-muted text-center">
+                    @DateTime.Parse(ruvent.StartTime).ToString("h:mm tt")
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-12 text-center">
+                    <h3 class="card-title">@ruvent.Title</h3>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-12">
+                    <p class="card-text text-center">@ruvent.Address</p>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-3 text-center">
+                    <i class="fas fa-thumbs-down text-danger"></i>
+                    <p class="text-muted">@ruvent.Attendees.Where(a => !a.IsAttending).Count()</p>
+                </div>
+                <div class="col-3 offset-6 text-center">
+                    <i class="fas fa-thumbs-down text-success"></i>
+                    <p class="text-muted">@ruvent.Attendees.Where(a => a.IsAttending).Count()</p>
+                </div>
+            </div>
+            <button @onclick='(() => navigation.NavigateTo($"detail/{ruvent.RuventId}"))' class="btn btn-info btn-block shadow-sm">Details</button>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public Ruvent ruvent { get; set; }
+}

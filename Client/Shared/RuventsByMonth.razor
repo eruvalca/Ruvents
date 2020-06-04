@@ -1,0 +1,55 @@
+﻿@using Services
+@using Ruvents.Shared
+
+@inject NavigationManager navigation
+@inject RuventService ruventService
+<div class="row">
+    <div class="col-12 text-center">
+        <button @onclick='(() => navigation.NavigateTo("/"))' class="btn btn-primary shadow">New Ruvent</button>
+    </div>
+</div>
+<br />
+<div class="row">
+    <div class="col-2 text-right">
+        <i @onclick="(() => GetRuventsByMonthAndYear(-1))" class="fas fa-caret-left fa-2x"></i>
+    </div>
+    <div class="col-8 text-center">
+        <h2>@currentMonthYear.ToString("MMMM")</h2>
+        <p class="text-muted">@currentMonthYear.Year</p>
+    </div>
+    <div class="col-2 text-left">
+        <i @onclick="(() => GetRuventsByMonthAndYear(1))" class="fas fa-caret-right fa-2x"></i>
+    </div>
+</div>
+
+<div class="row">
+    @if (ruvents != null)
+    {
+        @foreach (var ruvent in ruvents)
+        {
+            <RuventCard ruvent="ruvent"></RuventCard>
+        }
+    }
+    else
+    {
+        <LoadingAnimation></LoadingAnimation>
+    }
+</div>
+
+    @code {
+        public List<Ruvent> ruvents;
+        public DateTime currentMonthYear;
+
+        protected override async Task OnInitializedAsync()
+        {
+            currentMonthYear = DateTime.Today;
+            ruvents = await ruventService.GetRuventsByMonthAndYear(currentMonthYear.Month, currentMonthYear.Year);
+        }
+
+        private async Task GetRuventsByMonthAndYear(int increment)
+        {
+            ruvents = null;
+            currentMonthYear = currentMonthYear.AddMonths(increment);
+            ruvents = await ruventService.GetRuventsByMonthAndYear(currentMonthYear.Month, currentMonthYear.Year);
+        }
+    }

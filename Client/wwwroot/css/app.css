@@ -1,0 +1,28 @@
+﻿@import url('open-iconic/font/css/open-iconic-bootstrap.min.css');
+
+html, body {
+    font-family: 'Viga', sans-serif;
+}
+
+#main-container {
+    margin-top: 20px;
+    margin-bottom: 70px;
+}
+
+#loading-div {
+    margin-top: 100px;
+}
+
+    #loading-div div.spinner-border {
+        height: 100px;
+        width: 100px;
+    }
+
+#loading-div-mini {
+    margin-top: 25px;
+}
+
+    #loading-div-mini div.spinner-border {
+        height: 50px;
+        width: 50px;
+    }

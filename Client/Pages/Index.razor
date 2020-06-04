@@ -1,0 +1,14 @@
+﻿@page "/"
+
+<AuthorizeView>
+    <Authorized>
+        <RuventsByMonth></RuventsByMonth>
+    </Authorized>
+    <NotAuthorized>
+        <div class="row">
+            <div class="col-12 text-center">
+                <h3>Please log in.</h3>
+            </div>
+        </div>
+    </NotAuthorized>
+</AuthorizeView>
