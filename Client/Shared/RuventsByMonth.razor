@@ -3,6 +3,7 @@
 
 @inject NavigationManager navigation
 @inject RuventService ruventService
+@inject IJSRuntime jsRuntime
 
 <div class="row">
     <div class="col-12 text-center">
@@ -43,6 +44,8 @@
 
     protected override async Task OnInitializedAsync()
     {
+        _ = RequestNotificationSubscriptionAsync();
+
         currentMonthYear = DateTime.Today;
         ruvents = await ruventService.GetRuventsByMonthAndYear(currentMonthYear.Month, currentMonthYear.Year);
     }
@@ -52,5 +55,21 @@
         ruvents = null;
         currentMonthYear = currentMonthYear.AddMonths(increment);
         ruvents = await ruventService.GetRuventsByMonthAndYear(currentMonthYear.Month, currentMonthYear.Year);
+    }
+
+    private async Task RequestNotificationSubscriptionAsync()
+    {
+        var subscription = await jsRuntime.InvokeAsync<NotificationSubscription>("blazorPushNotifications.requestSubscription");
+        if (subscription != null)
+        {
+            try
+            {
+                await OrdersClient.SubscribeToNotifications(subscription);
+            }
+            catch (AccessTokenNotAvailableException ex)
+            {
+                ex.Redirect();
+            }
+        }
     }
 }

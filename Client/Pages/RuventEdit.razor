@@ -1,11 +1,14 @@
 ﻿@page "/edit/{id:int}"
 
+@using Microsoft.AspNetCore.Authorization
 @using Services
 @using Ruvents.Shared
 @using System.Security.Claims
 
 @inject NavigationManager navigation
 @inject RuventService ruventService
+
+@attribute [Authorize]
 
 <div class="row">
     <div class="col-12 col-sm-6 offset-sm-3 text-center">

@@ -1,5 +1,6 @@
 ﻿@page "/detail/{id:int}"
 
+@using Microsoft.AspNetCore.Authorization
 @using Services
 @using Ruvents.Shared
 @using System.Security.Claims
@@ -7,6 +8,8 @@
 @inject NavigationManager navigation
 @inject RuventService ruventService
 @inject AttendeeService attendeeService
+
+@attribute [Authorize]
 
 @if (ruvent != null)
 {
