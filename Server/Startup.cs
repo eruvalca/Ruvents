@@ -26,20 +26,16 @@ namespace Ruvents.Server
 
         public void ConfigureServices(IServiceCollection services)
         {
-            //if (_env.IsDevelopment())
-            //{
-            //    services.AddDbContext<ApplicationDbContext>(options =>
-            //        options.UseSqlServer(Configuration["DefaultConnection"]));
-            //}
-            //else
-            //{
-            //    services.AddDbContext<ApplicationDbContext>(options =>
-            //        options.UseSqlServer(Configuration.GetConnectionString("DefaultConnection")));
-            //}
-
-
-            services.AddDbContext<ApplicationDbContext>(options =>
-                options.UseSqlServer("Server=tcp:ruventsv2.database.windows.net,1433;Initial Catalog=ruvents;Persist Security Info=False;User ID=eruvalca;Password=Coltsfan1;MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"));
+            if (_env.IsDevelopment())
+            {
+                services.AddDbContext<ApplicationDbContext>(options =>
+                    options.UseSqlServer(Configuration["DefaultConnection"]));
+            }
+            else
+            {
+                services.AddDbContext<ApplicationDbContext>(options =>
+                    options.UseSqlServer(Configuration.GetConnectionString("DefaultConnection")));
+            }
 
             services.AddControllersWithViews();
             services.AddRazorPages();
