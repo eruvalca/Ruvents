@@ -15,6 +15,7 @@ namespace Ruvents.Server.Data
 
         public DbSet<Ruvent> Ruvents { get; set; }
         public DbSet<Attendee> Attendees { get; set; }
+        public DbSet<NotificationSubscription> NotificationSubscriptions { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {

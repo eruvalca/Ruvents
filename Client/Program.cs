@@ -21,6 +21,7 @@ namespace Ruvents.Client
 
             builder.Services.AddHttpClient<RuventService>(client => client.BaseAddress = new Uri(builder.HostEnvironment.BaseAddress));
             builder.Services.AddHttpClient<AttendeeService>(client => client.BaseAddress = new Uri(builder.HostEnvironment.BaseAddress));
+            builder.Services.AddHttpClient<NotificationSubscriptionService>(client => client.BaseAddress = new Uri(builder.HostEnvironment.BaseAddress));
 
             builder.Services.AddMsalAuthentication(options =>
             {

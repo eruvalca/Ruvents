@@ -1,8 +1,10 @@
 ﻿@using Services
 @using Ruvents.Shared
+@using System.Security.Claims
 
 @inject NavigationManager navigation
 @inject RuventService ruventService
+@inject NotificationSubscriptionService notificationService
 @inject IJSRuntime jsRuntime
 
 <div class="row">
@@ -39,11 +41,18 @@
 </div>
 
 @code {
+    [CascadingParameter]
+    private Task<AuthenticationState> authenticationStateTask { get; set; }
+
+    private ClaimsPrincipal user;
     private List<Ruvent> ruvents;
     private DateTime currentMonthYear;
 
     protected override async Task OnInitializedAsync()
     {
+        var authState = await authenticationStateTask;
+        user = authState.User;
+
         _ = RequestNotificationSubscriptionAsync();
 
         currentMonthYear = DateTime.Today;
@@ -62,13 +71,15 @@
         var subscription = await jsRuntime.InvokeAsync<NotificationSubscription>("blazorPushNotifications.requestSubscription");
         if (subscription != null)
         {
+            subscription.Sub = user.Claims.FirstOrDefault(c => c.Type == "sub").Value;
+
             try
             {
-                await OrdersClient.SubscribeToNotifications(subscription);
+                await notificationService.SubscribeToNotifications(subscription);
             }
-            catch (AccessTokenNotAvailableException ex)
+            catch
             {
-                ex.Redirect();
+                navigation.NavigateTo("/");
             }
         }
     }
