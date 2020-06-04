@@ -1,0 +1,125 @@
+﻿@page "/new"
+
+@using Services
+@using Ruvents.Shared
+@using System.Security.Claims
+
+@inject NavigationManager navigation
+@inject RuventService ruventService
+
+<div class="row">
+    <div class="col-12 col-sm-6 offset-sm-3 text-center">
+        <h3>New Ruvent</h3>
+    </div>
+    @if (showError)
+    {
+        <div class="col-12 col-sm-6 offset-sm-3 text-center">
+            <p class="text-danger"></p>
+        </div>
+    }
+</div>
+
+@if (showForm)
+{
+    <EditForm Model="@ruvent" OnValidSubmit="NewRuventSubmit">
+        <div class="form-group row">
+            <div class="col-12 col-sm-10 offset-sm-1 col-lg-8 offset-lg-2">
+                <label>Title</label>
+                <InputText @bind-Value="ruvent.Title" class="form-control"></InputText>
+            </div>
+        </div>
+        <div class="form-group row">
+            <div class="col-12 col-sm-10 offset-sm-1 col-lg-8 offset-lg-2">
+                <label>Description</label>
+                <InputTextArea @bind-Value="ruvent.Description" class="form-control" rows="3"></InputTextArea>
+            </div>
+        </div>
+        <div class="form-group row">
+            <div class="col-12 col-sm-10 offset-sm-1 col-lg-8 offset-lg-2">
+                <label>Address</label>
+                <InputText @bind-Value="ruvent.Address" class="form-control"></InputText>
+            </div>
+        </div>
+        <div class="form-group row">
+            <div class="col-6 col-sm-5 offset-sm-1 col-lg-4 offset-lg-2">
+                <label>Start Date</label>
+                <InputDate @bind-Value="ruvent.StartDate" class="form-control"></InputDate>
+            </div>
+            <div class="col-6 col-sm-5 col-lg-4">
+                <label>Start Time</label>
+                <input @bind-value="ruvent.StartTime" class="form-control" type="time" />
+            </div>
+        </div>
+        <div class="form-group row">
+            <div class="col-6 col-sm-5 offset-sm-1 col-lg-4 offset-lg-2">
+                <label>End Date</label>
+                <InputDate @bind-Value="ruvent.EndDate" class="form-control"></InputDate>
+            </div>
+            <div class="col-6 col-sm-5 col-lg-4">
+                <label>End Time</label>
+                <input @bind-value="ruvent.EndTime" class="form-control" type="time" />
+            </div>
+        </div>
+        <div class="form-group row">
+            <div class="col-6 col-sm-5 offset-sm-1 col-lg-4 offset-lg-2">
+                <button @onclick='(() => navigation.NavigateTo("/"))' class="btn btn-secondary btn-block shadow" type="reset">Cancel</button>
+            </div>
+            <div class="col-6 col-sm-5 col-lg-4">
+                <button class="btn btn-success btn-block shadow" type="submit">Submit</button>
+            </div>
+        </div>
+    </EditForm>
+}
+else
+{
+    <LoadingAnimation></LoadingAnimation>
+}
+
+@code {
+    [CascadingParameter]
+    private Task<AuthenticationState> authenticationStateTask { get; set; }
+    private ClaimsPrincipal user;
+    private bool showForm = true;
+    private bool showError = false;
+    private Ruvent ruvent = new Ruvent()
+    {
+        CreateDate = DateTime.Now,
+        StartDate = DateTime.Today,
+        EndDate = DateTime.Today
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await authenticationStateTask;
+        user = authState.User;
+    }
+
+    private async Task NewRuventSubmit()
+    {
+        ruvent.CreatedBy = user.Identity.Name;
+        ruvent.CreatedBySub = user.Claims.FirstOrDefault(u => u.Type == "sub").Value;
+
+        try
+        {
+            showError = false;
+            showForm = false;
+
+            var createdRuvent = await ruventService.CreateRuvent(ruvent);
+
+            if (createdRuvent.RuventId > 0)
+            {
+                navigation.NavigateTo("/");
+            }
+            else
+            {
+                showError = true;
+                showForm = true;
+            }
+        }
+        catch
+        {
+            showError = true;
+            showForm = true;
+        }
+    }
+}

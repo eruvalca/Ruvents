@@ -13,7 +13,7 @@
                     @ruvent.StartDate.DayOfWeek
                 </div>
                 <div class="col text-muted text-center">
-                    @DateTime.Parse(ruvent.StartTime).ToString("h:mm tt")
+                    @ruvent.StartTime.ToString("h:mm tt")
                 </div>
             </div>
             <div class="row">
@@ -32,7 +32,7 @@
                     <p class="text-muted">@ruvent.Attendees.Where(a => !a.IsAttending).Count()</p>
                 </div>
                 <div class="col-3 offset-6 text-center">
-                    <i class="fas fa-thumbs-down text-success"></i>
+                    <i class="fas fa-thumbs-up text-success"></i>
                     <p class="text-muted">@ruvent.Attendees.Where(a => a.IsAttending).Count()</p>
                 </div>
             </div>

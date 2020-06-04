@@ -3,9 +3,10 @@
 
 @inject NavigationManager navigation
 @inject RuventService ruventService
+
 <div class="row">
     <div class="col-12 text-center">
-        <button @onclick='(() => navigation.NavigateTo("/"))' class="btn btn-primary shadow">New Ruvent</button>
+        <button @onclick='(() => navigation.NavigateTo("/new"))' class="btn btn-primary shadow">New Ruvent</button>
     </div>
 </div>
 <br />
@@ -36,20 +37,20 @@
     }
 </div>
 
-    @code {
-        public List<Ruvent> ruvents;
-        public DateTime currentMonthYear;
+@code {
+    public List<Ruvent> ruvents;
+    public DateTime currentMonthYear;
 
-        protected override async Task OnInitializedAsync()
-        {
-            currentMonthYear = DateTime.Today;
-            ruvents = await ruventService.GetRuventsByMonthAndYear(currentMonthYear.Month, currentMonthYear.Year);
-        }
-
-        private async Task GetRuventsByMonthAndYear(int increment)
-        {
-            ruvents = null;
-            currentMonthYear = currentMonthYear.AddMonths(increment);
-            ruvents = await ruventService.GetRuventsByMonthAndYear(currentMonthYear.Month, currentMonthYear.Year);
-        }
+    protected override async Task OnInitializedAsync()
+    {
+        currentMonthYear = DateTime.Today;
+        ruvents = await ruventService.GetRuventsByMonthAndYear(currentMonthYear.Month, currentMonthYear.Year);
     }
+
+    private async Task GetRuventsByMonthAndYear(int increment)
+    {
+        ruvents = null;
+        currentMonthYear = currentMonthYear.AddMonths(increment);
+        ruvents = await ruventService.GetRuventsByMonthAndYear(currentMonthYear.Month, currentMonthYear.Year);
+    }
+}
