@@ -30,7 +30,7 @@ namespace Ruvents.Server.Controllers
             return attendee;
         }
 
-        [HttpPost("{id}")]
+        [HttpPut("{id}")]
         public async Task<ActionResult<Attendee>> UpdateAttendee(int id, Attendee attendee)
         {
             if (id != attendee.AttendeeId)
@@ -45,7 +45,7 @@ namespace Ruvents.Server.Controllers
         }
 
         [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteAttendee(int id)
+        public async Task<ActionResult<Attendee>> DeleteAttendee(int id)
         {
             var attendee = await _context.Attendees.FindAsync(id);
             if (attendee == null)
@@ -63,7 +63,7 @@ namespace Ruvents.Server.Controllers
                 return BadRequest();
             }
 
-            return Ok();
+            return attendee;
         }
     }
 }

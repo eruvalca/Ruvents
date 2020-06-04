@@ -48,7 +48,7 @@ namespace Ruvents.Server.Controllers
             return CreatedAtAction("GetRuvent", new { id = ruvent.RuventId }, ruvent);
         }
 
-        [HttpPost("{id}")]
+        [HttpPut("{id}")]
         public async Task<ActionResult<Ruvent>> UpdateRuvent(int id, Ruvent ruvent)
         {
             if (id != ruvent.RuventId)
@@ -63,7 +63,7 @@ namespace Ruvents.Server.Controllers
         }
 
         [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteRuvent(int id)
+        public async Task<ActionResult<Ruvent>> DeleteRuvent(int id)
         {
             var ruvent = await _context.Ruvents.FindAsync(id);
 
@@ -82,7 +82,7 @@ namespace Ruvents.Server.Controllers
                 return BadRequest();
             }
 
-            return Ok();
+            return ruvent;
         }
     }
 }

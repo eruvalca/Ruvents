@@ -1,0 +1,137 @@
+﻿@page "/edit/{id:int}"
+
+@using Services
+@using Ruvents.Shared
+@using System.Security.Claims
+
+@inject NavigationManager navigation
+@inject RuventService ruventService
+
+<div class="row">
+    <div class="col-12 col-sm-6 offset-sm-3 text-center">
+        <h3>Edit Ruvent</h3>
+    </div>
+    @if (showError)
+    {
+        <div class="col-12 col-sm-6 offset-sm-3 text-center">
+            <p class="text-danger">@errorMessage</p>
+        </div>
+    }
+</div>
+
+@if (showForm)
+{
+    <EditForm Model="@ruvent" OnValidSubmit="UpdateRuventSubmit">
+        <div class="form-group row">
+            <div class="col-12 col-sm-10 offset-sm-1 col-lg-8 offset-lg-2">
+                <label>Title</label>
+                <InputText @bind-Value="ruvent.Title" class="form-control"></InputText>
+            </div>
+        </div>
+        <div class="form-group row">
+            <div class="col-12 col-sm-10 offset-sm-1 col-lg-8 offset-lg-2">
+                <label>Description</label>
+                <InputTextArea @bind-Value="ruvent.Description" class="form-control" rows="3"></InputTextArea>
+            </div>
+        </div>
+        <div class="form-group row">
+            <div class="col-12 col-sm-10 offset-sm-1 col-lg-8 offset-lg-2">
+                <label>Address</label>
+                <InputText @bind-Value="ruvent.Address" class="form-control"></InputText>
+            </div>
+        </div>
+        <div class="form-group row">
+            <div class="col-6 col-sm-5 offset-sm-1 col-lg-4 offset-lg-2">
+                <label>Start Date</label>
+                <InputDate @bind-Value="ruvent.StartDate" class="form-control"></InputDate>
+            </div>
+            <div class="col-6 col-sm-5 col-lg-4">
+                <label>Start Time</label>
+                <input @bind-value="ruvent.StartTime" class="form-control" type="time" />
+            </div>
+        </div>
+        <div class="form-group row">
+            <div class="col-6 col-sm-5 offset-sm-1 col-lg-4 offset-lg-2">
+                <label>End Date</label>
+                <InputDate @bind-Value="ruvent.EndDate" class="form-control"></InputDate>
+            </div>
+            <div class="col-6 col-sm-5 col-lg-4">
+                <label>End Time</label>
+                <input @bind-value="ruvent.EndTime" class="form-control" type="time" />
+            </div>
+        </div>
+        <div class="form-group row">
+            <div class="col-6 col-sm-5 offset-sm-1 col-lg-4 offset-lg-2">
+                <button @onclick='(() => navigation.NavigateTo("/"))' class="btn btn-secondary btn-block shadow" type="reset">Cancel</button>
+            </div>
+            <div class="col-6 col-sm-5 col-lg-4">
+                <button class="btn btn-success btn-block shadow" type="submit">Submit</button>
+            </div>
+        </div>
+    </EditForm>
+}
+else
+{
+    <LoadingAnimation></LoadingAnimation>
+}
+
+@code {
+    [CascadingParameter]
+    private Task<AuthenticationState> authenticationStateTask { get; set; }
+
+    [Parameter]
+    public int id { get; set; }
+
+    private ClaimsPrincipal user;
+    private bool showForm = false;
+    private bool showError = false;
+    private string errorMessage;
+    private Ruvent ruvent;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await authenticationStateTask;
+        user = authState.User;
+
+        try
+        {
+            ruvent = await ruventService.GetRuvent(id);
+            if (ruvent != null)
+            {
+                showForm = true;
+            }
+            else
+            {
+                errorMessage = "There was a problem loading the Ruvent. Please contact Emmanuel.";
+                showError = true;
+            }
+        }
+        catch
+        {
+            errorMessage = "There was a problem loading the Ruvent. Please contact Emmanuel.";
+            showError = true;
+        }
+    }
+
+    private async Task UpdateRuventSubmit()
+    {
+        ruvent.ModifyDate = DateTime.Now;
+        ruvent.ModifyBy = user.Identity.Name;
+
+        try
+        {
+            showError = false;
+            showForm = false;
+
+            var updatedRuvent = await ruventService.UpdateRuvent(ruvent.RuventId, ruvent);
+
+            navigation.NavigateTo("/");
+        }
+        catch
+        {
+            errorMessage = "There was a problem submitting the changes. Please contact Emmanuel.";
+            showError = true;
+            showForm = true;
+        }
+    }
+}

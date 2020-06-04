@@ -36,7 +36,11 @@
                     <p class="text-muted">@ruvent.Attendees.Where(a => a.IsAttending).Count()</p>
                 </div>
             </div>
-            <button @onclick='(() => navigation.NavigateTo($"detail/{ruvent.RuventId}"))' class="btn btn-info btn-block shadow-sm">Details</button>
+            <div class="row">
+                <div class="col-12">
+                    <button @onclick='(() => navigation.NavigateTo($"detail/{ruvent.RuventId}"))' class="btn btn-info btn-block shadow">Details</button>
+                </div>
+            </div>
         </div>
     </div>
 </div>

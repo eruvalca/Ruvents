@@ -26,3 +26,18 @@ html, body {
         height: 50px;
         width: 50px;
     }
+
+.attendance-btn:hover {
+    cursor: pointer;
+}
+
+.meta-text {
+    margin: 0;
+    font-size: 12px;
+}
+
+.attendee-list{
+    padding: 0;
+    list-style: none;
+    font-size: 12px;
+}

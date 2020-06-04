@@ -8,13 +8,13 @@
 @inject RuventService ruventService
 
 <div class="row">
-    <div class="col-12 col-sm-6 offset-sm-3 text-center">
+    <div class="col-12 col-sm-10 offset-sm-1 col-lg-8 offset-lg-2 text-center">
         <h3>New Ruvent</h3>
     </div>
     @if (showError)
     {
-        <div class="col-12 col-sm-6 offset-sm-3 text-center">
-            <p class="text-danger"></p>
+        <div class="col-12 col-sm-10 offset-sm-1 col-lg-8 offset-lg-2 text-center">
+            <p class="text-danger">@errorMessage</p>
         </div>
     }
 </div>
@@ -78,9 +78,11 @@ else
 @code {
     [CascadingParameter]
     private Task<AuthenticationState> authenticationStateTask { get; set; }
+
     private ClaimsPrincipal user;
     private bool showForm = true;
     private bool showError = false;
+    private string errorMessage;
     private Ruvent ruvent = new Ruvent()
     {
         CreateDate = DateTime.Now,
@@ -112,12 +114,14 @@ else
             }
             else
             {
+                errorMessage = "Something went wrong submitting. Please contact Emmanuel.";
                 showError = true;
                 showForm = true;
             }
         }
         catch
         {
+            errorMessage = "Something went wrong submitting. Please contact Emmanuel.";
             showError = true;
             showForm = true;
         }

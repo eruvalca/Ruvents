@@ -39,9 +39,10 @@ namespace Ruvents.Client.Services
             return await response.Content.ReadFromJsonAsync<Ruvent>();
         }
 
-        public async Task DeleteRuvent(int id)
+        public async Task<Ruvent> DeleteRuvent(int id)
         {
-            await client.DeleteAsync($"Ruvent/{id}");
+            var response = await client.DeleteAsync($"Ruvent/{id}");
+            return await response.Content.ReadFromJsonAsync<Ruvent>();
         }
     }
 }
