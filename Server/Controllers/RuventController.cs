@@ -47,7 +47,7 @@ namespace Ruvents.Server.Controllers
             _context.Ruvents.Add(ruvent);
             await _context.SaveChangesAsync();
 
-            foreach (var subscription in await _context.NotificationSubscriptions.ToListAsync())
+            foreach (var subscription in await _context.NotificationSubscriptions.Where(n => n.Sub != ruvent.CreatedBySub).ToListAsync())
             {
                 await SendNotificationAsync(ruvent, subscription, $"{ruvent.CreatedBy} created a new Ruvent {ruvent.Title}! Check it out!");
             }
@@ -106,8 +106,8 @@ namespace Ruvents.Server.Controllers
                 var payload = JsonSerializer.Serialize(new
                 {
                     message,
-                    //url = $"https://localhost:44354/detail/{ruvent.RuventId}",
-                    url = $"https://ruvents.azurewebsites.net/detail/{ruvent.RuventId}",
+                    //url = $"https://localhost:44354/detail/{ruvent.RuventId}"
+                    url = $"https://ruvents.azurewebsites.net/detail/{ruvent.RuventId}"
                 });
 
                 await webPushClient.SendNotificationAsync(pushSubscription, payload, vapidDetails);
