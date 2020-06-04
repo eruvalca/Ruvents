@@ -39,16 +39,16 @@ namespace Ruvents.Server
 
 
             services.AddDbContext<ApplicationDbContext>(options =>
-                options.UseSqlServer("Server=tcp:ruventsv2.database.windows.net,1433;Initial Catalog=ruvents;Persist Security Info=False;User ID=eruvalca;Password=Coltsfan1;MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;");
+                options.UseSqlServer("Server=tcp:ruventsv2.database.windows.net,1433;Initial Catalog=ruvents;Persist Security Info=False;User ID=eruvalca;Password=Coltsfan1;MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"));
 
             services.AddControllersWithViews();
             services.AddRazorPages();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
+        public void Configure(IApplicationBuilder app)
         {
-            if (env.IsDevelopment())
+            if (_env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
                 app.UseWebAssemblyDebugging();
