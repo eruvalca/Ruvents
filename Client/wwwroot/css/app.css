@@ -52,6 +52,7 @@ nav.navbar {
 
 .card {
     border-color: darkslateblue;
+    margin-bottom: 15px;
 }
 
 .meta-text {
