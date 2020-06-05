@@ -27,7 +27,7 @@ namespace Ruvents.Server.Controllers
         public async Task<ActionResult<IEnumerable<Ruvent>>> GetRuventsByMonthAndYear(int month, int year)
         {
             return await _context.Ruvents.Where(r => r.StartDate.Month == month && r.StartDate.Year == year)
-                .Include("Attendees").ToListAsync();
+                .Include("Attendees").OrderBy(r => r.StartDate).ToListAsync();
         }
 
         [HttpGet("{id}")]
