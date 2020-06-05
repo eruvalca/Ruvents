@@ -34,9 +34,9 @@ namespace Ruvents.Server.Controllers
 
             if (attendee.Sub != ruvent.CreatedBySub)
             {
-                var subscription = await _context.NotificationSubscriptions.Where(n => n.Sub == ruvent.CreatedBySub).FirstOrDefaultAsync();
+                var subscriptions = await _context.NotificationSubscriptions.Where(n => n.Sub == ruvent.CreatedBySub).ToListAsync();
 
-                if (subscription != null)
+                if (subscriptions.Any())
                 {
                     var sb = new StringBuilder();
                     sb.AppendFormat($"{attendee.UserName} ");
@@ -50,7 +50,10 @@ namespace Ruvents.Server.Controllers
                         sb.AppendFormat($"is not attending {ruvent.Title}.");
                     }
 
-                    await SendNotificationAsync(ruvent, subscription, sb.ToString());
+                    foreach (var subscription in subscriptions)
+                    {
+                        await SendNotificationAsync(ruvent, subscription, sb.ToString());
+                    }
                 }
             }
 
@@ -72,9 +75,9 @@ namespace Ruvents.Server.Controllers
 
             if (attendee.Sub != ruvent.CreatedBySub)
             {
-                var subscription = await _context.NotificationSubscriptions.Where(n => n.Sub == ruvent.CreatedBySub).FirstOrDefaultAsync();
+                var subscriptions = await _context.NotificationSubscriptions.Where(n => n.Sub == ruvent.CreatedBySub).ToListAsync();
 
-                if (subscription != null)
+                if (subscriptions.Any())
                 {
                     var sb = new StringBuilder();
                     sb.AppendFormat($"{attendee.UserName} ");
@@ -88,7 +91,10 @@ namespace Ruvents.Server.Controllers
                         sb.AppendFormat($"is not attending {ruvent.Title}.");
                     }
 
-                    await SendNotificationAsync(ruvent, subscription, sb.ToString());
+                    foreach (var subscription in subscriptions)
+                    {
+                        await SendNotificationAsync(ruvent, subscription, sb.ToString());
+                    }
                 }
             }
 
@@ -118,14 +124,17 @@ namespace Ruvents.Server.Controllers
 
             if (attendee.Sub != ruvent.CreatedBySub)
             {
-                var subscription = await _context.NotificationSubscriptions.Where(n => n.Sub == ruvent.CreatedBySub).FirstOrDefaultAsync();
+                var subscriptions = await _context.NotificationSubscriptions.Where(n => n.Sub == ruvent.CreatedBySub).ToListAsync();
 
-                if (subscription != null)
+                if (subscriptions.Any())
                 {
                     var sb = new StringBuilder();
                     sb.AppendFormat($"{attendee.UserName} is now undecided about attending {ruvent.Title}!");
 
-                    await SendNotificationAsync(ruvent, subscription, sb.ToString());
+                    foreach (var subscription in subscriptions)
+                    {
+                        await SendNotificationAsync(ruvent, subscription, sb.ToString());
+                    }
                 }
             }
 
