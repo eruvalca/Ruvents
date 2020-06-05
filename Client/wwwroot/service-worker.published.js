@@ -10,7 +10,7 @@ self.addEventListener('push', event => {
     event.waitUntil(
         self.registration.showNotification('Ruvents', {
             body: payload.message,
-            icon: 'img/icon-512.png',
+            icon: 'icon-512.png',
             vibrate: [100, 50, 100],
             data: { url: payload.url }
         })
