@@ -49,7 +49,7 @@ namespace Ruvents.Server.Controllers
 
             foreach (var subscription in await _context.NotificationSubscriptions.Where(n => n.Sub != ruvent.CreatedBySub).ToListAsync())
             {
-                await SendNotificationAsync(ruvent, subscription, $"{ruvent.CreatedBy} created a new Ruvent {ruvent.Title}! Check it out!");
+                await SendNotificationAsync(ruvent, subscription, $"{ruvent.CreatedBy} created a new Ruvent, {ruvent.Title}! Check it out!");
             }
 
             return CreatedAtAction("GetRuvent", new { id = ruvent.RuventId }, ruvent);
@@ -65,6 +65,11 @@ namespace Ruvents.Server.Controllers
 
             _context.Entry(ruvent).State = EntityState.Modified;
             await _context.SaveChangesAsync();
+
+            foreach (var subscription in await _context.NotificationSubscriptions.ToListAsync())
+            {
+                await SendNotificationAsync(ruvent, subscription, $"{ruvent.ModifyBy} updated {ruvent.Title}! See what changed.");
+            }
 
             return ruvent;
         }
@@ -106,7 +111,6 @@ namespace Ruvents.Server.Controllers
                 var payload = JsonSerializer.Serialize(new
                 {
                     message,
-                    //url = $"https://localhost:44354/detail/{ruvent.RuventId}"
                     url = $"https://ruvents.azurewebsites.net/detail/{ruvent.RuventId}"
                 });
 

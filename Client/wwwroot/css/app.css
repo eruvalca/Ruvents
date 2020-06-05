@@ -9,6 +9,15 @@ html, body {
     margin-bottom: 70px;
 }
 
+nav.navbar {
+    border-top: 5px solid darkslateblue;
+    color: darkslateblue;
+}
+
+#logo-img {
+    height: 30px;
+}
+
 #loading-div {
     margin-top: 100px;
 }
@@ -16,6 +25,7 @@ html, body {
     #loading-div div.spinner-border {
         height: 100px;
         width: 100px;
+        color: darkslateblue;
     }
 
 #loading-div-mini {
@@ -25,10 +35,23 @@ html, body {
     #loading-div-mini div.spinner-border {
         height: 50px;
         width: 50px;
+        color: darkslateblue;
     }
+
+.month-nav-btn {
+    color: darkslateblue;
+}
+
+.month-nav-btn:hover {
+    cursor: pointer;
+}
 
 .attendance-btn:hover {
     cursor: pointer;
+}
+
+.card {
+    border-color: darkslateblue;
 }
 
 .meta-text {
