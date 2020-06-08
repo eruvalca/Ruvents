@@ -29,9 +29,18 @@
 <div class="row">
     @if (ruvents != null)
     {
-        @foreach (var ruvent in ruvents)
+        @if (ruvents.Any())
         {
-            <RuventCard ruvent="ruvent"></RuventCard>
+            @foreach (var ruvent in ruvents)
+            {
+                <RuventCard ruvent="ruvent"></RuventCard>
+            }
+        }
+        else
+        {
+            <div class="col-12 text-center">
+                <h4>Nothing to see here.</h4>
+            </div>
         }
     }
     else
