@@ -87,39 +87,31 @@
                     </div>
                 }
                 <hr />
+                <div class="row">
+                    <div class="col-12 text-center">
+                        <p>Attendance</p>
+                    </div>
+                </div>
                 @if (!attendanceUpdating)
                 {
                     <div class="row">
-                        <div class="col-12 text-center">
-                            <p>Attendance</p>
-                        </div>
-                    </div>
-                    <div class="row">
                         <div class="col-4 text-center">
-                            @if (ruvent.Attendees.Any())
+                            @if (ruvent.IsUserAttendee(userSub))
                             {
-                                @if (ruvent.Attendees.Where(a => a.Sub == user.Claims.FirstOrDefault(c => c.Type == "sub").Value).Any())
+                                @if (ruvent.GetUserAttendee(userSub).IsAttending)
                                 {
-                                    @if (!ruvent.Attendees.FirstOrDefault(a => a.Sub == user.Claims.FirstOrDefault(c => c.Type == "sub").Value).IsAttending)
-                                    {
-                                        <i @onclick="(() => UpdateAttendance(false))" class="attendance-btn fas fa-thumbs-down fa-lg text-danger"></i>
-                                    }
-                                    else
-                                    {
-                                        <i @onclick="(() => UpdateAttendance(false))" class="attendance-btn fas fa-thumbs-down fa-lg text-secondary"></i>
-                                    }
+                                    <i @onclick="(() => SetNotAttending())" class="attendance-btn fas fa-thumbs-down fa-lg text-secondary"></i>
                                 }
                                 else
                                 {
-                                    <i @onclick="(() => UpdateAttendance(false))" class="attendance-btn fas fa-thumbs-down fa-lg text-secondary"></i>
+                                    <i @onclick="(() => SetNoResponse())" class="attendance-btn fas fa-thumbs-down fa-lg text-danger"></i>
                                 }
-                                <p class="text-muted">(@ruvent.Attendees.Where(a => !a.IsAttending).Count())</p>
                             }
                             else
                             {
-                                <i @onclick="(() => UpdateAttendance(false))" class="attendance-btn fas fa-thumbs-down fa-lg text-secondary"></i>
-                                <p class="text-muted">(0)</p>
+                                <i @onclick="(() => SetNotAttending())" class="attendance-btn fas fa-thumbs-down fa-lg text-secondary"></i>
                             }
+                            <p class="text-muted">(@ruvent.Attendees.Where(a => !a.IsAttending).Count())</p>
                         </div>
                         <div class="col-4 text-center">
                             @if (ruvent.Attendees.Any())
@@ -128,13 +120,13 @@
                                     <div class="col-12">
                                         @if (showAttendees)
                                         {
-                                            <button @onclick="(() => ToggleAttendanceLists())" class="btn btn-sm btn-block btn-primary shadow">
+                                            <button @onclick="(() => showAttendees = !showAttendees)" class="btn btn-sm btn-block btn-primary shadow">
                                                 Hide
                                             </button>
                                         }
                                         else
                                         {
-                                            <button @onclick="(() => ToggleAttendanceLists())" class="btn btn-sm btn-block btn-primary shadow">
+                                            <button @onclick="(() => showAttendees = !showAttendees)" class="btn btn-sm btn-block btn-primary shadow">
                                                 Show
                                             </button>
                                         }
@@ -143,30 +135,22 @@
                             }
                         </div>
                         <div class="col-4 text-center">
-                            @if (ruvent.Attendees.Any())
+                            @if (ruvent.IsUserAttendee(userSub))
                             {
-                                @if (ruvent.Attendees.Where(a => a.Sub == user.Claims.FirstOrDefault(c => c.Type == "sub").Value).Any())
+                                @if (ruvent.GetUserAttendee(userSub).IsAttending)
                                 {
-                                    @if (ruvent.Attendees.FirstOrDefault(a => a.Sub == user.Claims.FirstOrDefault(c => c.Type == "sub").Value).IsAttending)
-                                    {
-                                        <i @onclick="(() => UpdateAttendance(true))" class="attendance-btn fas fa-thumbs-up fa-lg text-success"></i>
-                                    }
-                                    else
-                                    {
-                                        <i @onclick="(() => UpdateAttendance(true))" class="attendance-btn fas fa-thumbs-up fa-lg text-secondary"></i>
-                                    }
+                                    <i @onclick="(() => SetNoResponse())" class="attendance-btn fas fa-thumbs-up fa-lg text-success"></i>
                                 }
                                 else
                                 {
-                                    <i @onclick="(() => UpdateAttendance(true))" class="attendance-btn fas fa-thumbs-up fa-lg text-secondary"></i>
+                                    <i @onclick="(() => SetAttending())" class="attendance-btn fas fa-thumbs-up fa-lg text-secondary"></i>
                                 }
-                                <p class="text-muted">(@ruvent.Attendees.Where(a => a.IsAttending).Count())</p>
                             }
                             else
                             {
-                                <i @onclick="(() => UpdateAttendance(true))" class="attendance-btn fas fa-thumbs-up fa-lg text-secondary"></i>
-                                <p class="text-muted">(0)</p>
+                                <i @onclick="(() => SetAttending())" class="attendance-btn fas fa-thumbs-up fa-lg text-secondary"></i>
                             }
+                            <p class="text-muted">(@ruvent.Attendees.Where(a => a.IsAttending).Count())</p>
                         </div>
                     </div>
                     @if (showAttendees)
@@ -212,6 +196,7 @@ else
     public int id { get; set; }
 
     private ClaimsPrincipal user;
+    private string userSub;
     private Ruvent ruvent;
     private bool showAttendees = false;
     private bool attendanceUpdating = false;
@@ -221,76 +206,78 @@ else
     {
         var authState = await authenticationStateTask;
         user = authState.User;
+        userSub = user.Claims.FirstOrDefault(c => c.Type == "sub").Value;
 
         ruvent = await ruventService.GetRuvent(id);
+
+        if (ruvent.Attendees == null)
+        {
+            ruvent.Attendees = new List<Attendee>();
+        }
     }
 
-    private void ToggleAttendanceLists()
-    {
-        showAttendees = !showAttendees;
-    }
-
-    private async Task UpdateAttendance(bool isAttending)
+    private async Task SetAttending()
     {
         attendanceUpdating = true;
 
-        var userAttendance = ruvent.Attendees.FirstOrDefault(a => a.Sub == user.Claims.FirstOrDefault(c => c.Type == "sub").Value);
-
-        if (userAttendance != null)
+        if (ruvent.IsUserAttendee(userSub))
         {
-            var wasAttending = userAttendance.IsAttending;
+            var attendee = ruvent.GetUserAttendee(userSub);
+            attendee.IsAttending = true;
 
-            if ((wasAttending && isAttending) || (!wasAttending && !isAttending))
-            {
-                var updatedAttendee = await attendeeService.DeleteAttendee(userAttendance.AttendeeId);
-
-                if (updatedAttendee != null)
-                {
-                    ruvent = await ruventService.GetRuvent(ruvent.RuventId);
-                    attendanceUpdating = false;
-                }
-            }
-            else if (wasAttending && !isAttending)
-            {
-                userAttendance.IsAttending = false;
-                var updatedAttendee = await attendeeService.UpdateAttendee(userAttendance.AttendeeId, userAttendance);
-
-                if (!updatedAttendee.IsAttending)
-                {
-                    ruvent = await ruventService.GetRuvent(ruvent.RuventId);
-                    attendanceUpdating = false;
-                }
-            }
-            else if (!wasAttending && isAttending)
-            {
-                userAttendance.IsAttending = true;
-                var updatedAttendee = await attendeeService.UpdateAttendee(userAttendance.AttendeeId, userAttendance);
-
-                if (updatedAttendee.IsAttending)
-                {
-                    ruvent = await ruventService.GetRuvent(ruvent.RuventId);
-                    attendanceUpdating = false;
-                }
-            }
+            ruvent.Attendees = await attendeeService.UpdateAttendee(attendee.AttendeeId, attendee);
+            attendanceUpdating = false;
         }
         else
         {
             var attendee = new Attendee()
             {
-                Sub = user.Claims.FirstOrDefault(c => c.Type == "sub").Value,
+                Sub = userSub,
                 UserName = user.Identity.Name,
-                IsAttending = isAttending,
+                IsAttending = true,
                 RuventId = ruvent.RuventId
             };
 
-            var newAttendee = await attendeeService.CreateAttendee(attendee);
-
-            if (newAttendee.IsAttending == isAttending)
-            {
-                ruvent = await ruventService.GetRuvent(ruvent.RuventId);
-                attendanceUpdating = false;
-            }
+            ruvent.Attendees = await attendeeService.CreateAttendee(attendee);
+            attendanceUpdating = false;
         }
+    }
+
+    private async Task SetNotAttending()
+    {
+        attendanceUpdating = true;
+
+        if (ruvent.IsUserAttendee(userSub))
+        {
+            var attendee = ruvent.GetUserAttendee(userSub);
+            attendee.IsAttending = false;
+
+            ruvent.Attendees = await attendeeService.UpdateAttendee(attendee.AttendeeId, attendee);
+            attendanceUpdating = false;
+        }
+        else
+        {
+            var attendee = new Attendee()
+            {
+                Sub = userSub,
+                UserName = user.Identity.Name,
+                IsAttending = false,
+                RuventId = ruvent.RuventId
+            };
+
+            ruvent.Attendees = await attendeeService.CreateAttendee(attendee);
+            attendanceUpdating = false;
+        }
+    }
+
+    private async Task SetNoResponse()
+    {
+        attendanceUpdating = true;
+
+        var attendee = ruvent.GetUserAttendee(userSub);
+
+        ruvent.Attendees = await attendeeService.DeleteAttendee(attendee.AttendeeId);
+        attendanceUpdating = false;
     }
 
     private async Task DeleteRuvent()

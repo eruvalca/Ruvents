@@ -24,8 +24,14 @@ namespace Ruvents.Server.Controllers
             _context = context;
         }
 
+        [HttpGet]
+        public async Task<ActionResult<List<Attendee>>> GetAttendeesByRuvent(int ruventId)
+        {
+            return await _context.Attendees.Where(a => a.RuventId == ruventId).ToListAsync();
+        }
+
         [HttpPost]
-        public async Task<ActionResult<Attendee>> CreateAttendee(Attendee attendee)
+        public async Task<ActionResult<List<Attendee>>> CreateAttendee(Attendee attendee)
         {
             _context.Attendees.Add(attendee);
             await _context.SaveChangesAsync();
@@ -57,11 +63,11 @@ namespace Ruvents.Server.Controllers
                 }
             }
 
-            return attendee;
+            return await _context.Attendees.Where(a => a.RuventId == attendee.RuventId).ToListAsync();
         }
 
         [HttpPut("{id}")]
-        public async Task<ActionResult<Attendee>> UpdateAttendee(int id, Attendee attendee)
+        public async Task<ActionResult<List<Attendee>>> UpdateAttendee(int id, Attendee attendee)
         {
             if (id != attendee.AttendeeId)
             {
@@ -98,11 +104,11 @@ namespace Ruvents.Server.Controllers
                 }
             }
 
-            return attendee;
+            return await _context.Attendees.Where(a => a.RuventId == attendee.RuventId).ToListAsync();
         }
 
         [HttpDelete("{id}")]
-        public async Task<ActionResult<Attendee>> DeleteAttendee(int id)
+        public async Task<ActionResult<List<Attendee>>> DeleteAttendee(int id)
         {
             var attendee = await _context.Attendees.FindAsync(id);
             if (attendee == null)
@@ -138,7 +144,7 @@ namespace Ruvents.Server.Controllers
                 }
             }
 
-            return attendee;
+            return await _context.Attendees.Where(a => a.RuventId == attendee.RuventId).ToListAsync();
         }
 
         private static async Task SendNotificationAsync(Ruvent ruvent, NotificationSubscription subscription, string message)

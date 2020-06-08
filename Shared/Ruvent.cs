@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace Ruvents.Shared
 {
@@ -21,5 +23,15 @@ namespace Ruvents.Shared
         public string ModifyBy { get; set; }
 
         public List<Attendee> Attendees { get; set; }
+
+        public Attendee GetUserAttendee(string userSub)
+        {
+            return Attendees.FirstOrDefault(a => a.Sub == userSub);
+        }
+
+        public bool IsUserAttendee(string userSub)
+        {
+            return Attendees.Any(a => a.Sub == userSub);
+        }
     }
 }

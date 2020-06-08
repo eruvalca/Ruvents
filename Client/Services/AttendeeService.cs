@@ -17,22 +17,27 @@ namespace Ruvents.Client.Services
             this.client = client;
         }
 
-        public async Task<Attendee> CreateAttendee(Attendee attendee)
+        public async Task<List<Attendee>> GetAttendeesByRuvent(int ruventId)
+        {
+            return await client.GetFromJsonAsync<List<Attendee>>($"Attendee/{ruventId}");
+        }
+
+        public async Task<List<Attendee>> CreateAttendee(Attendee attendee)
         {
             var response = await client.PostAsJsonAsync("Attendee", attendee);
-            return await response.Content.ReadFromJsonAsync<Attendee>();
+            return await response.Content.ReadFromJsonAsync<List<Attendee>>();
         }
 
-        public async Task<Attendee> UpdateAttendee(int id, Attendee attendee)
+        public async Task<List<Attendee>> UpdateAttendee(int id, Attendee attendee)
         {
             var response = await client.PutAsJsonAsync($"Attendee/{id}", attendee);
-            return await response.Content.ReadFromJsonAsync<Attendee>();
+            return await response.Content.ReadFromJsonAsync<List<Attendee>>();
         }
 
-        public async Task<Attendee> DeleteAttendee(int id)
+        public async Task<List<Attendee>> DeleteAttendee(int id)
         {
             var response = await client.DeleteAsync($"Attendee/{id}");
-            return await response.Content.ReadFromJsonAsync<Attendee>();
+            return await response.Content.ReadFromJsonAsync<List<Attendee>>();
         }
     }
 }
