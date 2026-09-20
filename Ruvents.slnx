@@ -1,0 +1,9 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Project Path="Ruvents.Client/Ruvents.Client.csproj" />
+  <Project Path="Ruvents/Ruvents.csproj" />
+</Solution>
