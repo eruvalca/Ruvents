@@ -4,6 +4,8 @@
     <Platform Name="x64" />
     <Platform Name="x86" />
   </Configurations>
-  <Project Path="Ruvents.Client/Ruvents.Client.csproj" />
-  <Project Path="Ruvents/Ruvents.csproj" />
+  <Project Path="src/Ruvents.Client/Ruvents.Client.csproj" />
+  <Project Path="src/Ruvents.SharedKernel/Ruvents.SharedKernel.csproj" />
+  <Project Path="src/Ruvents.UI/Ruvents.UI.csproj" />
+  <Project Path="src/Ruvents/Ruvents.csproj" />
 </Solution>
