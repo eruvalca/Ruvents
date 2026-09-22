@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Identity;
 using Ruvents.Data;
 
-namespace Ruvents.Components.Account;
+namespace Ruvents.Features.Account.Services;
 
 internal sealed class IdentityRedirectManager(NavigationManager navigationManager)
 {

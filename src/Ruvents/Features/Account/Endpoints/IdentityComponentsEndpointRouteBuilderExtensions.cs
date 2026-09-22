@@ -7,15 +7,15 @@ using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Primitives;
-using Ruvents.Components.Account.Pages;
-using Ruvents.Components.Account.Pages.Manage;
+using Ruvents.Features.Account.Pages;
+using Ruvents.Features.Account.Pages.Manage;
 using Ruvents.Data;
 
-namespace Microsoft.AspNetCore.Routing;
+namespace Ruvents.Features.Account.Endpoints;
 
 internal static class IdentityComponentsEndpointRouteBuilderExtensions
 {
-    // These endpoints are required by the Identity Razor components defined in the /Components/Account/Pages directory of this project.
+    // These endpoints are required by the Identity Razor components defined in the Features/Account/Pages directory of this project.
     public static IEndpointConventionBuilder MapAdditionalIdentityEndpoints(this IEndpointRouteBuilder endpoints)
     {
         ArgumentNullException.ThrowIfNull(endpoints);

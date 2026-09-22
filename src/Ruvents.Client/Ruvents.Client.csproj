@@ -10,6 +10,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Ruvents.UI\Ruvents.UI.csproj" />
+    <ProjectReference Include="..\Ruvents.SharedKernel\Ruvents.SharedKernel.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.12" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Authentication" Version="10.0.12" />
   </ItemGroup>

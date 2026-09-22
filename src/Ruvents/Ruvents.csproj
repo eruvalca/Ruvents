@@ -14,6 +14,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Ruvents.Client\Ruvents.Client.csproj" />
+    <ProjectReference Include="..\Ruvents.UI\Ruvents.UI.csproj" />
+    <ProjectReference Include="..\Ruvents.SharedKernel\Ruvents.SharedKernel.csproj" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="10.0.12" />
     <PackageReference Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" Version="10.0.12" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.12" />

@@ -1,10 +1,10 @@
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Ruvents.Client.Pages;
 using Ruvents.Components;
-using Ruvents.Components.Account;
 using Ruvents.Data;
+using Ruvents.Features.Account.Endpoints;
+using Ruvents.Features.Account.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -64,7 +64,7 @@ app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode()
     .AddInteractiveWebAssemblyRenderMode()
-    .AddAdditionalAssemblies(typeof(Ruvents.Client._Imports).Assembly);
+    .AddAdditionalAssemblies(typeof(Ruvents.UI.UiAssemblyMarker).Assembly);
 
 // Add additional endpoints required by the Identity /Account Razor components.
 app.MapAdditionalIdentityEndpoints();

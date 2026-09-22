@@ -1,4 +1,4 @@
-namespace Ruvents.Components.Account;
+namespace Ruvents.Features.Account.Models;
 
 public class PasskeyInputModel
 {
