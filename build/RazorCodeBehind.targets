@@ -1,0 +1,37 @@
+<Project>
+  <PropertyGroup>
+    <_RuventsBuildProject>$(MSBuildThisFileDirectory)Ruvents.Build/Ruvents.Build.csproj</_RuventsBuildProject>
+    <_RuventsBuildAssembly>$(MSBuildThisFileDirectory)Ruvents.Build/bin/$(Configuration)/net10.0/Ruvents.Build.dll</_RuventsBuildAssembly>
+    <_RuventsDotNetHost Condition="'$(DotNetHostPath)' != ''">$(DotNetHostPath)</_RuventsDotNetHost>
+    <_RuventsDotNetHost Condition="'$(_RuventsDotNetHost)' == ''">dotnet</_RuventsDotNetHost>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="$(_RuventsBuildProject)"
+                      ReferenceOutputAssembly="false"
+                      Private="false"
+                      PrivateAssets="all"
+                      GlobalPropertiesToRemove="RuntimeIdentifier;SelfContained;PublishAot;PublishTrimmed" />
+  </ItemGroup>
+
+  <!-- Always recheck, including incremental builds and deleted companion files. -->
+  <Target Name="ValidateRazorCodeBehind"
+          BeforeTargets="CoreCompile"
+          DependsOnTargets="ResolveProjectReferences;ResolveRazorComponentInputs"
+          Condition="'$(DesignTimeBuild)' != 'true'">
+    <PropertyGroup>
+      <_RuventsComponentManifest>$(IntermediateOutputPath)ruvents-razor-components.txt</_RuventsComponentManifest>
+      <_RuventsCompileManifest>$(IntermediateOutputPath)ruvents-compile-files.txt</_RuventsCompileManifest>
+    </PropertyGroup>
+    <WriteLinesToFile File="$(_RuventsComponentManifest)" Lines="@(RazorComponent->'%(FullPath)')"
+                      Overwrite="true" WriteOnlyWhenDifferent="true" Encoding="UTF-8" />
+    <WriteLinesToFile File="$(_RuventsCompileManifest)" Lines="@(Compile->'%(FullPath)')"
+                      Overwrite="true" WriteOnlyWhenDifferent="true" Encoding="UTF-8" />
+    <ItemGroup>
+      <FileWrites Include="$(_RuventsComponentManifest);$(_RuventsCompileManifest)" />
+    </ItemGroup>
+    <!-- A separate process avoids locking the validator's assemblies in reusable MSBuild nodes. -->
+    <Exec Command="&quot;$(_RuventsDotNetHost)&quot; &quot;$(_RuventsBuildAssembly)&quot; &quot;$(MSBuildProjectDirectory)&quot; &quot;$(RootNamespace)&quot; &quot;$(DefineConstants)&quot; &quot;$(_RuventsComponentManifest)&quot; &quot;$(_RuventsCompileManifest)&quot;"
+          Condition="'@(RazorComponent)' != ''" />
+  </Target>
+</Project>

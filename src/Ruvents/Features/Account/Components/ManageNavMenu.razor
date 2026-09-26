@@ -1,4 +1,4 @@
-﻿@using Microsoft.AspNetCore.Identity
+@using Microsoft.AspNetCore.Identity
 @using Ruvents.Data
 
 @inject SignInManager<ApplicationUser> SignInManager
@@ -13,7 +13,7 @@
     <li class="nav-item">
         <NavLink class="nav-link" href="Account/Manage/ChangePassword">Password</NavLink>
     </li>
-    @if (hasExternalLogins)
+    @if (_hasExternalLogins)
     {
         <li class="nav-item">
             <NavLink class="nav-link" href="Account/Manage/ExternalLogins">External logins</NavLink>
@@ -29,12 +29,3 @@
         <NavLink class="nav-link" href="Account/Manage/PersonalData">Personal data</NavLink>
     </li>
 </ul>
-
-@code {
-    private bool hasExternalLogins;
-
-    protected override async Task OnInitializedAsync()
-    {
-        hasExternalLogins = (await SignInManager.GetExternalAuthenticationSchemesAsync()).Any();
-    }
-}

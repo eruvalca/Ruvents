@@ -41,7 +41,7 @@ internal sealed class IdentityRevalidatingAuthenticationStateProvider(
         {
             var principalStamp = principal.FindFirstValue(options.Value.ClaimsIdentity.SecurityStampClaimType);
             var userStamp = await userManager.GetSecurityStampAsync(user);
-            return principalStamp == userStamp;
+            return string.Equals(principalStamp, userStamp, StringComparison.Ordinal);
         }
     }
 }

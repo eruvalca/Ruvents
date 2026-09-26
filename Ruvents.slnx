@@ -1,4 +1,7 @@
 <Solution>
+  <Folder Name="/build/">
+    <Project Path="build/Ruvents.Build/Ruvents.Build.csproj" />
+  </Folder>
   <Configurations>
     <Platform Name="Any CPU" />
     <Platform Name="x64" />

@@ -13,7 +13,7 @@ using Ruvents.Data;
 
 namespace Ruvents.Features.Account.Endpoints;
 
-internal static class IdentityComponentsEndpointRouteBuilderExtensions
+internal static partial class IdentityComponentsEndpointRouteBuilderExtensions
 {
     // These endpoints are required by the Identity Razor components defined in the Features/Account/Pages directory of this project.
     public static IEndpointConventionBuilder MapAdditionalIdentityEndpoints(this IEndpointRouteBuilder endpoints)
@@ -123,10 +123,10 @@ internal static class IdentityComponentsEndpointRouteBuilderExtensions
             }
 
             var userId = await userManager.GetUserIdAsync(user);
-            downloadLogger.LogInformation("User with ID '{UserId}' asked for their personal data.", userId);
+            LogPersonalDataRequested(downloadLogger, userId);
 
             // Only include personal data for download
-            var personalData = new Dictionary<string, string>();
+            var personalData = new Dictionary<string, string>(StringComparer.Ordinal);
             var personalDataProps = typeof(ApplicationUser).GetProperties().Where(
                 prop => Attribute.IsDefined(prop, typeof(PersonalDataAttribute)));
             foreach (var p in personalDataProps)
@@ -149,4 +149,7 @@ internal static class IdentityComponentsEndpointRouteBuilderExtensions
 
         return accountGroup;
     }
+
+    [LoggerMessage(EventId = 1018, Level = LogLevel.Information, Message = "User with ID '{UserId}' asked for their personal data.")]
+    private static partial void LogPersonalDataRequested(ILogger logger, string userId);
 }

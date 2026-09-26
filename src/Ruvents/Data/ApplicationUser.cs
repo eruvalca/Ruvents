@@ -1,9 +1,12 @@
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.AspNetCore.Identity;
 
 namespace Ruvents.Data;
 
 // Add profile data for application users by adding properties to the ApplicationUser class
-public class ApplicationUser : IdentityUser
+[SuppressMessage("Major Code Smell", "S2094:Classes should not be empty",
+    Justification = "Provides the application's Identity/EF user type while inheriting its current members from IdentityUser.")]
+internal sealed class ApplicationUser : IdentityUser
 {
 }
 
