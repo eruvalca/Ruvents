@@ -8,4 +8,10 @@
     <UserSecretsId>1e67753d-ce7a-4cb7-9f42-8935cbedca98</UserSecretsId>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\Ruvents\Ruvents.csproj" />
+    <PackageReference Include="Aspire.Hosting.EntityFrameworkCore" />
+    <PackageReference Include="Aspire.Hosting.PostgreSQL" />
+  </ItemGroup>
+
 </Project>

@@ -1,5 +1,6 @@
 {
   "appHost": {
-    "language": "csharp"
+    "language": "csharp",
+    "path": "src/Ruvents.AppHost/Ruvents.AppHost.csproj"
   }
 }

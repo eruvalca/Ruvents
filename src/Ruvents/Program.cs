@@ -1,12 +1,16 @@
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Ruvents.Components;
 using Ruvents.Data;
 using Ruvents.Features.Account.Endpoints;
 using Ruvents.Features.Account.Services;
+using Ruvents.ServiceDefaults;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.AddServiceDefaults();
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
@@ -25,9 +29,21 @@ builder.Services.AddAuthentication(options =>
     })
     .AddIdentityCookies();
 
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlite(connectionString));
+var connectionString = builder.Configuration.GetConnectionString("ruventsdb")
+    ?? throw new InvalidOperationException("Connection string 'ruventsdb' not found. Start the application through Aspire or configure ConnectionStrings:ruventsdb.");
+// The factory supports one context per Blazor operation and also registers the scoped context used by Identity.
+builder.Services.AddDbContextFactory<ApplicationDbContext>(options => options.UseNpgsql(connectionString));
+builder.EnrichNpgsqlDbContext<ApplicationDbContext>();
+// Bound readiness independently of EF's transient retries for normal application operations.
+builder.Services.PostConfigure<HealthCheckServiceOptions>(options =>
+{
+    var databaseCheck = options.Registrations.SingleOrDefault(registration =>
+        string.Equals(registration.Name, nameof(ApplicationDbContext), StringComparison.Ordinal));
+    if (databaseCheck is not null)
+    {
+        databaseCheck.Timeout = TimeSpan.FromSeconds(5);
+    }
+});
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
 builder.Services.AddIdentityCore<ApplicationUser>(options =>
@@ -68,5 +84,6 @@ app.MapRazorComponents<App>()
 
 // Add additional endpoints required by the Identity /Account Razor components.
 app.MapAdditionalIdentityEndpoints();
+app.MapDefaultEndpoints();
 
 await app.RunAsync();
