@@ -21,10 +21,7 @@ public sealed partial class Register
 
     private string? Message => _identityErrors is null ? null : $"Error: {string.Join(", ", _identityErrors.Select(error => error.Description))}";
 
-    protected override void OnInitialized()
-    {
-        Input ??= new();
-    }
+    protected override void OnInitialized() => Input ??= new();
 
     public async Task RegisterUserAsync(EditContext editContext)
     {
@@ -71,10 +68,10 @@ public sealed partial class Register
         {
             return Activator.CreateInstance<ApplicationUser>();
         }
-        catch
+        catch (Exception exception)
         {
             throw new InvalidOperationException($"Can't create an instance of '{nameof(ApplicationUser)}'. " +
-                $"Ensure that '{nameof(ApplicationUser)}' is not an abstract class and has a parameterless constructor.");
+                $"Ensure that '{nameof(ApplicationUser)}' is not an abstract class and has a parameterless constructor.", exception);
         }
     }
 

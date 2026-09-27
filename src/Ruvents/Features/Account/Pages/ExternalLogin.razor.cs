@@ -158,10 +158,10 @@ public sealed partial class ExternalLogin
         {
             return Activator.CreateInstance<ApplicationUser>();
         }
-        catch
+        catch (Exception exception)
         {
             throw new InvalidOperationException($"Can't create an instance of '{nameof(ApplicationUser)}'. " +
-                $"Ensure that '{nameof(ApplicationUser)}' is not an abstract class and has a parameterless constructor");
+                $"Ensure that '{nameof(ApplicationUser)}' is not an abstract class and has a parameterless constructor", exception);
         }
     }
 
