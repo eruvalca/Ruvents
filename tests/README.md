@@ -6,8 +6,8 @@ the CLI and editor find `global.json` and `Ruvents.slnx`.
 
 | Project | Scope |
 | --- | --- |
-| `Ruvents.UnitTests` | Server logic, starting with `IdentityRedirectManager`. |
-| `Ruvents.ComponentTests` | Blazor rendering and interactions using bUnit, starting with the shared UI's `Counter`. |
+| `Ruvents.UnitTests` | Server account services, outcome decoding, and `IdentityRedirectManager`. |
+| `Ruvents.ComponentTests` | Account page rendering and interactions using bUnit, plus the shared UI's `Counter`. |
 
 ## Supported stack
 
@@ -19,6 +19,7 @@ Stable versions selected on September 26, 2026:
 | bunit (component project only) | 2.11.3 |
 | xunit.v3.core.mtp-v2 | 4.0.1 |
 | Shouldly | 4.3.0 |
+| NSubstitute (account tests) | 6.2.0 |
 | Microsoft.Testing.Platform / Platform.MSBuild | 2.4.1 |
 | Microsoft.Testing.Extensions.TrxReport | 2.4.1 |
 | Microsoft.Testing.Extensions.CodeCoverage | 18.11.2 |
@@ -35,8 +36,11 @@ The root build props recognize project names ending in `.UnitTests` or `.Compone
 evaluating shared analyzer references. Tests inherit nullable analysis, code style
 rules, and warnings-as-errors. xUnit test classes are public and sealed; their
 type-level CA1515 suppression documents the discovery requirement. The server
-grants only `Ruvents.UnitTests` access to its internal types. The component project
-uses the Razor SDK and references `Ruvents.UI` directly; it needs no internal access.
+grants `Ruvents.UnitTests` and `Ruvents.ComponentTests` access to its internal types.
+The component project uses the Razor SDK and references both `Ruvents.UI` and the
+server project. The server also grants `DynamicProxyGenAssembly2` internal access
+so NSubstitute can proxy Identity dependencies closed over the internal
+`ApplicationUser` type.
 
 `global.json` selects native .NET 10 MTP mode. Do not add VSTest packages
 (`Microsoft.NET.Test.Sdk`, `xunit.runner.visualstudio`) or the legacy
@@ -172,6 +176,17 @@ particular, do not add the historical
 stable extension's manifest.
 
 ## Initial test scope
+
+The account outcome suite exercises the real sign-in, passkey, registration,
+email-change, and two-factor services with substituted Identity dependencies.
+It verifies each outcome, payloads, operation ordering, short-circuited failures,
+credential/token decoding, and the passkey limit. Component tests exercise the
+real pages and services to check validation, redirects, account-privacy responses,
+partial-failure messages, and recovery-code rendering. Every test owns its mutable
+state; no database, Aspire process, browser, or external provider is required.
+
+The following initial-scope descriptions and acceptance records document the
+original test setup before the account outcome suite was added.
 
 The 16 server unit cases cover null/empty/relative destinations, absolute destinations within
 the application, rejection of external destinations, query replacement and

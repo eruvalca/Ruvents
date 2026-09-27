@@ -1,15 +1,15 @@
 using System.ComponentModel.DataAnnotations;
-using System.Text;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.WebUtilities;
 using Ruvents.Data;
+using Ruvents.Features.Account.Models;
 
 namespace Ruvents.Features.Account.Pages;
 
 public sealed partial class ResetPassword
 {
     private IEnumerable<IdentityError>? _identityErrors;
+    private bool _hasValidResetLink;
 
     [SupplyParameterFromForm]
     private InputModel Input { get; set; } = default!;
@@ -23,17 +23,21 @@ public sealed partial class ResetPassword
     {
         Input ??= new();
 
-        if (Code is null)
-        {
-            RedirectManager.RedirectTo("Account/InvalidPasswordReset");
-            return;
-        }
-
-        Input.Code = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(Code));
+        TokenDecodeOutcome.Decode(Code).Switch(
+            token =>
+            {
+                Input.Code = token.Value;
+                _hasValidResetLink = true;
+            },
+            _ => RedirectManager.RedirectTo("Account/InvalidPasswordReset"));
     }
 
     private async Task OnValidSubmitAsync()
     {
+        if (!_hasValidResetLink)
+        {
+            return;
+        }
         var user = await UserManager.FindByEmailAsync(Input.Email);
         if (user is null)
         {

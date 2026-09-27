@@ -1,8 +1,7 @@
-using System.Text;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.WebUtilities;
 using Ruvents.Data;
+using Ruvents.Features.Account.Models;
 
 namespace Ruvents.Features.Account.Pages;
 
@@ -35,9 +34,17 @@ public sealed partial class ConfirmEmail
         }
         else
         {
-            var code = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(Code));
-            var result = await UserManager.ConfirmEmailAsync(user, code);
-            _statusMessage = result.Succeeded ? "Thank you for confirming your email." : "Error confirming your email.";
+            await TokenDecodeOutcome.Decode(Code).Match<Task>(
+                async token =>
+                {
+                    var result = await UserManager.ConfirmEmailAsync(user, token.Value);
+                    _statusMessage = result.Succeeded ? "Thank you for confirming your email." : "Error confirming your email.";
+                },
+                _ =>
+                {
+                    _statusMessage = "Error confirming your email.";
+                    return Task.CompletedTask;
+                });
         }
     }
 }

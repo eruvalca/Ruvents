@@ -8,6 +8,7 @@
 @using Ruvents.Data
 
 @inject UserManager<ApplicationUser> UserManager
+@inject AccountTwoFactorService AccountTwoFactor
 @inject UrlEncoder UrlEncoder
 @inject IdentityRedirectManager RedirectManager
 @inject ILogger<EnableAuthenticator> Logger
@@ -18,7 +19,7 @@
 {
     <ShowRecoveryCodes RecoveryCodes="_recoveryCodes" StatusMessage="@_message" />
 }
-else
+else if (_sharedKey is not null)
 {
     <StatusMessage Message="@_message" />
     <h3>Configure authenticator app</h3>
@@ -63,4 +64,8 @@ else
             </li>
         </ol>
     </div>
+}
+else
+{
+    <StatusMessage Message="@_message" />
 }

@@ -4,12 +4,13 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Identity;
 using Ruvents.Data;
 using Ruvents.Features.Account.Models;
+using Ruvents.Features.Account.Services;
 
 namespace Ruvents.Features.Account.Pages.Manage;
 
 public sealed partial class Passkeys
 {
-    private const int MaxPasskeyCount = 100;
+    private const int MaxPasskeyCount = AccountPasskeyService.MaxPasskeyCount;
 
     private ApplicationUser? _user;
     private IList<UserPasskeyInfo>? _currentPasskeys;
@@ -47,41 +48,18 @@ public sealed partial class Passkeys
             return;
         }
 
-        if (!string.IsNullOrEmpty(Input.Error))
-        {
-            RedirectManager.RedirectToCurrentPageWithStatus($"Error: {Input.Error}", HttpContext);
-            return;
-        }
-
-        if (string.IsNullOrEmpty(Input.CredentialJson))
-        {
-            RedirectManager.RedirectToCurrentPageWithStatus("Error: The browser did not provide a passkey.", HttpContext);
-            return;
-        }
-
-        if (_currentPasskeys!.Count >= MaxPasskeyCount)
-        {
-            RedirectManager.RedirectToCurrentPageWithStatus($"Error: You have reached the maximum number of allowed passkeys.", HttpContext);
-            return;
-        }
-
-        var attestationResult = await SignInManager.PerformPasskeyAttestationAsync(Input.CredentialJson);
-        if (!attestationResult.Succeeded)
-        {
-            RedirectManager.RedirectToCurrentPageWithStatus($"Error: Could not add the passkey: {attestationResult.Failure.Message}", HttpContext);
-            return;
-        }
-
-        var addPasskeyResult = await UserManager.AddOrUpdatePasskeyAsync(_user, attestationResult.Passkey);
-        if (!addPasskeyResult.Succeeded)
-        {
-            RedirectManager.RedirectToCurrentPageWithStatus("Error: The passkey could not be added to your account.", HttpContext);
-            return;
-        }
-
-        // Immediately prompt the user to enter a name for the credential
-        var credentialIdBase64Url = Base64Url.EncodeToString(attestationResult.Passkey.CredentialId);
-        RedirectManager.RedirectTo($"Account/Manage/RenamePasskey/{credentialIdBase64Url}");
+        await PasskeySubmission.From(Input).Match<Task>(
+            _ => CompleteWithStatusAsync("Error: The browser did not provide a passkey."),
+            async credential =>
+            {
+                var result = await AccountPasskeys.AddAsync(_user, credential.Json, _currentPasskeys!.Count);
+                result.Switch(
+                    added => RedirectManager.RedirectTo($"Account/Manage/RenamePasskey/{Base64Url.EncodeToString(added.CredentialId)}"),
+                    _ => ShowStatus("Error: You have reached the maximum number of allowed passkeys."),
+                    rejected => ShowStatus($"Error: Could not add the passkey: {rejected.Message}"),
+                    _ => ShowStatus("Error: The passkey could not be added to your account."));
+            },
+            error => CompleteWithStatusAsync($"Error: {error.Message}"));
     }
 
     private async Task UpdatePasskeyAsync()
@@ -108,24 +86,20 @@ public sealed partial class Passkeys
             return;
         }
 
-        byte[] credentialId;
-        try
-        {
-            credentialId = Base64Url.DecodeFromChars(CredentialId);
-        }
-        catch (FormatException)
-        {
-            RedirectManager.RedirectToCurrentPageWithStatus("Error: The specified passkey ID had an invalid format.", HttpContext);
-            return;
-        }
+        await CredentialIdOutcome.Decode(CredentialId).Match<Task>(
+            async decoded =>
+            {
+                var result = await UserManager.RemovePasskeyAsync(_user, decoded.Bytes);
+                ShowStatus(result.Succeeded ? "Passkey deleted successfully." : "Error: The passkey could not be deleted.");
+            },
+            _ => CompleteWithStatusAsync("Error: The specified passkey ID had an invalid format."));
+    }
 
-        var result = await UserManager.RemovePasskeyAsync(_user, credentialId);
-        if (!result.Succeeded)
-        {
-            RedirectManager.RedirectToCurrentPageWithStatus("Error: The passkey could not be deleted.", HttpContext);
-            return;
-        }
+    private void ShowStatus(string message) => RedirectManager.RedirectToCurrentPageWithStatus(message, HttpContext);
 
-        RedirectManager.RedirectToCurrentPageWithStatus("Passkey deleted successfully.", HttpContext);
+    private Task CompleteWithStatusAsync(string message)
+    {
+        ShowStatus(message);
+        return Task.CompletedTask;
     }
 }

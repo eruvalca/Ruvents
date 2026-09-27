@@ -50,50 +50,49 @@ public sealed partial class EnableAuthenticator
             return;
         }
 
-        // Strip spaces and hyphens
-        var verificationCode = Input.Code
-            .Replace(" ", string.Empty, StringComparison.Ordinal)
-            .Replace("-", string.Empty, StringComparison.Ordinal);
-
-        var is2faTokenValid = await UserManager.VerifyTwoFactorTokenAsync(
-            _user, UserManager.Options.Tokens.AuthenticatorTokenProvider, verificationCode);
-
-        if (!is2faTokenValid)
+        if (_sharedKey is null)
         {
-            _message = "Error: Verification code is invalid.";
             return;
         }
+        _recoveryCodes = null;
+        var result = await AccountTwoFactor.EnableAsync(_user, Input.Code);
+        await result.Match<Task>(
+            _ => SetMessageAsync("Error: Verification code is invalid."),
+            _ => CompleteEnableAsync(_user, null),
+            enabled => CompleteEnableAsync(_user, enabled.Codes),
+            _ => SetMessageAsync("Error: Two-factor authentication could not be enabled. Please try again."),
+            _ => SetMessageAsync("Error: Two-factor authentication is enabled, but recovery codes could not be generated. Generate recovery codes from your two-factor authentication settings."));
+    }
 
-        await UserManager.SetTwoFactorEnabledAsync(_user, true);
-        var userId = await UserManager.GetUserIdAsync(_user);
+    private async Task CompleteEnableAsync(ApplicationUser user, string[]? codes)
+    {
+        var userId = await UserManager.GetUserIdAsync(user);
         LogAuthenticatorEnabled(Logger, userId);
-
         _message = "Your authenticator app has been verified.";
-
-        if (await UserManager.CountRecoveryCodesAsync(_user) == 0)
-        {
-            _recoveryCodes = (await UserManager.GenerateNewTwoFactorRecoveryCodesAsync(_user, 10))?.ToArray();
-        }
-        else
+        _recoveryCodes = codes;
+        if (codes is null)
         {
             RedirectManager.RedirectToWithStatus("Account/Manage/TwoFactorAuthentication", _message, HttpContext);
         }
     }
 
+    private Task SetMessageAsync(string message)
+    {
+        _message = message;
+        return Task.CompletedTask;
+    }
+
     private async ValueTask LoadSharedKeyAndQrCodeUriAsync(ApplicationUser user)
     {
-        // Load the authenticator key & QR code URI to display on the form
-        var unformattedKey = await UserManager.GetAuthenticatorKeyAsync(user);
-        if (string.IsNullOrEmpty(unformattedKey))
-        {
-            await UserManager.ResetAuthenticatorKeyAsync(user);
-            unformattedKey = await UserManager.GetAuthenticatorKeyAsync(user);
-        }
-
-        _sharedKey = FormatKey(unformattedKey!);
-
-        var email = await UserManager.GetEmailAsync(user);
-        _authenticatorUri = GenerateQrCodeUri(email!, unformattedKey!);
+        var result = await AccountTwoFactor.PrepareAsync(user);
+        await result.Match<Task>(
+            async ready =>
+            {
+                _sharedKey = FormatKey(ready.Key);
+                var email = await UserManager.GetEmailAsync(user);
+                _authenticatorUri = GenerateQrCodeUri(email!, ready.Key);
+            },
+            _ => SetMessageAsync("Error: The authenticator key could not be initialized. Please try again."));
     }
 
     [SuppressMessage("Globalization", "CA1308:Normalize strings to uppercase",

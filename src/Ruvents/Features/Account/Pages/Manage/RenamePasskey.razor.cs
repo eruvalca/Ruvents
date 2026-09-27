@@ -1,4 +1,3 @@
-using System.Buffers.Text;
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Identity;
@@ -31,29 +30,22 @@ public sealed partial class RenamePasskey
             return;
         }
 
-        byte[] credentialId;
-        try
-        {
-            credentialId = Base64Url.DecodeFromChars(Id);
-        }
-        catch (FormatException)
-        {
-            RedirectManager.RedirectToWithStatus("Account/Manage/Passkeys", "Error: The specified passkey ID had an invalid format.", HttpContext);
-            return;
-        }
-
-        _passkey = await UserManager.GetPasskeyAsync(_user, credentialId);
-        if (_passkey is null)
-        {
-            RedirectManager.RedirectToWithStatus("Account/Manage/Passkeys", "Error: The specified passkey could not be found.", HttpContext);
-            return;
-        }
+        var result = await AccountPasskeys.FindAsync(_user, Id);
+        result.Switch(
+            found => _passkey = found.Passkey,
+            _ => RedirectManager.RedirectToWithStatus("Account/Manage/Passkeys", "Error: The specified passkey ID had an invalid format.", HttpContext),
+            _ => RedirectManager.RedirectToWithStatus("Account/Manage/Passkeys", "Error: The specified passkey could not be found.", HttpContext));
     }
 
     private async Task RenameAsync()
     {
-        _passkey!.Name = Input.Name;
-        var result = await UserManager.AddOrUpdatePasskeyAsync(_user!, _passkey);
+        // Static SSR navigation does not throw; a POST can still dispatch after initialization redirects.
+        if (_user is null || _passkey is null)
+        {
+            return;
+        }
+        _passkey.Name = Input.Name;
+        var result = await UserManager.AddOrUpdatePasskeyAsync(_user, _passkey);
         if (!result.Succeeded)
         {
             RedirectManager.RedirectToWithStatus("Account/Manage/Passkeys", "Error: The passkey could not be updated.", HttpContext);

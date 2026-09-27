@@ -30,27 +30,29 @@ public sealed partial class LoginWith2fa
 
     private async Task OnValidSubmitAsync()
     {
-        var authenticatorCode = Input.TwoFactorCode!
-            .Replace(" ", string.Empty, StringComparison.Ordinal)
-            .Replace("-", string.Empty, StringComparison.Ordinal);
-        var result = await SignInManager.TwoFactorAuthenticatorSignInAsync(authenticatorCode, RememberMe, Input.RememberMachine);
+        var result = await AccountSignIn.AuthenticatorAsync(Input.TwoFactorCode!, RememberMe, Input.RememberMachine);
         var userId = await UserManager.GetUserIdAsync(_user);
 
-        if (result.Succeeded)
-        {
-            LogUserLoggedInWithTwoFactor(Logger, userId);
-            RedirectManager.RedirectTo(ReturnUrl);
-        }
-        else if (result.IsLockedOut)
-        {
-            LogUserLockedOut(Logger, userId);
-            RedirectManager.RedirectTo("Account/Lockout");
-        }
-        else
-        {
-            LogInvalidAuthenticatorCode(Logger, userId);
-            _message = "Error: Invalid authenticator code.";
-        }
+        result.Switch(
+            _ =>
+            {
+                LogUserLoggedInWithTwoFactor(Logger, userId);
+                RedirectManager.RedirectTo(ReturnUrl);
+            },
+            _ => ShowInvalidCode(userId),
+            _ =>
+            {
+                LogUserLockedOut(Logger, userId);
+                RedirectManager.RedirectTo("Account/Lockout");
+            },
+            _ => ShowInvalidCode(userId),
+            _ => ShowInvalidCode(userId));
+    }
+
+    private void ShowInvalidCode(string userId)
+    {
+        LogInvalidAuthenticatorCode(Logger, userId);
+        _message = "Error: Invalid authenticator code.";
     }
 
     [LoggerMessage(EventId = 1003, Level = LogLevel.Information, Message = "User with ID '{UserId}' logged in with 2fa.")]

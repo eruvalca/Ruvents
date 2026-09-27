@@ -9,6 +9,9 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="Ruvents.UnitTests" />
+    <InternalsVisibleTo Include="Ruvents.ComponentTests" />
+    <!-- NSubstitute proxies Identity dependencies whose generic user type is internal. -->
+    <InternalsVisibleTo Include="DynamicProxyGenAssembly2" />
   </ItemGroup>
 
   <ItemGroup>
@@ -17,6 +20,8 @@
     <ProjectReference Include="..\Ruvents.SharedKernel\Ruvents.SharedKernel.csproj" />
     <ProjectReference Include="..\Ruvents.ServiceDefaults\Ruvents.ServiceDefaults.csproj" />
     <PackageReference Include="Aspire.Npgsql.EntityFrameworkCore.PostgreSQL" />
+    <PackageReference Include="OneOf" />
+    <PackageReference Include="OneOf.SourceGenerator" PrivateAssets="all" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" />
     <PackageReference Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" />

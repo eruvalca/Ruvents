@@ -27,27 +27,30 @@ public sealed partial class LoginWithRecoveryCode
 
     private async Task OnValidSubmitAsync()
     {
-        var recoveryCode = Input.RecoveryCode.Replace(" ", string.Empty, StringComparison.Ordinal);
-
-        var result = await SignInManager.TwoFactorRecoveryCodeSignInAsync(recoveryCode);
+        var result = await AccountSignIn.RecoveryCodeAsync(Input.RecoveryCode);
 
         var userId = await UserManager.GetUserIdAsync(_user);
 
-        if (result.Succeeded)
-        {
-            LogUserLoggedInWithRecoveryCode(Logger, userId);
-            RedirectManager.RedirectTo(ReturnUrl);
-        }
-        else if (result.IsLockedOut)
-        {
-            LogUserLockedOut(Logger);
-            RedirectManager.RedirectTo("Account/Lockout");
-        }
-        else
-        {
-            LogInvalidRecoveryCode(Logger, userId);
-            _message = "Error: Invalid recovery code entered.";
-        }
+        result.Switch(
+            _ =>
+            {
+                LogUserLoggedInWithRecoveryCode(Logger, userId);
+                RedirectManager.RedirectTo(ReturnUrl);
+            },
+            _ => ShowInvalidCode(userId),
+            _ =>
+            {
+                LogUserLockedOut(Logger);
+                RedirectManager.RedirectTo("Account/Lockout");
+            },
+            _ => ShowInvalidCode(userId),
+            _ => ShowInvalidCode(userId));
+    }
+
+    private void ShowInvalidCode(string userId)
+    {
+        LogInvalidRecoveryCode(Logger, userId);
+        _message = "Error: Invalid recovery code entered.";
     }
 
     [LoggerMessage(EventId = 1006, Level = LogLevel.Information, Message = "User with ID '{UserId}' logged in with a recovery code.")]

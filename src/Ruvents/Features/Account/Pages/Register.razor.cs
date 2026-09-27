@@ -25,19 +25,18 @@ public sealed partial class Register
 
     public async Task RegisterUserAsync(EditContext editContext)
     {
-        var user = CreateUser();
+        var result = await AccountRegistration.PasswordAsync(Input.Email, Input.Password);
+        await result.Match<Task>(
+            created => CompleteRegistrationAsync(created.User),
+            rejected =>
+            {
+                _identityErrors = rejected.Errors;
+                return Task.CompletedTask;
+            });
+    }
 
-        await UserStore.SetUserNameAsync(user, Input.Email, CancellationToken.None);
-        var emailStore = GetEmailStore();
-        await emailStore.SetEmailAsync(user, Input.Email, CancellationToken.None);
-        var result = await UserManager.CreateAsync(user, Input.Password);
-
-        if (!result.Succeeded)
-        {
-            _identityErrors = result.Errors;
-            return;
-        }
-
+    private async Task CompleteRegistrationAsync(ApplicationUser user)
+    {
         LogUserCreatedWithPassword(Logger);
 
         var userId = await UserManager.GetUserIdAsync(user);
@@ -60,28 +59,6 @@ public sealed partial class Register
             await SignInManager.SignInAsync(user, isPersistent: false);
             RedirectManager.RedirectTo(ReturnUrl);
         }
-    }
-
-    private static ApplicationUser CreateUser()
-    {
-        try
-        {
-            return Activator.CreateInstance<ApplicationUser>();
-        }
-        catch (Exception exception)
-        {
-            throw new InvalidOperationException($"Can't create an instance of '{nameof(ApplicationUser)}'. " +
-                $"Ensure that '{nameof(ApplicationUser)}' is not an abstract class and has a parameterless constructor.", exception);
-        }
-    }
-
-    private IUserEmailStore<ApplicationUser> GetEmailStore()
-    {
-        if (!UserManager.SupportsUserEmail)
-        {
-            throw new NotSupportedException("The default UI requires a user store with email support.");
-        }
-        return (IUserEmailStore<ApplicationUser>)UserStore;
     }
 
     [LoggerMessage(EventId = 1011, Level = LogLevel.Information, Message = "User created a new account with password.")]

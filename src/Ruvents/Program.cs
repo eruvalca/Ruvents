@@ -20,6 +20,11 @@ builder.Services.AddRazorComponents()
 
 builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddScoped<IdentityRedirectManager>();
+builder.Services.AddScoped<AccountSignInService>();
+builder.Services.AddScoped<AccountPasskeyService>();
+builder.Services.AddScoped<AccountRegistrationService>();
+builder.Services.AddScoped<AccountEmailChangeService>();
+builder.Services.AddScoped<AccountTwoFactorService>();
 builder.Services.AddScoped<AuthenticationStateProvider, IdentityRevalidatingAuthenticationStateProvider>();
 
 builder.Services.AddAuthentication(options =>

@@ -25,7 +25,7 @@ public sealed partial class GenerateRecoveryCodes
         var isTwoFactorEnabled = await UserManager.GetTwoFactorEnabledAsync(_user);
         if (!isTwoFactorEnabled)
         {
-            throw new InvalidOperationException("Cannot generate recovery codes for user because they do not have 2FA enabled.");
+            RedirectManager.RedirectToWithStatus("Account/Manage/TwoFactorAuthentication", "Error: Enable two-factor authentication before generating recovery codes.", HttpContext);
         }
     }
 
@@ -37,11 +37,26 @@ public sealed partial class GenerateRecoveryCodes
             return;
         }
 
-        var userId = await UserManager.GetUserIdAsync(_user);
-        _recoveryCodes = (await UserManager.GenerateNewTwoFactorRecoveryCodesAsync(_user, 10))?.ToArray();
-        _message = "You have generated new recovery codes.";
-
-        LogRecoveryCodesGenerated(Logger, userId);
+        _recoveryCodes = null;
+        var result = await AccountTwoFactor.GenerateRecoveryCodesAsync(_user);
+        await result.Match<Task>(
+            async generated =>
+            {
+                _recoveryCodes = generated.Codes;
+                _message = "You have generated new recovery codes.";
+                var userId = await UserManager.GetUserIdAsync(_user);
+                LogRecoveryCodesGenerated(Logger, userId);
+            },
+            _ =>
+            {
+                RedirectManager.RedirectToWithStatus("Account/Manage/TwoFactorAuthentication", "Error: Enable two-factor authentication before generating recovery codes.", HttpContext);
+                return Task.CompletedTask;
+            },
+            _ =>
+            {
+                _message = "Error: Recovery codes could not be generated. Please try again.";
+                return Task.CompletedTask;
+            });
     }
 
     [LoggerMessage(EventId = 1016, Level = LogLevel.Information, Message = "User with ID '{UserId}' has generated new 2FA recovery codes.")]

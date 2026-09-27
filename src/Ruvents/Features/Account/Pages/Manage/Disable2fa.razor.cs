@@ -22,7 +22,7 @@ public sealed partial class Disable2fa
 
         if (HttpMethods.IsGet(HttpContext.Request.Method) && !await UserManager.GetTwoFactorEnabledAsync(_user))
         {
-            throw new InvalidOperationException("Cannot disable 2FA for user as it's not currently enabled.");
+            RedirectManager.RedirectToWithStatus("Account/Manage/TwoFactorAuthentication", "Two-factor authentication is already disabled.", HttpContext);
         }
     }
 
@@ -34,18 +34,24 @@ public sealed partial class Disable2fa
             return;
         }
 
-        var disable2faResult = await UserManager.SetTwoFactorEnabledAsync(_user, false);
-        if (!disable2faResult.Succeeded)
-        {
-            throw new InvalidOperationException("Unexpected error occurred disabling 2FA.");
-        }
+        var result = await AccountTwoFactor.DisableAsync(_user);
+        await result.Match<Task>(
+            async _ =>
+            {
+                var userId = await UserManager.GetUserIdAsync(_user);
+                LogTwoFactorDisabled(Logger, userId);
+                RedirectManager.RedirectToWithStatus(
+                    "Account/Manage/TwoFactorAuthentication",
+                    "2fa has been disabled. You can reenable 2fa when you setup an authenticator app", HttpContext);
+            },
+            _ => ShowStatusAsync("Account/Manage/TwoFactorAuthentication", "Two-factor authentication is already disabled."),
+            _ => ShowStatusAsync("Account/Manage/Disable2fa", "Error: Two-factor authentication could not be disabled. Please try again."));
+    }
 
-        var userId = await UserManager.GetUserIdAsync(_user);
-        LogTwoFactorDisabled(Logger, userId);
-        RedirectManager.RedirectToWithStatus(
-            "Account/Manage/TwoFactorAuthentication",
-            "2fa has been disabled. You can reenable 2fa when you setup an authenticator app",
-            HttpContext);
+    private Task ShowStatusAsync(string destination, string message)
+    {
+        RedirectManager.RedirectToWithStatus(destination, message, HttpContext);
+        return Task.CompletedTask;
     }
 
     [LoggerMessage(EventId = 1014, Level = LogLevel.Information, Message = "User with ID '{UserId}' has disabled 2fa.")]

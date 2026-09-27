@@ -1,8 +1,7 @@
-using System.Text;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.WebUtilities;
 using Ruvents.Data;
+using Ruvents.Features.Account.Models;
 
 namespace Ruvents.Features.Account.Pages;
 
@@ -34,28 +33,23 @@ public sealed partial class ConfirmEmailChange
         var user = await UserManager.FindByIdAsync(UserId);
         if (user is null)
         {
-            _message = "Unable to find user with Id '{userId}'";
+            _message = $"Unable to find user with Id '{UserId}'";
             return;
         }
 
-        var code = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(Code));
-        var result = await UserManager.ChangeEmailAsync(user, Email, code);
-        if (!result.Succeeded)
-        {
-            _message = "Error changing email.";
-            return;
-        }
-
-        // In our UI email and user name are one and the same, so when we update the email
-        // we need to update the user name.
-        var setUserNameResult = await UserManager.SetUserNameAsync(user, Email);
-        if (!setUserNameResult.Succeeded)
-        {
-            _message = "Error changing user name.";
-            return;
-        }
-
-        await SignInManager.RefreshSignInAsync(user);
-        _message = "Thank you for confirming your email change.";
+        await TokenDecodeOutcome.Decode(Code).Match<Task>(
+            async token =>
+            {
+                var result = await AccountEmailChange.ChangeAsync(user, Email, token.Value);
+                _message = result.Match(
+                    _ => "Thank you for confirming your email change.",
+                    _ => "Error changing email.",
+                    _ => "Error: Your email was changed, but your user name could not be updated.");
+            },
+            _ =>
+            {
+                RedirectManager.RedirectToWithStatus("Account/Login", "Error: Invalid email change confirmation link.", HttpContext);
+                return Task.CompletedTask;
+            });
     }
 }

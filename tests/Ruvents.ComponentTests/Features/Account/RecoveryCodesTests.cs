@@ -1,0 +1,79 @@
+using System.Diagnostics.CodeAnalysis;
+using Bunit;
+using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.DependencyInjection;
+using NSubstitute;
+using Ruvents.Features.Account.Pages.Manage;
+using Shouldly;
+using Xunit;
+
+namespace Ruvents.ComponentTests.Features.Account;
+
+[SuppressMessage("Maintainability", "CA1515:Consider making public types internal",
+    Justification = "xUnit requires public test classes for discovery.")]
+public sealed class RecoveryCodesTests
+{
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task MissingRecoveryCodesShowsVisibleFailureWithoutSuccessLogAsync(bool empty)
+    {
+        await using var context = new BunitContext();
+        var account = AccountTestContext.Configure(context);
+        var user = account.Authenticate();
+        var logger = AccountTestContext.CaptureLogs<GenerateRecoveryCodes>(context);
+        account.Users.GetTwoFactorEnabledAsync(user).Returns(true);
+        account.Users.GenerateNewTwoFactorRecoveryCodesAsync(user, 10).Returns(empty ? [] : (IEnumerable<string>?)null);
+        var component = account.Render<GenerateRecoveryCodes>(context);
+
+        await component.Find("form").SubmitAsync();
+
+        await component.WaitForAssertionAsync(() => component.Find(".alert-danger").TextContent
+            .ShouldBe("Error: Recovery codes could not be generated. Please try again."));
+        component.FindAll(".recovery-code").ShouldBeEmpty();
+        component.FindAll(".alert-success").ShouldBeEmpty();
+        AccountTestContext.LoggedEventIds(logger).ShouldNotContain(1016);
+    }
+
+    [Fact]
+    public async Task GeneratedRecoveryCodesAreDisplayedWithSuccessMessageAndLogAsync()
+    {
+        await using var context = new BunitContext();
+        var account = AccountTestContext.Configure(context);
+        var user = account.Authenticate();
+        var logger = AccountTestContext.CaptureLogs<GenerateRecoveryCodes>(context);
+        account.Users.GetTwoFactorEnabledAsync(user).Returns(true);
+        string[] codes = ["first-code", "second-code"];
+        account.Users.GenerateNewTwoFactorRecoveryCodesAsync(user, 10).Returns(codes);
+        var component = account.Render<GenerateRecoveryCodes>(context);
+
+        await component.Find("form").SubmitAsync();
+
+        await component.WaitForAssertionAsync(() => component.FindAll(".recovery-code").Select(element => element.TextContent).ShouldBe(codes));
+        component.Find(".alert-success").TextContent.ShouldBe("You have generated new recovery codes.");
+        AccountTestContext.LoggedEventIds(logger).ShouldContain(1016);
+        await account.Users.Received(1).GenerateNewTwoFactorRecoveryCodesAsync(user, 10);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task DisabledTwoFactorRedirectsAndCannotGenerateEvenAfterPreviouslyEnabledPageAsync(bool initiallyEnabled)
+    {
+        await using var context = new BunitContext();
+        var account = AccountTestContext.Configure(context);
+        var user = account.Authenticate();
+        var logger = AccountTestContext.CaptureLogs<GenerateRecoveryCodes>(context);
+        account.Users.GetTwoFactorEnabledAsync(user).Returns(initiallyEnabled);
+        var component = account.Render<GenerateRecoveryCodes>(context);
+        account.Users.GetTwoFactorEnabledAsync(user).Returns(false);
+
+        await component.Find("form").SubmitAsync();
+
+        context.Services.GetRequiredService<NavigationManager>().Uri.ShouldBe("http://localhost/Account/Manage/TwoFactorAuthentication");
+        account.StatusCookie.ShouldContain("Enable two-factor authentication before generating recovery codes");
+        await account.Users.DidNotReceiveWithAnyArgs().GenerateNewTwoFactorRecoveryCodesAsync(default!, default);
+        AccountTestContext.LoggedEventIds(logger).ShouldNotContain(1016);
+    }
+}

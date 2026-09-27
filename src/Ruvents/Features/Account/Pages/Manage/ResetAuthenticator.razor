@@ -4,7 +4,7 @@
 @using Ruvents.Data
 
 @inject UserManager<ApplicationUser> UserManager
-@inject SignInManager<ApplicationUser> SignInManager
+@inject AccountTwoFactorService AccountTwoFactor
 @inject IdentityRedirectManager RedirectManager
 @inject ILogger<ResetAuthenticator> Logger
 
