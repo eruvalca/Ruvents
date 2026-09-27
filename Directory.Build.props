@@ -7,6 +7,11 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
 
+  <!-- Identify tests before evaluating analyzer references; project bodies and NuGet props load later. -->
+  <PropertyGroup Condition="'$(IsTestProject)' == '' and ($(MSBuildProjectName.EndsWith('.UnitTests')) or $(MSBuildProjectName.EndsWith('.ComponentTests')))">
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
   <!-- Resolve the shared code-metrics thresholds from the repository root. -->
   <ItemGroup Condition="'$(MSBuildProjectExtension)' == '.csproj'">
     <AdditionalFiles Include="$(MSBuildThisFileDirectory)CodeMetricsConfig.txt" />

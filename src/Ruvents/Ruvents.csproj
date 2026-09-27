@@ -9,6 +9,7 @@
 
   <ItemGroup>
     <None Update="Data\app.db" CopyToOutputDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
+    <InternalsVisibleTo Include="Ruvents.UnitTests" />
   </ItemGroup>
 
   <ItemGroup>
