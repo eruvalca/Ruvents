@@ -5,6 +5,8 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
+using OpenTelemetry.Instrumentation.AspNetCore;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
 using Ruvents.ServiceDefaults;
@@ -18,6 +20,27 @@ namespace Ruvents.UnitTests.ServiceDefaults;
     Justification = "xUnit requires public test classes for discovery.")]
 public sealed class ServiceDefaultsExtensionsTests
 {
+    [Theory]
+    [InlineData("/health", false)]
+    [InlineData("/HEALTH/ready", false)]
+    [InlineData("/alive", false)]
+    [InlineData("/ALIVE/check", false)]
+    [InlineData("/healthcare", true)]
+    [InlineData("/alive-status", true)]
+    [InlineData("/events", true)]
+    public async Task TraceFilterOmitsHealthSegmentsWithoutDroppingApplicationRequestsAsync(string path, bool expected)
+    {
+        var builder = CreateBuilder(Environments.Development);
+        builder.ConfigureOpenTelemetry();
+        await using var app = builder.Build();
+        _ = app.Services.GetRequiredService<TracerProvider>();
+        var options = app.Services.GetRequiredService<IOptions<AspNetCoreTraceInstrumentationOptions>>().Value;
+        var http = new DefaultHttpContext();
+        http.Request.Path = path;
+
+        options.Filter.ShouldNotBeNull()(http).ShouldBe(expected);
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]

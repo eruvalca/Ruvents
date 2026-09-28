@@ -6,8 +6,8 @@ the CLI and editor find `global.json` and `Ruvents.slnx`.
 
 | Project | Scope |
 | --- | --- |
-| `Ruvents.UnitTests` | Account services and extensions, outcome decoding, `IdentityRedirectManager`, Identity routes, and service defaults. |
-| `Ruvents.ComponentTests` | Account page rendering and interactions using bUnit, account test helpers, and the shared UI's `Counter`. |
+| `Ruvents.UnitTests` | Account services and extensions, outcome decoding, redirects, authentication-state revalidation, Identity endpoint behavior, and service defaults. |
+| `Ruvents.ComponentTests` | Account sign-in and management workflows, validation, shared account components, navigation, error request IDs, and the shared UI's `Counter`, using bUnit. |
 
 ## Supported stack
 
@@ -20,6 +20,7 @@ Stable versions selected on September 26, 2026:
 | xunit.v3.core.mtp-v2 | 4.0.1 |
 | Shouldly | 4.3.0 |
 | NSubstitute (account tests) | 6.2.0 |
+| Bogus (locally seeded fake data) | 35.6.5 |
 | Microsoft.Testing.Platform / Platform.MSBuild | 2.4.1 |
 | Microsoft.Testing.Extensions.TrxReport | 2.4.1 |
 | Microsoft.Testing.Extensions.CodeCoverage | 18.11.2 |
@@ -47,6 +48,11 @@ so NSubstitute can proxy Identity dependencies closed over the internal
 `TestingPlatformDotnetTestSupport` bridge to these projects. bUnit provides the
 component renderer and comparison tools; xUnit and MTP provide discovery and
 execution, and Shouldly is the exclusive assertion library.
+
+Use Bogus for realistic generated fixture values with a per-instance seed
+(`UseSeed` or a locally assigned `Randomizer`). Do not set the global
+`Randomizer.Seed`: both test projects run test methods and theory rows in parallel.
+Keep explicit literals for boundaries, encoded tokens, and expected results.
 
 Account tests use `context.ConfigureAccount()` and `context.CaptureLogs<TComponent>()`
 from `BunitAccountExtensions`. The resulting `AccountTestContext` holds each test's
@@ -182,6 +188,49 @@ disabled. No `launch.json` or custom test protocol setting is required. In
 particular, do not add the historical
 `dotnet.testWindow.useTestingPlatformProtocol`: it is absent from the supported
 stable extension's manifest.
+
+## Coverage expansion (September 28, 2026)
+
+The suite now has **413 passing cases**: 184 unit tests and 229 component tests,
+up from 235 cases. The 178 additions cover account management, authentication
+revalidation, endpoint responses, shared component contracts, navigation, and
+validation boundaries. They also verify failure paths do not write account data,
+refresh sessions, send email, or generate credentials unexpectedly.
+
+Validation completed with zero build warnings/errors and zero failed/skipped tests:
+
+```powershell
+dotnet build Ruvents.slnx --no-incremental
+dotnet test --solution Ruvents.slnx --no-build --report-trx --coverage --coverage-output-format cobertura --results-directory TestResults/final
+```
+
+Coverage below merges both projects' Cobertura reports by distinct source filename
+and line number, counting a line covered when either project executes it. It
+measures `Ruvents`, `Ruvents.UI`, and `Ruvents.ServiceDefaults`; it is line coverage,
+not a claim of complete branch or browser coverage. The collector configuration
+was not changed to exclude uncovered files.
+
+| Measured scope | Before | After |
+| --- | --- | --- |
+| Handwritten application code, excluding generated files, migrations, and startup | 918 / 1,480 (62.03%) | 1,449 / 1,480 (97.91%) |
+| All instrumented production code, including those categories | 1,100 / 2,954 (37.24%) | 1,794 / 2,954 (60.73%) |
+
+The 31 remaining application lines comprise 20 defensive guard lines whose states
+are prevented by initialization or absent forms, three OTLP exporter configuration
+lines, and eight trivial lines (no-op email methods, layout/content slots, the
+database-context constructor, and the fixed revalidation interval). Tests do not
+mutate cached private state or invoke private event handlers merely to cover them.
+Generated logging/union code, migrations, startup, build-tool execution, actual
+WebAuthn JavaScript, database persistence, and live external providers remain
+outside this unit/component testing scope.
+
+Endpoint tests invoke mapped delegates against in-memory HTTP contexts with
+substituted dependencies; they never start their application or send a network
+request. Revalidation tests invoke the framework's protected validation hook
+directly, avoiding its 30-minute background timer. bUnit tests use actual form
+events; the existing form helper supplies posted values only where bUnit does not
+run static SSR form mapping. For example, an empty phone string fails validation,
+while an explicitly null posted phone value removes the saved number.
 
 ## Initial test scope
 
