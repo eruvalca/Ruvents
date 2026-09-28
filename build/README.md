@@ -117,8 +117,11 @@ the build tooling; `Directory.Packages.props` holds their versions. References u
 | Roslynator.Analyzers | C# simplification and style checks |
 | xunit.analyzers | xUnit test checks; included only when `IsTestProject` is `true` |
 
-There are currently no test projects. Adding xUnit analyzers does not add a test
-framework or select a test runner.
+`Ruvents.UnitTests` and `Ruvents.ComponentTests` use xUnit with native
+Microsoft.Testing.Platform integration. Shared build props include xUnit analyzers
+for these projects; analyzer references alone do not add a test framework or
+select a runner. See [tests/README.md](../tests/README.md) for the test stack and
+conventions.
 
 Compiler and analyzer warnings emitted during builds fail through
 `TreatWarningsAsErrors`. `.editorconfig` records the agreed style preferences and
