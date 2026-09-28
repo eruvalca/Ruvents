@@ -21,7 +21,7 @@ public sealed class CounterTests
             """
             <h1>Counter</h1>
             <p role="status">Current count: 0</p>
-            <button class="btn btn-primary">Click me</button>
+            <button>Click me</button>
             """);
 
         differences.ShouldBeEmpty();

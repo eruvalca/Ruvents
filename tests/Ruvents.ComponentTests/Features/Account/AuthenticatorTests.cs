@@ -38,7 +38,7 @@ public sealed class AuthenticatorTests
 
         var component = account.Render<EnableAuthenticator>(context);
 
-        component.Find(".alert-danger").TextContent.ShouldContain("authenticator");
+        component.Find(".notice[data-kind='error']").TextContent.ShouldContain("authenticator");
         component.FindAll("form").ShouldBeEmpty();
         await account.Users.DidNotReceiveWithAnyArgs().SetTwoFactorEnabledAsync(default!, default);
     }
@@ -60,9 +60,9 @@ public sealed class AuthenticatorTests
 
         await component.Find("form").SubmitAsync();
 
-        await component.WaitForAssertionAsync(() => component.Find(".alert-danger").TextContent.ShouldContain(expectedMessage));
+        await component.WaitForAssertionAsync(() => component.Find(".notice[data-kind='error']").TextContent.ShouldContain(expectedMessage));
         component.FindAll(".recovery-code").ShouldBeEmpty();
-        component.FindAll(".alert-success").ShouldBeEmpty();
+        component.FindAll(".notice[data-kind='success']").ShouldBeEmpty();
         logger.GetLoggedEventIds().ShouldNotContain(1015);
         if (!validCode)
         {
@@ -90,7 +90,7 @@ public sealed class AuthenticatorTests
         await component.Find("form").SubmitAsync();
 
         await component.WaitForAssertionAsync(() => component.FindAll(".recovery-code").Select(element => element.TextContent).ShouldBe(codes));
-        component.Find(".alert-success").TextContent.ShouldBe("Your authenticator app has been verified.");
+        component.Find(".notice[data-kind='success']").TextContent.ShouldBe("Your authenticator app has been verified.");
         component.FindAll("form").ShouldBeEmpty();
         logger.GetLoggedEventIds().ShouldContain(1015);
     }

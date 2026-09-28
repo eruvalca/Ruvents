@@ -29,10 +29,10 @@ public sealed class RecoveryCodesTests
 
         await component.Find("form").SubmitAsync();
 
-        await component.WaitForAssertionAsync(() => component.Find(".alert-danger").TextContent
+        await component.WaitForAssertionAsync(() => component.Find(".notice[data-kind='error']").TextContent
             .ShouldBe("Error: Recovery codes could not be generated. Please try again."));
         component.FindAll(".recovery-code").ShouldBeEmpty();
-        component.FindAll(".alert-success").ShouldBeEmpty();
+        component.FindAll(".notice[data-kind='success']").ShouldBeEmpty();
         logger.GetLoggedEventIds().ShouldNotContain(1016);
     }
 
@@ -51,7 +51,7 @@ public sealed class RecoveryCodesTests
         await component.Find("form").SubmitAsync();
 
         await component.WaitForAssertionAsync(() => component.FindAll(".recovery-code").Select(element => element.TextContent).ShouldBe(codes));
-        component.Find(".alert-success").TextContent.ShouldBe("You have generated new recovery codes.");
+        component.Find(".notice[data-kind='success']").TextContent.ShouldBe("You have generated new recovery codes.");
         logger.GetLoggedEventIds().ShouldContain(1016);
         await account.Users.Received(1).GenerateNewTwoFactorRecoveryCodesAsync(user, 10);
     }

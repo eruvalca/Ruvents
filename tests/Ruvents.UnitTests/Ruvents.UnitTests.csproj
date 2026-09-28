@@ -13,6 +13,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Bogus" PrivateAssets="all" />
     <PackageReference Include="NSubstitute" PrivateAssets="all" />
     <PackageReference Include="Shouldly" PrivateAssets="all" />
     <PackageReference Include="xunit.v3.core.mtp-v2" PrivateAssets="all" />

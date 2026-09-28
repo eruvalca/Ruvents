@@ -29,7 +29,7 @@ public sealed class ConfirmationTests
 
         var component = account.Render<ConfirmEmail>(context);
 
-        await component.WaitForAssertionAsync(() => component.Find(succeeds ? ".alert-success" : ".alert-danger").TextContent.ShouldBe(message));
+        await component.WaitForAssertionAsync(() => component.Find(succeeds ? ".notice[data-kind='success']" : ".notice[data-kind='error']").TextContent.ShouldBe(message));
         await account.Users.Received(1).ConfirmEmailAsync(user, "token");
     }
 
@@ -46,7 +46,7 @@ public sealed class ConfirmationTests
 
         var component = account.Render<ConfirmEmailChange>(context);
 
-        await component.WaitForAssertionAsync(() => component.Find(".alert-success").TextContent.ShouldBe("Thank you for confirming your email change."));
+        await component.WaitForAssertionAsync(() => component.Find(".notice[data-kind='success']").TextContent.ShouldBe("Thank you for confirming your email change."));
         await account.Users.Received(1).ChangeEmailAsync(user, "new@example.test", "token");
         await account.Users.Received(1).SetUserNameAsync(user, "new@example.test");
         await account.SignIn.Received(1).RefreshSignInAsync(user);
@@ -62,7 +62,7 @@ public sealed class ConfirmationTests
 
         var component = account.Render<ConfirmEmail>(context);
 
-        await component.WaitForAssertionAsync(() => component.Find(".alert-danger").TextContent.ShouldBe("Error confirming your email."));
+        await component.WaitForAssertionAsync(() => component.Find(".notice[data-kind='error']").TextContent.ShouldBe("Error confirming your email."));
         await account.Users.DidNotReceiveWithAnyArgs().ConfirmEmailAsync(default!, default!);
     }
 
@@ -97,7 +97,7 @@ public sealed class ConfirmationTests
 
         var component = account.Render<ConfirmEmailChange>(context);
 
-        await component.WaitForAssertionAsync(() => component.Find(".alert-danger").TextContent
+        await component.WaitForAssertionAsync(() => component.Find(".notice[data-kind='error']").TextContent
             .ShouldBe("Error: Your email was changed, but your user name could not be updated."));
         await account.SignIn.DidNotReceiveWithAnyArgs().RefreshSignInAsync(default!);
     }

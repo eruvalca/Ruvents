@@ -31,7 +31,7 @@ public sealed class RegistrationTests
 
         await component.Find("form").SubmitAsync();
 
-        await component.WaitForAssertionAsync(() => component.Find(".alert-danger").TextContent.ShouldContain("Email already registered"));
+        await component.WaitForAssertionAsync(() => component.Find(".notice[data-kind='error']").TextContent.ShouldContain("Email already registered"));
         await account.Users.DidNotReceiveWithAnyArgs().GenerateEmailConfirmationTokenAsync(default!);
         await account.Emails.DidNotReceiveWithAnyArgs().SendConfirmationLinkAsync(default!, default!, default!);
         await account.SignIn.DidNotReceiveWithAnyArgs().SignInAsync(default!, default(bool), default);
@@ -92,7 +92,7 @@ public sealed class RegistrationTests
 
         await component.Find("form").SubmitAsync();
 
-        await component.WaitForAssertionAsync(() => component.Find(".alert-danger").TextContent.ShouldContain("Operation rejected"));
+        await component.WaitForAssertionAsync(() => component.Find(".notice[data-kind='error']").TextContent.ShouldContain("Operation rejected"));
         if (linkFailed)
         {
             component.Find("h1").TextContent.ShouldBe("Finish setting up your account");
