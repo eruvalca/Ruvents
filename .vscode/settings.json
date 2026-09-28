@@ -1,3 +1,4 @@
 {
-  "dotnet.defaultSolution": "Ruvents.slnx"
+  "dotnet.defaultSolution": "Ruvents.slnx",
+  "aspire.dashboardBrowser": "openExternalBrowser"
 }
