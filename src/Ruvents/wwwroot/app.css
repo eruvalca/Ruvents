@@ -1,0 +1,178 @@
+:root {
+    color-scheme: light;
+    font-family: system-ui, sans-serif;
+    line-height: 1.5;
+    background: #fff;
+    color: #222;
+}
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+}
+
+h1, h2, h3, h4, p, ul, ol {
+    margin-block: 0 1rem;
+}
+
+h1, h2, h3, h4 {
+    line-height: 1.25;
+}
+
+a {
+    color: #174c91;
+    text-underline-offset: 0.15em;
+}
+
+a:hover {
+    color: #123766;
+}
+
+:focus-visible {
+    outline: 2px solid #174c91;
+    outline-offset: 3px;
+}
+
+main {
+    overflow-wrap: anywhere;
+}
+
+button, input, select, textarea {
+    font: inherit;
+}
+
+button {
+    max-width: 100%;
+    padding: 0.4rem 0.75rem;
+    cursor: pointer;
+}
+
+button:disabled {
+    cursor: default;
+}
+
+hr {
+    width: 100%;
+    margin-block: 1rem;
+    border: 0;
+    border-top: 1px solid #ccc;
+}
+
+.account-sections,
+.account-form {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1rem;
+    width: 100%;
+    max-width: 36rem;
+}
+
+.account-form {
+    justify-items: start;
+}
+
+.form-field {
+    display: grid;
+    gap: 0.25rem;
+    width: 100%;
+    min-width: 0;
+}
+
+.form-field input,
+.form-field select,
+.form-field textarea {
+    width: 100%;
+    min-width: 0;
+    padding: 0.4rem;
+}
+
+.form-field button {
+    justify-self: start;
+}
+
+.checkbox-field {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: baseline;
+    gap: 0.5rem;
+}
+
+.actions {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), 1fr));
+    align-items: start;
+    gap: 0.75rem;
+}
+
+.validation-message,
+.validation-errors,
+.error-text {
+    color: #9c2525;
+}
+
+.invalid {
+    outline: 1px solid #9c2525;
+}
+
+.invalid:focus-visible {
+    outline: 2px solid #174c91;
+}
+
+.notice {
+    margin-block: 1rem;
+    padding: 1rem;
+    border: 1px solid #777;
+    border-inline-start-width: 0.25rem;
+}
+
+.notice > :last-child {
+    margin-bottom: 0;
+}
+
+.notice[data-kind="error"] {
+    border-color: #9c2525;
+}
+
+.notice[data-kind="warning"] {
+    border-color: #805500;
+}
+
+.notice[data-kind="success"] {
+    border-color: #286437;
+}
+
+.notice[data-kind="information"] {
+    border-color: #174c91;
+}
+
+.table-container {
+    max-width: 100%;
+    overflow-x: auto;
+    margin-block: 1rem;
+}
+
+table {
+    width: 100%;
+    min-width: 24rem;
+    border-collapse: collapse;
+}
+
+table .actions {
+    grid-template-columns: max-content;
+}
+
+th, td {
+    padding: 0.5rem;
+    border-bottom: 1px solid #ccc;
+    text-align: start;
+    vertical-align: top;
+}
+
+.recovery-code {
+    font-size: 1rem;
+}

@@ -1,0 +1,26 @@
+.account-navigation {
+    margin-block: 1rem 2rem;
+}
+
+.account-navigation ul {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.account-navigation ::deep a {
+    display: block;
+    padding: 0.5rem;
+}
+
+.account-navigation ::deep a:hover {
+    background: #f4f4f4;
+}
+
+.account-navigation ::deep a.active {
+    background: #eee;
+    font-weight: 700;
+}

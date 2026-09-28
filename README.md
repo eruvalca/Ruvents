@@ -103,6 +103,26 @@ Test Explorer without Aspire.
 
 See the [Aspire VS Code extension guide](https://aspire.dev/get-started/aspire-vscode-extension/).
 
+## Styling
+
+The UI uses standard CSS with Grid as the default for structured layout and
+alignment. The shell has always-visible top navigation; account pages stack
+their sections and use forms capped at 36rem. The baseline is intentionally
+plain: a system font, neutral light colors, native controls, and visible focus.
+
+Shared styles live in `src/Ruvents/wwwroot/app.css`: sizing, typography, forms
+(`account-form`, `form-field`, `checkbox-field`), action groups (`actions`),
+notices (`notice` with a semantic `data-kind`), and table overflow
+(`table-container`). Component-specific styles belong in adjacent `.razor.css`
+files. Use narrowly scoped `::deep` selectors for child component markup.
+
+Use normal flow for prose and semantic tables, and positioning for overlays.
+Flexbox needs a specific benefit; do not recreate Bootstrap utilities or add
+inline layout styles, `!important`, decorative icons, or animations. Keep form
+labels before their controls and preserve Blazor/Identity behavior hooks when
+editing markup. Check narrow screens, keyboard focus, and text wrapping when
+changing layouts. See `AGENTS.md` for the authoring conventions.
+
 ## Resource graph and database
 
 ```text

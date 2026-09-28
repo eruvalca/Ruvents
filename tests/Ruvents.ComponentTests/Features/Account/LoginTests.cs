@@ -58,7 +58,7 @@ public sealed class LoginTests
 
         await component.Find("form").SubmitAsync();
 
-        await component.WaitForAssertionAsync(() => component.Find(".alert-danger").TextContent.ShouldContain("Browser rejected request"));
+        await component.WaitForAssertionAsync(() => component.Find(".notice[data-kind='error']").TextContent.ShouldContain("Browser rejected request"));
         await account.SignIn.DidNotReceiveWithAnyArgs().PasskeySignInAsync(default!);
         await account.SignIn.DidNotReceiveWithAnyArgs().PasswordSignInAsync(default(string)!, default!, default, default);
     }
@@ -99,7 +99,7 @@ public sealed class LoginTests
 
         await component.Find("form").SubmitAsync();
 
-        await component.WaitForAssertionAsync(() => component.Find(".alert-danger").TextContent.ShouldBe("Error: Invalid login attempt."));
+        await component.WaitForAssertionAsync(() => component.Find(".notice[data-kind='error']").TextContent.ShouldBe("Error: Invalid login attempt."));
         navigation.Uri.ShouldBe("http://localhost/Account/Login");
     }
 
