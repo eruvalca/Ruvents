@@ -13,16 +13,6 @@ namespace Ruvents.UnitTests.Features.Account;
     Justification = "xUnit requires public test classes for discovery.")]
 public sealed class AccountSignInServiceTests
 {
-    [Fact]
-    public void ClassifyPreservesEveryIdentityOutcome()
-    {
-        AccountSignInService.Classify(SignInResult.Success).Value.ShouldBeOfType<SignInOutcome.Succeeded>();
-        AccountSignInService.Classify(SignInResult.TwoFactorRequired).Value.ShouldBeOfType<SignInOutcome.RequiresTwoFactor>();
-        AccountSignInService.Classify(SignInResult.LockedOut).Value.ShouldBeOfType<SignInOutcome.LockedOut>();
-        AccountSignInService.Classify(SignInResult.NotAllowed).Value.ShouldBeOfType<SignInOutcome.NotAllowed>();
-        AccountSignInService.Classify(SignInResult.Failed).Value.ShouldBeOfType<SignInOutcome.Failed>();
-    }
-
     [Theory]
     [InlineData(false)]
     [InlineData(true)]

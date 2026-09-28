@@ -82,7 +82,7 @@ public sealed class TwoFactorSignInTests
 
     private static AccountTestContext Configure(BunitContext context)
     {
-        var account = AccountTestContext.Configure(context);
+        var account = context.ConfigureAccount();
         var user = account.Authenticate();
         account.SignIn.GetTwoFactorAuthenticationUserAsync().Returns(user);
         return account;

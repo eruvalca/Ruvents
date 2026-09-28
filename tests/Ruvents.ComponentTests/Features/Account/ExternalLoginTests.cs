@@ -47,7 +47,7 @@ public sealed class ExternalLoginTests
 
     private static AccountTestContext ConfigureCallback(BunitContext context, SignInResult result)
     {
-        var account = AccountTestContext.Configure(context);
+        var account = context.ConfigureAccount();
         account.Http.Request.Method = HttpMethods.Get;
         var principal = new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.Email, "member@example.test")], "Provider"));
         account.SignIn.GetExternalLoginInfoAsync().Returns(new ExternalLoginInfo(principal, "Provider", "key", "Provider"));

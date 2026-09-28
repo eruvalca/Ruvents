@@ -1,11 +1,10 @@
 using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
-using System.Text;
 using System.Text.Encodings.Web;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.WebUtilities;
 using Ruvents.Data;
+using Ruvents.Features.Account.Extensions;
 using Ruvents.Features.Account.Models;
 
 namespace Ruvents.Features.Account.Pages;
@@ -54,7 +53,7 @@ public sealed partial class ExternalLogin
 
         _externalLoginInfo = info;
 
-        if (HttpMethods.IsGet(HttpContext.Request.Method))
+        if (HttpContext.Request.IsGet)
         {
             if (string.Equals(Action, LoginCallbackAction, StringComparison.Ordinal))
             {
@@ -106,13 +105,13 @@ public sealed partial class ExternalLogin
             created => CompleteRegistrationAsync(created.User, _externalLoginInfo.LoginProvider),
             rejected =>
             {
-                _message = $"Error: {string.Join(",", rejected.Errors.Select(error => error.Description))}";
+                _message = $"Error: {rejected.Errors.FormatDescriptions(",")}";
                 return Task.CompletedTask;
             },
             failure =>
             {
                 _linkFailure = failure;
-                _message = $"Error: Your account was created, but the external login could not be linked. {string.Join(",", failure.Errors.Select(error => error.Description))}";
+                _message = $"Error: Your account was created, but the external login could not be linked. {failure.Errors.FormatDescriptions(",")}";
                 return Task.CompletedTask;
             });
     }
@@ -122,7 +121,7 @@ public sealed partial class ExternalLogin
         LogUserCreatedWithExternalProvider(Logger, provider);
         var userId = await UserManager.GetUserIdAsync(user);
         var code = await UserManager.GenerateEmailConfirmationTokenAsync(user);
-        code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
+        code = code.EncodeIdentityToken();
 
         var callbackUrl = NavigationManager.GetUriWithQueryParameters(
             NavigationManager.ToAbsoluteUri("Account/ConfirmEmail").AbsoluteUri,

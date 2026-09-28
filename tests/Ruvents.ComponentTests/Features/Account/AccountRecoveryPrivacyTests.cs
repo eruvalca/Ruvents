@@ -22,7 +22,7 @@ public sealed class AccountRecoveryPrivacyTests
     public async Task ForgotPasswordAlwaysNavigatesToSameConfirmationAsync(bool exists, bool confirmed)
     {
         await using var context = new BunitContext();
-        var account = AccountTestContext.Configure(context);
+        var account = context.ConfigureAccount();
         var user = new ApplicationUser();
         account.Users.FindByEmailAsync("member@example.test").Returns(exists ? user : null);
         account.Users.IsEmailConfirmedAsync(user).Returns(confirmed);
@@ -50,7 +50,7 @@ public sealed class AccountRecoveryPrivacyTests
     public async Task ResendConfirmationAlwaysShowsSamePublicMessageAsync(bool exists)
     {
         await using var context = new BunitContext();
-        var account = AccountTestContext.Configure(context);
+        var account = context.ConfigureAccount();
         var user = new ApplicationUser();
         account.Users.FindByEmailAsync("member@example.test").Returns(exists ? user : null);
         account.Users.GetUserIdAsync(user).Returns("member");
@@ -78,7 +78,7 @@ public sealed class AccountRecoveryPrivacyTests
     public async Task PasswordResetUsesSameConfirmationForMissingUserAndSuccessAsync(bool exists)
     {
         await using var context = new BunitContext();
-        var account = AccountTestContext.Configure(context);
+        var account = context.ConfigureAccount();
         var user = new ApplicationUser();
         account.Users.FindByEmailAsync("member@example.test").Returns(exists ? user : null);
         account.Users.ResetPasswordAsync(user, "token", "password").Returns(IdentityResult.Success);

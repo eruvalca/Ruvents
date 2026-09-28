@@ -24,7 +24,7 @@ public sealed class PasskeyTests
         await using var context = new BunitContext();
         var account = ConfigurePasskeys(context);
         var component = account.Render<Passkeys>(context);
-        AccountTestContext.SetFormValue(component.Instance, "Input", new PasskeyInputModel { CredentialJson = credential, Error = browserError });
+        component.Instance.SetFormValue("Input", new PasskeyInputModel { CredentialJson = credential, Error = browserError });
 
         await component.Find("form").SubmitAsync();
 
@@ -38,7 +38,7 @@ public sealed class PasskeyTests
         await using var context = new BunitContext();
         var account = ConfigurePasskeys(context, 100);
         var component = account.Render<Passkeys>(context);
-        AccountTestContext.SetFormValue(component.Instance, "Input", new PasskeyInputModel { CredentialJson = "credential" });
+        component.Instance.SetFormValue("Input", new PasskeyInputModel { CredentialJson = "credential" });
 
         component.FindAll("passkey-submit").ShouldBeEmpty();
         await component.FindAll("form")[100].SubmitAsync();
@@ -57,7 +57,7 @@ public sealed class PasskeyTests
             new PasskeyUserEntity { Id = "user", Name = "member", DisplayName = "Member" }));
         account.Users.AddOrUpdatePasskeyAsync(Arg.Any<Ruvents.Data.ApplicationUser>(), passkey).Returns(IdentityResult.Success);
         var component = account.Render<Passkeys>(context);
-        AccountTestContext.SetFormValue(component.Instance, "Input", new PasskeyInputModel { CredentialJson = "credential" });
+        component.Instance.SetFormValue("Input", new PasskeyInputModel { CredentialJson = "credential" });
 
         await component.Find("form").SubmitAsync();
 
@@ -78,7 +78,7 @@ public sealed class PasskeyTests
             : PasskeyAttestationResult.Fail(new PasskeyException("Invalid origin")));
         account.Users.AddOrUpdatePasskeyAsync(Arg.Any<Ruvents.Data.ApplicationUser>(), passkey).Returns(IdentityResult.Failed());
         var component = account.Render<Passkeys>(context);
-        AccountTestContext.SetFormValue(component.Instance, "Input", new PasskeyInputModel { CredentialJson = "credential" });
+        component.Instance.SetFormValue("Input", new PasskeyInputModel { CredentialJson = "credential" });
 
         await component.Find("form").SubmitAsync();
 
@@ -99,8 +99,8 @@ public sealed class PasskeyTests
         await using var context = new BunitContext();
         var account = ConfigurePasskeys(context, 1);
         var component = account.Render<Passkeys>(context);
-        AccountTestContext.SetFormValue(component.Instance, "Action", "delete");
-        AccountTestContext.SetFormValue(component.Instance, "CredentialId", id);
+        component.Instance.SetFormValue("Action", "delete");
+        component.Instance.SetFormValue("CredentialId", id);
 
         await component.FindAll("form")[0].SubmitAsync();
 
@@ -154,7 +154,7 @@ public sealed class PasskeyTests
 
     private static AccountTestContext ConfigurePasskeys(BunitContext context, int count = 0)
     {
-        var account = AccountTestContext.Configure(context);
+        var account = context.ConfigureAccount();
         var user = account.Authenticate();
         account.Users.GetPasskeysAsync(user).Returns(Enumerable.Range(0, count).Select(_ => CreatePasskey()).ToList());
         context.Services.GetRequiredService<NavigationManager>().NavigateTo("Account/Manage/Passkeys");

@@ -6,8 +6,8 @@ the CLI and editor find `global.json` and `Ruvents.slnx`.
 
 | Project | Scope |
 | --- | --- |
-| `Ruvents.UnitTests` | Server account services, outcome decoding, and `IdentityRedirectManager`. |
-| `Ruvents.ComponentTests` | Account page rendering and interactions using bUnit, plus the shared UI's `Counter`. |
+| `Ruvents.UnitTests` | Account services and extensions, outcome decoding, `IdentityRedirectManager`, Identity routes, and service defaults. |
+| `Ruvents.ComponentTests` | Account page rendering and interactions using bUnit, account test helpers, and the shared UI's `Counter`. |
 
 ## Supported stack
 
@@ -47,6 +47,14 @@ so NSubstitute can proxy Identity dependencies closed over the internal
 `TestingPlatformDotnetTestSupport` bridge to these projects. bUnit provides the
 component renderer and comparison tools; xUnit and MTP provide discovery and
 execution, and Shouldly is the exclusive assertion library.
+
+Account tests use `context.ConfigureAccount()` and `context.CaptureLogs<TComponent>()`
+from `BunitAccountExtensions`. The resulting `AccountTestContext` holds each test's
+HTTP context and Identity dependencies. `ComponentFormExtensions` supplies
+`SetFormValue` and `SetInputValue` where static SSR form mapping needs to be simulated;
+`LoggerTestExtensions.GetLoggedEventIds()` inspects captured logging calls. Keep
+these receiver-focused helpers in the account test namespace and use a fresh,
+asynchronously disposed `BunitContext` for every test.
 
 ## Build and run
 

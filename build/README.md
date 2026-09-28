@@ -413,6 +413,22 @@ receive the accessibility check. Other required public contracts use a type-leve
 `SuppressMessage` with a specific `Justification`: `PasskeyOperation` stays public
 because it is the type of the public `PasskeySubmit.Operation` parameter.
 
+The .NET 10.0.401 SDK analyzer misidentifies C# 14 extension blocks as public
+types and reports CA1515 without a source location. Type-level suppressions cannot
+attach to those diagnostics. `AnalyzerCompatibility.globalconfig`, included by
+`Directory.Build.props`, disables the fallback severity: the existing
+`.editorconfig` source-file CA1515 warning takes precedence, so ordinary public
+types still fail the build. Isolated compiler probes verified both cases.
+This approved workaround suppresses all unlocated CA1515 diagnostics, not just
+extension-block false positives. Recheck it after SDK updates and remove it once
+extension-block analysis is fixed. See Microsoft's
+[analyzer configuration precedence](https://learn.microsoft.com/dotnet/fundamentals/code-analysis/configuration-files#precedence).
+
+The public service-defaults `Extensions` container has a justified CA1034
+type-level suppression because C# 14 extension blocks generate public nested
+metadata types. No handwritten nested types were added. Keep the public extension
+APIs available to their existing consumers.
+
 Members that do not use instance state should be static where reported by
 `S2325` (warning). Private helpers stay private, including in Razor code-behind.
 Lifecycle overrides and methods using component state or injected services remain
@@ -496,16 +512,17 @@ Blazor `[Parameter]` properties or require guards in every private helper.
 
 Specify `StringComparison` where a matching overload exists (`CA1307`, warning),
 even when the overload's default behavior is suitable. The authentication-code
-cleanup calls in Razor code-behind explicitly use `StringComparison.Ordinal`,
+cleanup in `AuthenticationCodeExtensions` explicitly uses `StringComparison.Ordinal`,
 preserving the existing literal removal of spaces and hyphens. Choose comparison
 behavior for each use case; this rule does not require ordinal matching everywhere.
 
 Lowercase string normalization is checked (`CA1308`, warning). Prefer an explicit
 `StringComparison` or `StringComparer` for comparisons instead of changing case.
 Intentional display formatting can use a method-level `SuppressMessage` with a
-specific justification. `EnableAuthenticator.FormatKey` preserves the existing
-lowercase grouping for display; the stored key and QR-code URI use the original
-value. The exception applies only to this method, not the rest of its code-behind.
+specific justification. `AuthenticatorKeyExtensions.FormatAuthenticatorKey`
+preserves the existing lowercase grouping for display; the stored key and QR-code
+URI use the original value. The exception applies only to this method, not the
+other account helpers.
 
 Type/namespace naming overlaps are review guidance (`CA1724`, suggestion). Keep
 the current `Home` and `Counter` component names and the service-defaults

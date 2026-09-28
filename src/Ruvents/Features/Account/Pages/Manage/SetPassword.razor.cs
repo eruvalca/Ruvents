@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Identity;
 using Ruvents.Data;
+using Ruvents.Features.Account.Extensions;
 
 namespace Ruvents.Features.Account.Pages.Manage;
 
@@ -45,7 +46,7 @@ public sealed partial class SetPassword
         var addPasswordResult = await UserManager.AddPasswordAsync(_user, Input.NewPassword!);
         if (!addPasswordResult.Succeeded)
         {
-            _message = $"Error: {string.Join(",", addPasswordResult.Errors.Select(error => error.Description))}";
+            _message = $"Error: {addPasswordResult.Errors.FormatDescriptions(",")}";
             return;
         }
 

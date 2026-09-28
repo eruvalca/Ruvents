@@ -12,9 +12,11 @@
     <IsTestProject>true</IsTestProject>
   </PropertyGroup>
 
-  <!-- Resolve the shared code-metrics thresholds from the repository root. -->
+  <!-- Resolve shared analyzer inputs from the repository root. -->
   <ItemGroup Condition="'$(MSBuildProjectExtension)' == '.csproj'">
     <AdditionalFiles Include="$(MSBuildThisFileDirectory)CodeMetricsConfig.txt" />
+    <!-- Source diagnostics remain governed by .editorconfig; see build/README.md for the SDK workaround. -->
+    <GlobalAnalyzerConfigFiles Include="$(MSBuildThisFileDirectory)build/AnalyzerCompatibility.globalconfig" />
   </ItemGroup>
 
   <!-- Analyzer versions live in Directory.Packages.props. These are build tools, not dependencies

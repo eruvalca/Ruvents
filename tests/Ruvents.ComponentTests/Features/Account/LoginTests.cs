@@ -20,7 +20,7 @@ public sealed class LoginTests
     public async Task PasswordLoginValidatesRequiredFieldsBeforeCallingIdentityAsync()
     {
         await using var context = new BunitContext();
-        var account = AccountTestContext.Configure(context);
+        var account = context.ConfigureAccount();
         var component = account.Render<Login>(context);
 
         await component.Find("form").SubmitAsync();
@@ -33,7 +33,7 @@ public sealed class LoginTests
     public async Task PasskeyLoginBypassesPasswordValidationAndNavigatesToReturnUrlAsync()
     {
         await using var context = new BunitContext();
-        var account = AccountTestContext.Configure(context);
+        var account = context.ConfigureAccount();
         var navigation = context.Services.GetRequiredService<NavigationManager>();
         navigation.NavigateTo("Account/Login?returnUrl=%2Fevents");
         account.SignIn.PasskeySignInAsync("credential").Returns(SignInResult.Success);
@@ -52,7 +52,7 @@ public sealed class LoginTests
     public async Task BrowserErrorTakesPrecedenceOverCredentialAndStopsSignInAsync()
     {
         await using var context = new BunitContext();
-        var account = AccountTestContext.Configure(context);
+        var account = context.ConfigureAccount();
         var component = account.Render<Login>(context);
         GetInput(component.Instance).Passkey = new PasskeyInputModel { CredentialJson = "credential", Error = "Browser rejected request" };
 
@@ -67,7 +67,7 @@ public sealed class LoginTests
     public async Task PasswordLoginPreservesRememberMeAndReturnUrlWhenTwoFactorIsRequiredAsync()
     {
         await using var context = new BunitContext();
-        var account = AccountTestContext.Configure(context);
+        var account = context.ConfigureAccount();
         var navigation = context.Services.GetRequiredService<NavigationManager>();
         navigation.NavigateTo("Account/Login?returnUrl=%2Fevents");
         account.SignIn.PasswordSignInAsync("member@example.test", "password", true, false).Returns(SignInResult.TwoFactorRequired);
@@ -88,7 +88,7 @@ public sealed class LoginTests
     public async Task RejectedPasswordLoginShowsGenericFailureWithoutNavigatingAsync(bool notAllowed)
     {
         await using var context = new BunitContext();
-        var account = AccountTestContext.Configure(context);
+        var account = context.ConfigureAccount();
         var navigation = context.Services.GetRequiredService<NavigationManager>();
         navigation.NavigateTo("Account/Login");
         account.SignIn.PasswordSignInAsync("member@example.test", "password", false, false)

@@ -1,10 +1,9 @@
 using System.ComponentModel.DataAnnotations;
-using System.Text;
 using System.Text.Encodings.Web;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.WebUtilities;
 using Ruvents.Data;
+using Ruvents.Features.Account.Extensions;
 
 namespace Ruvents.Features.Account.Pages.Manage;
 
@@ -54,7 +53,7 @@ public sealed partial class Email
 
         var userId = await UserManager.GetUserIdAsync(_user);
         var code = await UserManager.GenerateChangeEmailTokenAsync(_user, Input.NewEmail);
-        code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
+        code = code.EncodeIdentityToken();
         var callbackUrl = NavigationManager.GetUriWithQueryParameters(
             NavigationManager.ToAbsoluteUri("Account/ConfirmEmailChange").AbsoluteUri,
             new Dictionary<string, object?>(StringComparer.Ordinal) { ["userId"] = userId, ["email"] = Input.NewEmail, ["code"] = code });
@@ -79,7 +78,7 @@ public sealed partial class Email
 
         var userId = await UserManager.GetUserIdAsync(_user);
         var code = await UserManager.GenerateEmailConfirmationTokenAsync(_user);
-        code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
+        code = code.EncodeIdentityToken();
         var callbackUrl = NavigationManager.GetUriWithQueryParameters(
             NavigationManager.ToAbsoluteUri("Account/ConfirmEmail").AbsoluteUri,
             new Dictionary<string, object?>(StringComparer.Ordinal) { ["userId"] = userId, ["code"] = code });

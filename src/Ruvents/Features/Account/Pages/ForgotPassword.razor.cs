@@ -1,10 +1,9 @@
 using System.ComponentModel.DataAnnotations;
-using System.Text;
 using System.Text.Encodings.Web;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.WebUtilities;
 using Ruvents.Data;
+using Ruvents.Features.Account.Extensions;
 
 namespace Ruvents.Features.Account.Pages;
 
@@ -31,7 +30,7 @@ public sealed partial class ForgotPassword
         // For more information on how to enable account confirmation and password reset please
         // visit https://go.microsoft.com/fwlink/?LinkID=532713
         var code = await UserManager.GeneratePasswordResetTokenAsync(user);
-        code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
+        code = code.EncodeIdentityToken();
         var callbackUrl = NavigationManager.GetUriWithQueryParameters(
             NavigationManager.ToAbsoluteUri("Account/ResetPassword").AbsoluteUri,
             new Dictionary<string, object?>(StringComparer.Ordinal) { ["code"] = code });

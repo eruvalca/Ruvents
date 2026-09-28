@@ -6,6 +6,7 @@ using System.Text.Encodings.Web;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Identity;
 using Ruvents.Data;
+using Ruvents.Features.Account.Extensions;
 
 namespace Ruvents.Features.Account.Pages.Manage;
 
@@ -88,30 +89,11 @@ public sealed partial class EnableAuthenticator
         await result.Match<Task>(
             async ready =>
             {
-                _sharedKey = FormatKey(ready.Key);
+                _sharedKey = ready.Key.FormatAuthenticatorKey();
                 var email = await UserManager.GetEmailAsync(user);
                 _authenticatorUri = GenerateQrCodeUri(email!, ready.Key);
             },
             _ => SetMessageAsync("Error: The authenticator key could not be initialized. Please try again."));
-    }
-
-    [SuppressMessage("Globalization", "CA1308:Normalize strings to uppercase",
-        Justification = "Lowercase grouping is only for the displayed authenticator key; the stored key and QR-code URI use the original value.")]
-    private static string FormatKey(string unformattedKey)
-    {
-        var result = new StringBuilder();
-        int currentPosition = 0;
-        while (currentPosition + 4 < unformattedKey.Length)
-        {
-            result.Append(unformattedKey.AsSpan(currentPosition, 4)).Append(' ');
-            currentPosition += 4;
-        }
-        if (currentPosition < unformattedKey.Length)
-        {
-            result.Append(unformattedKey.AsSpan(currentPosition));
-        }
-
-        return result.ToString().ToLowerInvariant();
     }
 
     private string GenerateQrCodeUri(string email, string unformattedKey)

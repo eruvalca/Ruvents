@@ -51,7 +51,7 @@ public sealed class AuthenticatorTests
     {
         await using var context = new BunitContext();
         var (account, user) = ConfigureAuthenticator(context);
-        var logger = AccountTestContext.CaptureLogs<EnableAuthenticator>(context);
+        var logger = context.CaptureLogs<EnableAuthenticator>();
         account.Users.VerifyTwoFactorTokenAsync(user, account.Users.Options.Tokens.AuthenticatorTokenProvider, "123456").Returns(validCode);
         account.Users.SetTwoFactorEnabledAsync(user, true).Returns(enableSucceeds ? IdentityResult.Success : IdentityResult.Failed());
         account.Users.GenerateNewTwoFactorRecoveryCodesAsync(user, 10).Returns((IEnumerable<string>?)null);
@@ -63,7 +63,7 @@ public sealed class AuthenticatorTests
         await component.WaitForAssertionAsync(() => component.Find(".alert-danger").TextContent.ShouldContain(expectedMessage));
         component.FindAll(".recovery-code").ShouldBeEmpty();
         component.FindAll(".alert-success").ShouldBeEmpty();
-        AccountTestContext.LoggedEventIds(logger).ShouldNotContain(1015);
+        logger.GetLoggedEventIds().ShouldNotContain(1015);
         if (!validCode)
         {
             await account.Users.DidNotReceiveWithAnyArgs().SetTwoFactorEnabledAsync(default!, default);
@@ -79,7 +79,7 @@ public sealed class AuthenticatorTests
     {
         await using var context = new BunitContext();
         var (account, user) = ConfigureAuthenticator(context);
-        var logger = AccountTestContext.CaptureLogs<EnableAuthenticator>(context);
+        var logger = context.CaptureLogs<EnableAuthenticator>();
         account.Users.VerifyTwoFactorTokenAsync(user, account.Users.Options.Tokens.AuthenticatorTokenProvider, "123456").Returns(true);
         account.Users.SetTwoFactorEnabledAsync(user, true).Returns(IdentityResult.Success);
         string[] codes = ["first-code", "second-code"];
@@ -92,7 +92,7 @@ public sealed class AuthenticatorTests
         await component.WaitForAssertionAsync(() => component.FindAll(".recovery-code").Select(element => element.TextContent).ShouldBe(codes));
         component.Find(".alert-success").TextContent.ShouldBe("Your authenticator app has been verified.");
         component.FindAll("form").ShouldBeEmpty();
-        AccountTestContext.LoggedEventIds(logger).ShouldContain(1015);
+        logger.GetLoggedEventIds().ShouldContain(1015);
     }
 
     [Fact]
@@ -120,7 +120,7 @@ public sealed class AuthenticatorTests
     {
         await using var context = new BunitContext();
         var (account, user) = ConfigureAuthenticator(context);
-        var logger = AccountTestContext.CaptureLogs<ResetAuthenticator>(context);
+        var logger = context.CaptureLogs<ResetAuthenticator>();
         account.Users.SetTwoFactorEnabledAsync(user, false).Returns(disabled ? IdentityResult.Success : IdentityResult.Failed());
         account.Users.ResetAuthenticatorKeyAsync(user).Returns(IdentityResult.Failed());
         var component = account.Render<ResetAuthenticator>(context);
@@ -129,7 +129,7 @@ public sealed class AuthenticatorTests
 
         account.StatusCookie.ShouldContain(expectedMessage);
         account.StatusCookie.ShouldNotContain("key has been reset");
-        AccountTestContext.LoggedEventIds(logger).ShouldNotContain(1017);
+        logger.GetLoggedEventIds().ShouldNotContain(1017);
         await account.SignIn.DidNotReceiveWithAnyArgs().RefreshSignInAsync(default!);
         if (!disabled)
         {
@@ -142,7 +142,7 @@ public sealed class AuthenticatorTests
     {
         await using var context = new BunitContext();
         var (account, user) = ConfigureAuthenticator(context);
-        var logger = AccountTestContext.CaptureLogs<ResetAuthenticator>(context);
+        var logger = context.CaptureLogs<ResetAuthenticator>();
         account.Users.SetTwoFactorEnabledAsync(user, false).Returns(IdentityResult.Success);
         account.Users.ResetAuthenticatorKeyAsync(user).Returns(IdentityResult.Success);
         var component = account.Render<ResetAuthenticator>(context);
@@ -152,12 +152,12 @@ public sealed class AuthenticatorTests
         context.Services.GetRequiredService<NavigationManager>().Uri.ShouldBe("http://localhost/Account/Manage/EnableAuthenticator");
         account.StatusCookie.ShouldContain("key has been reset");
         await account.SignIn.Received(1).RefreshSignInAsync(user);
-        AccountTestContext.LoggedEventIds(logger).ShouldContain(1017);
+        logger.GetLoggedEventIds().ShouldContain(1017);
     }
 
     private static (AccountTestContext Account, ApplicationUser User) ConfigureAuthenticator(BunitContext context)
     {
-        var account = AccountTestContext.Configure(context);
+        var account = context.ConfigureAccount();
         var user = account.Authenticate();
         account.Users.GetAuthenticatorKeyAsync(user).Returns("ABCDEFGHIJKL");
         account.Users.GetEmailAsync(user).Returns("member@example.test");

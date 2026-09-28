@@ -21,7 +21,7 @@ public sealed class ConfirmationTests
     public async Task ValidEmailConfirmationPassesDecodedTokenAndDisplaysIdentityResultAsync(bool succeeds, string message)
     {
         await using var context = new BunitContext();
-        var account = AccountTestContext.Configure(context);
+        var account = context.ConfigureAccount();
         var user = new ApplicationUser();
         account.Users.FindByIdAsync("member").Returns(user);
         account.Users.ConfirmEmailAsync(user, "token").Returns(succeeds ? IdentityResult.Success : IdentityResult.Failed());
@@ -37,7 +37,7 @@ public sealed class ConfirmationTests
     public async Task SuccessfulEmailChangePassesDecodedTokenUpdatesUsernameAndRefreshesSignInAsync()
     {
         await using var context = new BunitContext();
-        var account = AccountTestContext.Configure(context);
+        var account = context.ConfigureAccount();
         var user = new ApplicationUser();
         account.Users.FindByIdAsync("member").Returns(user);
         account.Users.ChangeEmailAsync(user, "new@example.test", "token").Returns(IdentityResult.Success);
@@ -56,7 +56,7 @@ public sealed class ConfirmationTests
     public async Task MalformedEmailConfirmationShowsExistingFailureWithoutConfirmingAsync()
     {
         await using var context = new BunitContext();
-        var account = AccountTestContext.Configure(context);
+        var account = context.ConfigureAccount();
         account.Users.FindByIdAsync("member").Returns(new ApplicationUser());
         context.Services.GetRequiredService<NavigationManager>().NavigateTo("Account/ConfirmEmail?userId=member&code=invalid!");
 
@@ -70,7 +70,7 @@ public sealed class ConfirmationTests
     public async Task MalformedEmailChangeRedirectsWithoutChangingEmailOrUsernameAsync()
     {
         await using var context = new BunitContext();
-        var account = AccountTestContext.Configure(context);
+        var account = context.ConfigureAccount();
         account.Users.FindByIdAsync("member").Returns(new ApplicationUser());
         var navigation = context.Services.GetRequiredService<NavigationManager>();
         navigation.NavigateTo("Account/ConfirmEmailChange?userId=member&email=new%40example.test&code=invalid!");
@@ -88,7 +88,7 @@ public sealed class ConfirmationTests
     public async Task UsernameFailureShowsPartialEmailChangeAndDoesNotRefreshSignInAsync()
     {
         await using var context = new BunitContext();
-        var account = AccountTestContext.Configure(context);
+        var account = context.ConfigureAccount();
         var user = new ApplicationUser();
         account.Users.FindByIdAsync("member").Returns(user);
         account.Users.ChangeEmailAsync(user, "new@example.test", "token").Returns(IdentityResult.Success);
@@ -106,7 +106,7 @@ public sealed class ConfirmationTests
     public async Task MissingEmailChangeUserDisplaysActualRequestedIdAsync()
     {
         await using var context = new BunitContext();
-        var account = AccountTestContext.Configure(context);
+        var account = context.ConfigureAccount();
         context.Services.GetRequiredService<NavigationManager>().NavigateTo("Account/ConfirmEmailChange?userId=missing-id&email=new%40example.test&code=dG9rZW4");
 
         var component = account.Render<ConfirmEmailChange>(context);
@@ -122,14 +122,14 @@ public sealed class ConfirmationTests
     public async Task InvalidResetLinkCannotResetPasswordAfterInitializationRedirectAsync(string query)
     {
         await using var context = new BunitContext();
-        var account = AccountTestContext.Configure(context);
+        var account = context.ConfigureAccount();
         var navigation = context.Services.GetRequiredService<NavigationManager>();
         navigation.NavigateTo("Account/ResetPassword" + query);
         var component = account.Render<ResetPassword>(context);
         await component.Find("input[name='Input.Email']").ChangeAsync(new ChangeEventArgs { Value = "member@example.test" });
         await component.Find("input[name='Input.Password']").ChangeAsync(new ChangeEventArgs { Value = "password" });
         await component.Find("input[name='Input.ConfirmPassword']").ChangeAsync(new ChangeEventArgs { Value = "password" });
-        AccountTestContext.SetInputValue(component.Instance, "Code", "posted-token");
+        component.Instance.SetInputValue("Code", "posted-token");
 
         await component.Find("form").SubmitAsync();
 

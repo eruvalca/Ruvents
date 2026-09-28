@@ -22,9 +22,9 @@ public sealed class DisableTwoFactorTests
     public async Task DisableReportsOutcomeAndLogsOnlyActualSuccessfulMutationAsync(bool enabled, bool succeeds, string message)
     {
         await using var context = new BunitContext();
-        var account = AccountTestContext.Configure(context);
+        var account = context.ConfigureAccount();
         var user = account.Authenticate();
-        var logger = AccountTestContext.CaptureLogs<Disable2fa>(context);
+        var logger = context.CaptureLogs<Disable2fa>();
         account.Users.GetTwoFactorEnabledAsync(user).Returns(enabled);
         account.Users.SetTwoFactorEnabledAsync(user, false).Returns(succeeds ? IdentityResult.Success : IdentityResult.Failed());
         var component = account.Render<Disable2fa>(context);
@@ -37,11 +37,11 @@ public sealed class DisableTwoFactorTests
             : "http://localhost/Account/Manage/TwoFactorAuthentication");
         if (enabled && succeeds)
         {
-            AccountTestContext.LoggedEventIds(logger).ShouldContain(1014);
+            logger.GetLoggedEventIds().ShouldContain(1014);
         }
         else
         {
-            AccountTestContext.LoggedEventIds(logger).ShouldNotContain(1014);
+            logger.GetLoggedEventIds().ShouldNotContain(1014);
         }
         if (!enabled)
         {
@@ -53,7 +53,7 @@ public sealed class DisableTwoFactorTests
     public async Task OpeningDisablePageWhenAlreadyDisabledRedirectsWithStatusAsync()
     {
         await using var context = new BunitContext();
-        var account = AccountTestContext.Configure(context);
+        var account = context.ConfigureAccount();
         account.Authenticate();
         account.Http.Request.Method = HttpMethods.Get;
 

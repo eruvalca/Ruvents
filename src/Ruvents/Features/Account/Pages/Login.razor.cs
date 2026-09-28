@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.AspNetCore.Identity;
 using Ruvents.Data;
+using Ruvents.Features.Account.Extensions;
 using Ruvents.Features.Account.Models;
 
 namespace Ruvents.Features.Account.Pages;
@@ -27,7 +28,7 @@ public sealed partial class Login
 
         _editContext = new EditContext(Input);
 
-        if (HttpMethods.IsGet(HttpContext.Request.Method))
+        if (HttpContext.Request.IsGet)
         {
             // Clear the existing external cookie to ensure a clean login process
             await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);

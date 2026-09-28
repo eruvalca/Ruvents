@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Identity;
 using Ruvents.Data;
+using Ruvents.Features.Account.Extensions;
 
 namespace Ruvents.Features.Account.Pages.Manage;
 
@@ -20,7 +21,7 @@ public sealed partial class Disable2fa
             return;
         }
 
-        if (HttpMethods.IsGet(HttpContext.Request.Method) && !await UserManager.GetTwoFactorEnabledAsync(_user))
+        if (HttpContext.Request.IsGet && !await UserManager.GetTwoFactorEnabledAsync(_user))
         {
             RedirectManager.RedirectToWithStatus("Account/Manage/TwoFactorAuthentication", "Two-factor authentication is already disabled.", HttpContext);
         }

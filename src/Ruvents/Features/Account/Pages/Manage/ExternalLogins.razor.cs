@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Identity;
 using Ruvents.Data;
+using Ruvents.Features.Account.Extensions;
 
 namespace Ruvents.Features.Account.Pages.Manage;
 
@@ -48,7 +49,7 @@ public sealed partial class ExternalLogins
 
         _showRemoveButton = passwordHash is not null || _currentLogins.Count > 1;
 
-        if (HttpMethods.IsGet(HttpContext.Request.Method) && string.Equals(Action, LinkLoginCallbackAction, StringComparison.Ordinal))
+        if (HttpContext.Request.IsGet && string.Equals(Action, LinkLoginCallbackAction, StringComparison.Ordinal))
         {
             await OnGetLinkLoginCallbackAsync();
         }

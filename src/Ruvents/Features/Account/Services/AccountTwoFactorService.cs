@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Identity;
 using Ruvents.Data;
+using Ruvents.Features.Account.Extensions;
 using Ruvents.Features.Account.Models;
 
 namespace Ruvents.Features.Account.Services;
@@ -28,8 +29,7 @@ internal sealed class AccountTwoFactorService(UserManager<ApplicationUser> userM
 
     public async Task<EnableAuthenticatorOutcome> EnableAsync(ApplicationUser user, string code)
     {
-        var normalizedCode = code.Replace(" ", string.Empty, StringComparison.Ordinal)
-            .Replace("-", string.Empty, StringComparison.Ordinal);
+        var normalizedCode = code.NormalizeAuthenticatorCode();
         if (!await userManager.VerifyTwoFactorTokenAsync(user, userManager.Options.Tokens.AuthenticatorTokenProvider, normalizedCode))
         {
             return new EnableAuthenticatorOutcome.InvalidCode();

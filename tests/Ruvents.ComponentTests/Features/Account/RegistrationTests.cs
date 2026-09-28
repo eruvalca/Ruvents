@@ -21,7 +21,7 @@ public sealed class RegistrationTests
     public async Task RejectedPasswordRegistrationDisplaysIdentityErrorAndSkipsContinuationAsync()
     {
         await using var context = new BunitContext();
-        var account = AccountTestContext.Configure(context);
+        var account = context.ConfigureAccount();
         account.Users.SupportsUserEmail.Returns(true);
         account.Users.CreateAsync(Arg.Any<ApplicationUser>(), "password").Returns(IdentityResult.Failed(new IdentityError { Description = "Email already registered" }));
         var component = account.Render<Register>(context);
@@ -43,7 +43,7 @@ public sealed class RegistrationTests
     public async Task SuccessfulPasswordRegistrationConfirmsBeforeFollowingConfiguredSignInPolicyAsync(bool requireConfirmation)
     {
         await using var context = new BunitContext();
-        var account = AccountTestContext.Configure(context);
+        var account = context.ConfigureAccount();
         account.Users.SupportsUserEmail.Returns(true);
         account.Users.Options.SignIn.RequireConfirmedAccount = requireConfirmation;
         account.Users.CreateAsync(Arg.Any<ApplicationUser>(), "password").Returns(IdentityResult.Success);
@@ -80,7 +80,7 @@ public sealed class RegistrationTests
     public async Task ExternalRegistrationFailureSkipsEmailAndSignInAndExplainsPartialAccountAsync(bool linkFailed)
     {
         await using var context = new BunitContext();
-        var account = AccountTestContext.Configure(context);
+        var account = context.ConfigureAccount();
         account.Users.SupportsUserEmail.Returns(true);
         var login = new ExternalLoginInfo(new ClaimsPrincipal(new ClaimsIdentity()), "Provider", "key", "Provider");
         account.SignIn.GetExternalLoginInfoAsync().Returns(login);
@@ -120,7 +120,7 @@ public sealed class RegistrationTests
     public async Task SuccessfulExternalRegistrationConfirmsBeforeFollowingConfiguredSignInPolicyAsync(bool requireConfirmation)
     {
         await using var context = new BunitContext();
-        var account = AccountTestContext.Configure(context);
+        var account = context.ConfigureAccount();
         account.Users.SupportsUserEmail.Returns(true);
         account.Users.Options.SignIn.RequireConfirmedAccount = requireConfirmation;
         var login = new ExternalLoginInfo(new ClaimsPrincipal(new ClaimsIdentity()), "Provider", "key", "Provider");
@@ -155,7 +155,7 @@ public sealed class RegistrationTests
     public async Task FailedExternalLinkWithDevelopmentEmailSenderOffersExistingConfirmationPageAsync()
     {
         await using var context = new BunitContext();
-        var account = AccountTestContext.Configure(context);
+        var account = context.ConfigureAccount();
         context.Services.AddSingleton<IEmailSender<ApplicationUser>>(new IdentityNoOpEmailSender());
         account.Users.SupportsUserEmail.Returns(true);
         var login = new ExternalLoginInfo(new ClaimsPrincipal(new ClaimsIdentity()), "Provider", "key", "Provider");

@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Identity;
 using Ruvents.Data;
+using Ruvents.Features.Account.Extensions;
 using Ruvents.Features.Account.Models;
 
 namespace Ruvents.Features.Account.Pages;
@@ -17,7 +18,7 @@ public sealed partial class ResetPassword
     [SupplyParameterFromQuery]
     private string? Code { get; set; }
 
-    private string? Message => _identityErrors is null ? null : $"Error: {string.Join(", ", _identityErrors.Select(error => error.Description))}";
+    private string? Message => _identityErrors is null ? null : $"Error: {_identityErrors.FormatDescriptions(", ")}";
 
     protected override void OnInitialized()
     {
