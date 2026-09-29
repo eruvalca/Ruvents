@@ -12,6 +12,8 @@
     <EnableDefaultItems>false</EnableDefaultItems>
     <NoDefaultExcludes>true</NoDefaultExcludes>
     <NoBuild>true</NoBuild>
+    <!-- Template scripts are source files, never NuGet install/uninstall hooks. -->
+    <NoWarn>$(NoWarn);NU5110;NU5111</NoWarn>
   </PropertyGroup>
   <ItemGroup>
     <Content Include="$(TemplateContentRoot)/**/*" Pack="true"

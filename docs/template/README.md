@@ -103,6 +103,8 @@ source snapshot; pack and install the next local version explicitly.
   assembly output or package dependencies. Required dotfiles are deliberately retained.
   Existing central analyzer versions/settings remain inherited; no new NuGet
   authoring dependencies or nested central package files are needed.
+  The packaging project alone suppresses NU5110/NU5111: the included PowerShell
+  policy script is template source, not a legacy NuGet installation hook.
 - The initial Identity migration and snapshot are retained. Namespace and model
   type names change; migration identifiers and `RUV001`–`RUV004` stay stable.
 - Binary assets are copied byte for byte. Unknown extensions fail packaging until
