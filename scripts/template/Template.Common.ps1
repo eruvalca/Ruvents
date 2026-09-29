@@ -73,7 +73,7 @@ function Read-TemplatePackage {
         $config = [Text.Encoding]::UTF8.GetString($files[$prefix + '.template.config/template.json']) | ConvertFrom-Json
         $provenance = [Text.Encoding]::UTF8.GetString($files[$prefix + '.template-provenance.json']) | ConvertFrom-Json
         $inventory = [Text.Encoding]::UTF8.GetString($files[$prefix + '.template.config/content-manifest.json']) | ConvertFrom-Json
-        [xml] $nuspec = [Text.Encoding]::UTF8.GetString($files['Ruvents.Templates.nuspec'])
+        [xml] $nuspec = [Text.Encoding]::UTF8.GetString($files['Ruvents.Templates.nuspec']).TrimStart([char]0xFEFF)
         Assert-Template ($nuspec.package.metadata.id -ceq 'Ruvents.Templates') 'Wrong package ID.'
         Assert-Template ($nuspec.package.metadata.version -ceq $provenance.packageVersion) 'Package/provenance versions disagree.'
         Assert-Template ($config.identity -ceq 'Ruvents.Solution' -and $provenance.templateIdentity -ceq 'Ruvents.Solution') 'Wrong template identity.'
