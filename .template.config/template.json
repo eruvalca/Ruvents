@@ -1,0 +1,44 @@
+{
+  "$schema": "http://json.schemastore.org/template",
+  "author": "Ruvents",
+  "classifications": ["Web", "Blazor", "Aspire"],
+  "identity": "Ruvents.Solution",
+  "name": "Ruvents Blazor solution",
+  "description": "Personal .NET 10 Blazor, Identity, PostgreSQL and Aspire starter. Use a simple PascalCase name (letters and digits only).",
+  "shortName": "ruvents",
+  "sourceName": "Ruvents",
+  "preferNameDirectory": true,
+  "tags": { "language": "C#", "type": "solution" },
+  "guids": [
+    "1e67753d-ce7a-4cb7-9f42-8935cbedca98",
+    "c17f4175-8bed-4634-ae44-e267c9a968f3"
+  ],
+  "sources": [{
+    "copyOnly": [
+      ".template-provenance.json",
+      "**/*.png", "**/*.jpg", "**/*.jpeg", "**/*.gif", "**/*.ico",
+      "**/*.webp", "**/*.woff", "**/*.woff2", "**/*.ttf", "**/*.pdf"
+    ],
+    "modifiers": [{
+      "exclude": [
+        "**/.git", "**/.git/**", "**/.aspire/**", "**/.vs/**", "**/.idea/**",
+        "**/bin/**", "**/obj/**", "**/artifacts/**", "**/TestResults/**",
+        "**/test-results/**", "**/playwright-report/**", "**/.playwright-cli/**",
+        "**/node_modules/**", "**/.env", "**/.env.*", "**/secrets.json",
+        "**/*.user", "**/*.suo", "**/*.pfx", "**/*.p12", "**/*.pem", "**/*.key",
+        "**/*.db", "**/*.db-shm", "**/*.db-wal", "**/*.log", "**/*.binlog",
+        "**/*.nupkg", "**/*.snupkg", "**/*.dll", "**/*.exe", "**/*.pdb",
+        "templates/**", "docs/template/**", "scripts/template/**",
+        "scripts/Pack-Template.ps1", "scripts/Test-Template.ps1", "scripts/Install-Template.ps1"
+      ]
+    }]
+  }],
+  "primaryOutputs": [{ "path": "Ruvents.slnx" }],
+  "postActions": [{
+    "actionId": "AC1156F7-BB77-4DB8-B28F-24EEBCCA1E5C",
+    "description": "Next steps",
+    "manualInstructions": [{
+      "text": "Enter your output directory, then run: dotnet build; dotnet test; aspire run. See README.md for prerequisites, Aspire endpoint discovery, and production follow-ups. Only files were created; Git initialization is optional."
+    }]
+  }]
+}

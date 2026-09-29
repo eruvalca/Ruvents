@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <PackageId>Ruvents.Templates</PackageId>
+    <PackageType>Template</PackageType>
+    <Authors>Ruvents</Authors>
+    <Description>Personal Ruvents Blazor solution template snapshot.</Description>
+    <PackageReadmeFile>PACKAGE-README.md</PackageReadmeFile>
+    <IncludeContentInPack>true</IncludeContentInPack>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
+    <EnableDefaultItems>false</EnableDefaultItems>
+    <NoDefaultExcludes>true</NoDefaultExcludes>
+    <NoBuild>true</NoBuild>
+  </PropertyGroup>
+  <ItemGroup>
+    <Content Include="$(TemplateContentRoot)/**/*" Pack="true"
+             PackagePath="content/Ruvents/%(RecursiveDir)%(Filename)%(Extension)" />
+    <None Include="PACKAGE-README.md" Pack="true" PackagePath="/" />
+  </ItemGroup>
+  <Target Name="RequireStagedTemplate" BeforeTargets="Pack">
+    <Error Condition="'$(TemplateContentRoot)' == '' or !Exists('$(TemplateContentRoot)/.template-provenance.json')"
+           Text="Run scripts/Pack-Template.ps1 to pack a committed source snapshot." />
+  </Target>
+</Project>
