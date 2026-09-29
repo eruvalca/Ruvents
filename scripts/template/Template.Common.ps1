@@ -52,6 +52,10 @@ function ConvertTo-TemplateSource {
         Assert-Template (-not $Text.Contains(':cnd:')) "Review existing template conditional controls in $Path."
         $Text = "//-:cnd:noEmit`n" + $Text + "//+:cnd:noEmit`n"
     }
+    if ($Path -match '\.(?:\w*proj|props|targets|msbuild)$' -and $Text -match '\bCondition\s*=') {
+        Assert-Template (-not $Text.Contains(':msbuild-conditional:')) "Review existing MSBuild template controls in $Path."
+        $Text = "<!--/-:msbuild-conditional:noEmit -->`n" + $Text + "<!--/+:msbuild-conditional:noEmit -->`n"
+    }
     return $Text
 }
 

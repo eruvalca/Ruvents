@@ -113,6 +113,9 @@ source snapshot; pack and install the next local version explicitly.
   `cnd:noEmit` control comments. They preserve all compiler branches while allowing
   name/GUID substitutions, and disappear during generation. No application source
   is edited by this step. A synthetic probe checks this behavior against the SDK.
+  MSBuild files with `Condition` attributes receive analogous
+  `msbuild-conditional:noEmit` guards: in particular, the engine would otherwise
+  remove the Razor validator's item-list condition. Validation checks both forms.
 - Only the marked authoring section is removed from the shared README. Historical
   acceptance results and all authoring docs/scripts are excluded entirely.
   `.template-provenance.json` records the template identity, version, and source

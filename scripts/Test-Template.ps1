@@ -80,6 +80,7 @@ try {
                 }
                 $expectedText = [Text.Encoding]::UTF8.GetString($bytes).Replace('Ruvents', $name).Replace('ruvents', $name.ToLowerInvariant())
                 $expectedText = $expectedText.Replace("//-:cnd:noEmit`n", '').Replace("//+:cnd:noEmit`n", '')
+                $expectedText = $expectedText.Replace("<!--/-:msbuild-conditional:noEmit -->`n", '').Replace("<!--/+:msbuild-conditional:noEmit -->`n", '')
                 for ($index = 0; $index -lt $guids.Count; $index++) {
                     $expectedText = $expectedText.Replace($package.Config.guids[$index], $guids[$index])
                 }
@@ -105,11 +106,14 @@ try {
         [IO.File]::WriteAllText((Join-Path $fixture '.template.config/template.json'), ($fixtureConfig | ConvertTo-Json))
         $conditional = "namespace Ruvents;`n#if DEBUG`ninternal sealed class DebugType { }`n#else`ninternal sealed class ReleaseType { }`n#endif`n"
         [IO.File]::WriteAllText((Join-Path $fixture 'Probe.cs'), (ConvertTo-TemplateSource 'Probe.cs' $conditional))
+        $msbuildConditional = '<Project><Target Name="RuventsProbe"><Message Text="Ruvents" Condition="''@(RazorComponent)'' != ''''" /></Target></Project>' + "`n"
+        [IO.File]::WriteAllText((Join-Path $fixture 'Probe.targets'), (ConvertTo-TemplateSource 'Probe.targets' $msbuildConditional))
         Invoke-ValidationCommand dotnet (@('new', 'install', $fixture) + $hiveArgs) 'conditional-install.log'
         $fixtureOutput = Join-Path $runRoot 'conditional-output'
         Invoke-ValidationCommand dotnet (@('new', 'ruvents-conditional-probe', '--name', 'ConditionalApp', '--output', $fixtureOutput) + $hiveArgs) 'conditional-generate.log'
         Assert-Template ([IO.File]::ReadAllText((Join-Path $fixtureOutput 'Probe.cs')) -ceq $conditional.Replace('Ruvents', 'ConditionalApp')) 'Compiler conditionals were altered or renaming was suppressed.'
-        Write-Host 'PASS: compiler conditionals and name replacement coexist.'
+        Assert-Template ([IO.File]::ReadAllText((Join-Path $fixtureOutput 'Probe.targets')) -ceq $msbuildConditional.Replace('Ruvents', 'ConditionalApp')) 'MSBuild conditions were altered or renaming was suppressed.'
+        Write-Host 'PASS: compiler/MSBuild conditions and name replacement coexist.'
     }
     finally { Pop-Location }
 
