@@ -45,6 +45,9 @@ try {
         else {
             Assert-Template ($extension -in $manifest.textExtensions -or $path -cin $manifest.files) "Classify this new file extension in templates/content-manifest.json: $path"
             $text = [IO.File]::ReadAllText($origin, [Text.UTF8Encoding]::new($false, $true))
+            if (Test-TemplateGlob $path $config.sources[0].copyOnly) {
+                Assert-Template ($text -notmatch '(?i)ruvents' -and -not ($config.guids | Where-Object { $text.Contains($_) })) "Copy-only source now needs substitutions: $path"
+            }
             [IO.File]::WriteAllText($destination, (ConvertTo-TemplateSource $path $text))
         }
     }

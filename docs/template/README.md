@@ -109,6 +109,9 @@ source snapshot; pack and install the next local version explicitly.
   type names change; migration identifiers and `RUV001`–`RUV004` stay stable.
 - Binary assets are copied byte for byte. Unknown extensions fail packaging until
   classified in the manifest; add new binary formats to `copyOnly` too.
+  The name-independent Razor policy script is also copy-only: its embedded C#
+  `#if` fixture would otherwise be interpreted by the template engine. Packaging
+  fails if an application name or secrets GUID is later added to copy-only text.
 - For C# files containing compiler conditionals, staging adds template-engine
   `cnd:noEmit` control comments. They preserve all compiler branches while allowing
   name/GUID substitutions, and disappear during generation. No application source

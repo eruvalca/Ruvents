@@ -73,7 +73,7 @@ try {
                 $generatedPath = Join-Path $directory $renamed
                 Assert-Template (Test-Path -LiteralPath $generatedPath -PathType Leaf) "Missing generated file: $renamed"
                 $bytes = $package.Files[$package.Prefix + $entry.path]
-                if ($entry.binary -or $entry.path -eq '.template-provenance.json') {
+                if ($entry.binary -or (Test-TemplateGlob $entry.path $package.Config.sources[0].copyOnly)) {
                     $expectedHash = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($bytes))
                     Assert-Template ((Get-FileHash -LiteralPath $generatedPath).Hash -ceq $expectedHash) "Copy-only content changed: $renamed"
                     continue

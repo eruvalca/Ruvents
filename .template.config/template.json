@@ -16,6 +16,7 @@
   "sources": [{
     "copyOnly": [
       ".template-provenance.json",
+      "scripts/Test-RazorCodeBehind.ps1",
       "**/*.png", "**/*.jpg", "**/*.jpeg", "**/*.gif", "**/*.ico",
       "**/*.webp", "**/*.woff", "**/*.woff2", "**/*.ttf", "**/*.pdf"
     ],
