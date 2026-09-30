@@ -325,12 +325,19 @@ configuration is required. On a new machine, install Aspire on `PATH`, then:
   repository and use the Aspire MCP resource-list tool to verify the connection.
   If several AppHosts are running, select this repository's AppHost explicitly.
 
-The checked-in skills require no additional installation on clone. To refresh them,
-use the matching CLI's `aspire agent init` with the **standard** skill location
-(`.agents/skills`), then review the diff. Avoid creating alternate copies under
+The checked-in skills require no additional installation on clone. To refresh the
+Aspire skills, use the matching CLI's `aspire agent init` with the **standard** skill
+location (`.agents/skills`), then review the diff. Avoid creating alternate copies under
 `.github`, `.codex`, or VS Code agent configuration. Keep user secrets, dashboard
 tokens, runtime `.aspire` state, telemetry exports, and temporary browser output out
 of source control.
+
+The [Fluent UI Blazor v5 usage skill](.agents/skills/fluentui-blazor-usage/SKILL.md)
+includes setup, data-grid, and theming references. Adding the skill does not install
+the component library or configure its MCP server. When using its examples, follow
+`AGENTS.md` for code-behind, CSS, static account rendering, and central package
+versions. Verify version-sensitive APIs against the Fluent UI Blazor MCP server's
+documentation and check its reported version against the selected package version.
 
 References: [Aspire MCP](https://aspire.dev/reference/cli/commands/aspire-agent-mcp/),
 [Codex skills](https://learn.chatgpt.com/docs/build-skills#where-codex-loads-local-skills),
