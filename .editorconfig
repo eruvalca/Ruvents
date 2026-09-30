@@ -33,6 +33,9 @@ csharp_prefer_braces = true:warning
 # Enforce C# formatting, including handwritten Razor code-behind.
 dotnet_diagnostic.IDE0055.severity = warning
 
+# IDE0001: Simplify Names
+dotnet_diagnostic.IDE0001.severity = warning
+
 # Match C# filenames to their type names; Component.razor.cs already qualifies.
 dotnet_diagnostic.MA0048.severity = warning
 

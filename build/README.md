@@ -41,6 +41,35 @@ only the nearest central package file.
 
 ## Formatting
 
+For every change set, including configuration and documentation changes, run from
+the repository root after stopping any running Aspire instance:
+
+```powershell
+dotnet format Ruvents.slnx --severity warn
+dotnet format Ruvents.slnx --severity warn --verify-no-changes
+```
+
+The first command applies whitespace, code-style, and analyzer fixes. Review the
+diff for preserved behavior, then require the verification command to exit zero
+before completion. Resolve remaining actionable findings manually and rerun the
+check; do not silence diagnostics or omit files to manufacture a clean result.
+Use `--no-restore` only when restore assets already match the current project and
+package configuration. Do not pass `--include-generated` or edit generated code.
+
+During development, `dotnet format whitespace Ruvents.slnx`,
+`dotnet format style Ruvents.slnx --severity warn`, and
+`dotnet format analyzers Ruvents.slnx --severity warn` can target an individual
+category. A focused `--include` is useful while editing, but the final verification
+must cover the whole solution. Warning and error rules are mandatory; rules set
+to suggestion remain review guidance rather than bulk refactoring requirements.
+
+`dotnet format` is not a universal EditorConfig validator: it operates on the
+solution's supported source documents and available analyzer fixes. Review Razor
+markup, scripts, documentation, and configuration separately for their applicable
+EditorConfig settings. A clean formatting check does not replace the solution
+build, the Razor policy checks when required, or both test suites after code
+changes. [Command reference](https://learn.microsoft.com/dotnet/core/tools/dotnet-format).
+
 Text files use UTF-8 without a byte-order mark (`charset = utf-8`), including C#,
 Razor markup and companions, configuration, project files, scripts, and documentation.
 This preserves Unicode text and follows the existing C# convention in Ruvents rather
@@ -287,10 +316,15 @@ is needed to distinguish a member from a same-named parameter or local variable.
 This preference is compatible with primary constructors and does not apply to
 passing `this` as an argument.
 
-IDE0003 is an editor-only diagnostic in the current SDK. Its warning severity
-does not fail ordinary `dotnet build` commands, even with code-style enforcement
-and warnings-as-errors enabled. Follow this convention when authoring or reviewing
-code; generated Razor output must remain untouched.
+`IDE0001` (warning) requires simplifying redundant namespace/type qualification
+and inferable generic type arguments where binding is unchanged. Keep qualification
+or type arguments when they resolve an ambiguity. In particular, an inferred
+task-returning `Match` preserves the asynchronous OneOf contract; it must still be
+returned or awaited, and asynchronous lambdas must never be passed to `Switch`.
+IDE0001 and IDE0003 are editor/formatter diagnostics in the current SDK; an
+ordinary build alone does not establish compliance. The required `dotnet format`
+pass checks these conventions, including handwritten Razor code-behind. Generated
+Razor output must remain untouched.
 
 Methods returning awaitable types, including `Task` and `ValueTask`, must end in
 `Async` (`MA0137`, warning). This includes methods that forward an awaitable

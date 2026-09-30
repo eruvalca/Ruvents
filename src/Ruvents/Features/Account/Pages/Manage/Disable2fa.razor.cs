@@ -36,7 +36,7 @@ public sealed partial class Disable2fa
         }
 
         var result = await AccountTwoFactor.DisableAsync(_user);
-        await result.Match<Task>(
+        await result.Match(
             async _ =>
             {
                 var userId = await UserManager.GetUserIdAsync(_user);

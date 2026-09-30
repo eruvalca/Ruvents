@@ -55,7 +55,7 @@ public sealed class PasskeyTests
         var passkey = CreatePasskey();
         account.SignIn.PerformPasskeyAttestationAsync("credential").Returns(PasskeyAttestationResult.Success(passkey,
             new PasskeyUserEntity { Id = "user", Name = "member", DisplayName = "Member" }));
-        account.Users.AddOrUpdatePasskeyAsync(Arg.Any<Ruvents.Data.ApplicationUser>(), passkey).Returns(IdentityResult.Success);
+        account.Users.AddOrUpdatePasskeyAsync(Arg.Any<Data.ApplicationUser>(), passkey).Returns(IdentityResult.Success);
         var component = account.Render<Passkeys>(context);
         component.Instance.SetFormValue("Input", new PasskeyInputModel { CredentialJson = "credential" });
 
@@ -76,7 +76,7 @@ public sealed class PasskeyTests
         account.SignIn.PerformPasskeyAttestationAsync("credential").Returns(validAttestation
             ? PasskeyAttestationResult.Success(passkey, new PasskeyUserEntity { Id = "user", Name = "member", DisplayName = "Member" })
             : PasskeyAttestationResult.Fail(new PasskeyException("Invalid origin")));
-        account.Users.AddOrUpdatePasskeyAsync(Arg.Any<Ruvents.Data.ApplicationUser>(), passkey).Returns(IdentityResult.Failed());
+        account.Users.AddOrUpdatePasskeyAsync(Arg.Any<Data.ApplicationUser>(), passkey).Returns(IdentityResult.Failed());
         var component = account.Render<Passkeys>(context);
         component.Instance.SetFormValue("Input", new PasskeyInputModel { CredentialJson = "credential" });
 
@@ -136,8 +136,8 @@ public sealed class PasskeyTests
         var account = ConfigurePasskeys(context);
         var passkey = CreatePasskey();
         passkey.Name = "Old name";
-        account.Users.GetPasskeyAsync(Arg.Any<Ruvents.Data.ApplicationUser>(), Arg.Any<byte[]>()).Returns(passkey);
-        account.Users.AddOrUpdatePasskeyAsync(Arg.Any<Ruvents.Data.ApplicationUser>(), passkey)
+        account.Users.GetPasskeyAsync(Arg.Any<Data.ApplicationUser>(), Arg.Any<byte[]>()).Returns(passkey);
+        account.Users.AddOrUpdatePasskeyAsync(Arg.Any<Data.ApplicationUser>(), passkey)
             .Returns(succeeds ? IdentityResult.Success : IdentityResult.Failed());
         var component = context.Render<RenamePasskey>(parameters => parameters
             .AddCascadingValue<HttpContext>(account.Http).Add(page => page.Id, "AQID"));
@@ -147,7 +147,7 @@ public sealed class PasskeyTests
         await component.Find("form").SubmitAsync();
 
         passkey.Name.ShouldBe("New name");
-        await account.Users.Received(1).AddOrUpdatePasskeyAsync(Arg.Any<Ruvents.Data.ApplicationUser>(), passkey);
+        await account.Users.Received(1).AddOrUpdatePasskeyAsync(Arg.Any<Data.ApplicationUser>(), passkey);
         account.StatusCookie.ShouldContain(message);
         context.Services.GetRequiredService<NavigationManager>().Uri.ShouldBe("http://localhost/Account/Manage/Passkeys");
     }

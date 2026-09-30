@@ -34,7 +34,7 @@ public sealed partial class ConfirmEmail
         }
         else
         {
-            await TokenDecodeOutcome.Decode(Code).Match<Task>(
+            await TokenDecodeOutcome.Decode(Code).Match(
                 async token =>
                 {
                     var result = await UserManager.ConfirmEmailAsync(user, token.Value);

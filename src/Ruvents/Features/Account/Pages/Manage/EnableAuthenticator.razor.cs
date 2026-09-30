@@ -57,7 +57,7 @@ public sealed partial class EnableAuthenticator
         }
         _recoveryCodes = null;
         var result = await AccountTwoFactor.EnableAsync(_user, Input.Code);
-        await result.Match<Task>(
+        await result.Match(
             _ => SetMessageAsync("Error: Verification code is invalid."),
             _ => CompleteEnableAsync(_user, null),
             enabled => CompleteEnableAsync(_user, enabled.Codes),
@@ -86,7 +86,7 @@ public sealed partial class EnableAuthenticator
     private async ValueTask LoadSharedKeyAndQrCodeUriAsync(ApplicationUser user)
     {
         var result = await AccountTwoFactor.PrepareAsync(user);
-        await result.Match<Task>(
+        await result.Match(
             async ready =>
             {
                 _sharedKey = ready.Key.FormatAuthenticatorKey();

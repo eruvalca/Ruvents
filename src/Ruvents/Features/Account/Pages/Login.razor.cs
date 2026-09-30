@@ -35,7 +35,7 @@ public sealed partial class Login
         }
     }
 
-    public Task LoginUserAsync() => PasskeySubmission.From(Input.Passkey).Match<Task>(
+    public Task LoginUserAsync() => PasskeySubmission.From(Input.Passkey).Match(
         _ => PasswordLoginAsync(),
         async credential => HandleSignIn(await AccountSignIn.PasskeyAsync(credential.Json)),
         error =>

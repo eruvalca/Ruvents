@@ -48,7 +48,7 @@ public sealed partial class Passkeys
             return;
         }
 
-        await PasskeySubmission.From(Input).Match<Task>(
+        await PasskeySubmission.From(Input).Match(
             _ => CompleteWithStatusAsync("Error: The browser did not provide a passkey."),
             async credential =>
             {
@@ -86,7 +86,7 @@ public sealed partial class Passkeys
             return;
         }
 
-        await CredentialIdOutcome.Decode(CredentialId).Match<Task>(
+        await CredentialIdOutcome.Decode(CredentialId).Match(
             async decoded =>
             {
                 var result = await UserManager.RemovePasskeyAsync(_user, decoded.Bytes);

@@ -16,7 +16,7 @@ the original starter and are excluded from generated applications.
 ## Local prerequisites
 
 - .NET SDK **10.0.401** (selected by `global.json`).
-- Aspire CLI **13.5.4** on `PATH`, matching the AppHost SDK and stable integrations.
+- Aspire CLI **13.6.0** on `PATH`, matching the AppHost SDK and stable integrations.
   Follow the [Aspire installation guide](https://aspire.dev/get-started/install/).
 - Docker Desktop running Linux containers, or another Aspire-supported container runtime.
 - A trusted .NET development HTTPS certificate: `dotnet dev-certs https --trust`.
@@ -62,7 +62,7 @@ The CLI builds the AppHost and its projects before starting them. For a backgrou
 run (including agent validation), use:
 
 ```powershell
-aspire start --non-interactive
+aspire start --launch-profile https --non-interactive
 aspire wait ruvents --timeout 120 --non-interactive
 aspire describe --non-interactive
 ```
@@ -74,7 +74,8 @@ restart. Chromium browsers resolve `.localhost` names locally. Command-line
 clients that do not resolve subdomains can use the internal `https://localhost`
 endpoint shown by Aspire. Do not copy ports or dashboard login tokens into source.
 
-The AppHost defaults to its first launch profile, `https`. `AddProject` selects the
+The background command explicitly selects `https`; it is also the AppHost's first
+and default launch profile. `AddProject` selects the
 matching web profile and derives its endpoints from `applicationUrl`; there is no
 AppHost override for the web profile or its ports. The web profiles retain
 `ruvents.dev.localhost:0`: the hostname is our local convention, and port `0` asks
@@ -82,7 +83,7 @@ Aspire to allocate an available port instead of using the template's fixed ports
 The other web launch settings preserve the template's environment and Blazor debugging.
 
 The AppHost's `https` profile omits dashboard, OTLP, and resource-service addresses:
-Aspire 13.5.4 supplies secure, dynamically allocated local endpoints. The optional
+Aspire 13.6.0 supplies secure, dynamically allocated local endpoints. The optional
 AppHost `http` profile sets `ASPIRE_ALLOW_UNSECURED_TRANSPORT=true`, which opts into
 HTTP endpoints with allocated ports. This opt-in applies only when that profile
 is selected; the default `https` profile keeps Aspire's secure defaults.
@@ -93,7 +94,7 @@ For AppHost changes or a full solution build, stop first to release Windows file
 ```powershell
 aspire stop --non-interactive
 dotnet build Ruvents.slnx
-aspire start --non-interactive
+aspire start --launch-profile https --non-interactive
 ```
 
 Stop the application with `aspire stop --non-interactive` (or Ctrl+C for a foreground
@@ -190,13 +191,13 @@ An **Exited**, **Failed**, or **Unhealthy** application/database resource, or we
 startup blocked by failed migrations, does require investigation through its logs.
 
 The PostgreSQL image version is the built-in default of
-`Aspire.Hosting.PostgreSQL` 13.5.4. Container lifetime remains Aspire's default
+`Aspire.Hosting.PostgreSQL` 13.6.0. Container lifetime remains Aspire's default
 session lifetime. Data uses an Aspire-managed named volume rather than a repository
 file. This is a fresh PostgreSQL schema; the original SQLite scaffold is removed.
 
 Aspire supplies `ConnectionStrings:ruventsdb` to both the application and migration
 tool. The application uses Npgsql EF Core 10.0.3, EF Core 10.0.12, and Aspire's
-Npgsql EF integration 13.5.4. Its non-pooled `IDbContextFactory<ApplicationDbContext>`
+Npgsql EF integration 13.6.0. Its non-pooled `IDbContextFactory<ApplicationDbContext>`
 supports a context per Blazor operation; Identity can still resolve the scoped
 context. Dispose factory-created contexts with `await using`.
 
@@ -213,7 +214,7 @@ and the desired exposure of health endpoints also require application-specific w
 
 ## EF migrations
 
-`Aspire.Hosting.EntityFrameworkCore` **13.5.4-preview.1.26464.4** manages
+`Aspire.Hosting.EntityFrameworkCore` **13.6.0-preview.1.26479.8** manages
 `ruvents-migrations` and its **dotnet-ef 10.0.12** tool. It does not alter the machine's
 global EF tool. On every start, migrations wait for PostgreSQL and the database;
 the web application starts only after migration success. Failure blocks web startup.
@@ -266,6 +267,31 @@ Useful CLI commands include `aspire logs ruvents`, `aspire otel traces`, and
 visibility to agents. Database query telemetry can contain application information;
 keep exports and runtime logs out of Git.
 
+Aspire 13.6 retains dashboard run history automatically in **Run** persistence
+mode. Use the header's run selector to compare the live run with completed runs;
+historical runs are read-only. Up to ten unpinned runs are retained per application,
+and pinning keeps a useful run. Console logs are only persisted after their stream
+is viewed or exported, so capture needed console output before stopping.
+
+Keep the default dashboard data directory, `<ASPIRE_HOME>/dashboard` (normally
+`~/.aspire/dashboard`), outside the checkout. Persisted resource snapshots can
+contain unredacted credentials even when the dashboard masks them. On Windows,
+the directory inherits filesystem permissions; keep it private and do not share
+its databases or backups. The existing Git exclusions cover `.aspire/`, `*.db`,
+`*.db-wal`, and `*.db-shm`. No application telemetry changes are needed for run
+history. See [dashboard persistence](https://aspire.dev/dashboard/data-persistence/).
+
+For quick SQL inspection, select **REPL** on the running `postgres` resource. The
+dashboard opens the container's bundled `psql` with its existing credentials, so
+no local client or pgAdmin startup is required. Run `\connect ruvents` to switch
+from the initial `postgres` database to the application database. Exit with `\q`
+before closing the tab; closing the viewer alone can leave the client running.
+This shell has normal write permissions, not read-only access. Database reset or
+drop still requires explicit intent to delete local data. `WithRepl()` uses our
+existing PostgreSQL package without an experimental-warning suppression, while
+the dashboard terminal infrastructure remains preview. See
+[PostgreSQL REPLs](https://aspire.dev/integrations/databases/postgres/postgres-host/#open-an-interactive-repl).
+
 pgAdmin is available only in run mode. Start `pgadmin` from its dashboard action or:
 
 ```powershell
@@ -280,10 +306,12 @@ Aspire configures the connection and credentials. Stop it from the dashboard whe
 
 Shared repository skills live only in `.agents/skills`, supported by Codex and
 Copilot CLI. Copilot desktop inherits repository/CLI skills and MCP configuration.
-The Aspire skills were reconciled with the first-party **aspire-skills v0.0.1**
-bundle referenced by CLI 13.5.4 (including its published SHA-512). Its descriptions
-still refer to Aspire 13.4; those upstream headings are intentionally unchanged.
-Use installed package/API evidence and current documentation when versions differ.
+The Aspire skills use the first-party **aspire-skills v0.0.3** bundle refreshed
+with CLI 13.6.0. Local corrections document 13.6's Project v2 diagnostic changes
+and the distinction between persistent-resource cleanup and volume deletion.
+Reconcile those corrections when refreshing the skills; use installed package/API
+evidence and current documentation when upstream guidance differs. Project v2
+migration remains deferred; the AppHost continues to use `AddProject`.
 
 The existing user-level Codex and Copilot MCP entries run **`aspire agent mcp`**.
 Keep a single entry per agent. No repository MCP duplicate or VS Code agent
@@ -311,13 +339,18 @@ References: [Aspire MCP](https://aspire.dev/reference/cli/commands/aspire-agent-
 
 ## Validation
 
-The existing tests run headlessly with native Microsoft.Testing.Platform and
-Shouldly; they do not require Aspire or PostgreSQL:
+For every change set, run formatting from the repository root, review the fixes,
+and require a clean verification pass. Stop Aspire first on Windows. After code
+changes, also build and run both existing headless test suites, which use native
+Microsoft.Testing.Platform and Shouldly and do not require Aspire or PostgreSQL:
 
 ```powershell
+dotnet format Ruvents.slnx --severity warn
+dotnet format Ruvents.slnx --severity warn --verify-no-changes
 dotnet build Ruvents.slnx
 dotnet test --solution Ruvents.slnx
 ```
 
 See [tests/README.md](tests/README.md) for test conventions and
-[build/README.md](build/README.md) for Razor code-behind validation.
+[build/README.md](build/README.md) for formatting scope, analyzer rules, and Razor
+code-behind validation. Formatting does not replace checks for other file types.

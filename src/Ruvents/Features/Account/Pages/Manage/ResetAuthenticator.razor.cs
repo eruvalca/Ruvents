@@ -19,7 +19,7 @@ public sealed partial class ResetAuthenticator
         }
 
         var result = await AccountTwoFactor.ResetAsync(user);
-        await result.Match<Task>(
+        await result.Match(
             async _ =>
             {
                 var userId = await UserManager.GetUserIdAsync(user);

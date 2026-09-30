@@ -26,7 +26,7 @@ internal sealed class AccountPasskeyService(UserManager<ApplicationUser> userMan
     }
 
     public Task<PasskeyLookupOutcome> FindAsync(ApplicationUser user, string? credentialId) =>
-        CredentialIdOutcome.Decode(credentialId).Match<Task<PasskeyLookupOutcome>>(
+        CredentialIdOutcome.Decode(credentialId).Match(
             async decoded =>
             {
                 var passkey = await userManager.GetPasskeyAsync(user, decoded.Bytes);

@@ -25,7 +25,7 @@ public sealed partial class Register
     public async Task RegisterUserAsync(EditContext editContext)
     {
         var result = await AccountRegistration.PasswordAsync(Input.Email, Input.Password);
-        await result.Match<Task>(
+        await result.Match(
             created => CompleteRegistrationAsync(created.User),
             rejected =>
             {

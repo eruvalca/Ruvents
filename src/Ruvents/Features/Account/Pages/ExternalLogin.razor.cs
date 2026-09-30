@@ -101,7 +101,7 @@ public sealed partial class ExternalLogin
         }
 
         var result = await AccountRegistration.ExternalAsync(Input.Email, _externalLoginInfo);
-        await result.Match<Task>(
+        await result.Match(
             created => CompleteRegistrationAsync(created.User, _externalLoginInfo.LoginProvider),
             rejected =>
             {

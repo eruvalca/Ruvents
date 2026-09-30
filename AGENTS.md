@@ -122,8 +122,10 @@ shared kernel, plus Aspire hosting and service defaults.
   or `AsTn`. `TryPick` is appropriate when deliberately separating one case and
   handling or forwarding the remaining union; direct case inspection is also
   appropriate in tests.
-- Return and await `Match<Task>` or `Match<Task<T>>` for asynchronous branches.
-  Never pass asynchronous lambdas to `Switch`, whose callbacks return `void`.
+- Return and await task-returning `Match` for asynchronous branches
+  (`Match<Task>` or `Match<Task<T>>`); let the compiler infer the type arguments
+  when they are redundant under IDE0001. Never pass asynchronous lambdas to
+  `Switch`, whose callbacks return `void`.
 - Represent anticipated failures and partial completion accurately, including
   earlier writes that succeeded. Preserve unexpected exceptions and cancellation;
   do not catch every exception into a generic failure outcome.
@@ -149,6 +151,17 @@ distinguishes complete success from partial completion.
   analyzer rules and the documented SDK compatibility workaround.
 - Run `dotnet build Ruvents.slnx` after code changes. The Razor code-behind policy
   is checked automatically during builds; see `build/README.md` for diagnostics.
+- For every change set, including configuration and documentation changes, run
+  `dotnet format Ruvents.slnx --severity warn` from the repository root and review
+  its fixes. Before completion, require a clean
+  `dotnet format Ruvents.slnx --severity warn --verify-no-changes` pass. This covers
+  whitespace, code style (including IDE0001 name simplification), and analyzer
+  fixes at warning/error severity; suggestions remain review guidance. Do not
+  suppress diagnostics or exclude maintained source just to obtain a clean pass.
+  Keep generated files under their owning tools' control.
+  Resolve remaining findings manually without weakening `.editorconfig`. The
+  formatter does not replace builds, tests, or review of non-C# files. See
+  [build/README.md](build/README.md#formatting) for scope and targeted commands.
 - After changing the policy or upgrading the SDK, also run
   `pwsh ./scripts/Test-RazorCodeBehind.ps1`.
 - Fix violations rather than disabling checks or adding unrelated placeholder
@@ -218,10 +231,15 @@ dotnet test --solution Ruvents.slnx
   orchestration by launching the web or WebAssembly project alone. Unit/component
   tests remain headless and do not require Aspire.
 - Run Aspire CLI commands from the repository root; `aspire.config.json` selects
-  `src/Ruvents.AppHost/Ruvents.AppHost.csproj`. Use `aspire start --non-interactive`,
+  `src/Ruvents.AppHost/Ruvents.AppHost.csproj`. Use
+  `aspire start --launch-profile https --non-interactive`,
   `aspire wait ruvents --timeout 120 --non-interactive`, and `aspire describe`.
-  Stop Aspire before full builds on Windows and when agent validation is finished.
-- Keep Aspire 13.5.4, the explicitly selected preview EF integration, and
+  Stop Aspire before formatting/full builds on Windows and when agent validation
+  is finished. Ordinary shutdown uses `aspire stop`; `--force` removes persistent
+  resource instances and requires explicit destructive intent for one AppHost.
+  In 13.6, named volumes are preserved unless `--volumes` is also requested;
+  never add either cleanup flag to routine validation.
+- Keep Aspire 13.6.0, the explicitly selected preview EF integration, and
   the managed EF tool 10.0.12 aligned with the documented setup in `README.md`.
   Use `.agents/skills` as the shared skill location; retain the single user-level
   `aspire agent mcp` entry for each agent rather than adding repository duplicates.
@@ -241,9 +259,15 @@ dotnet test --solution Ruvents.slnx
   generating migrations. The web resource must wait for successful migration
   completion; do not add application-startup migration code or a custom worker.
 - pgAdmin is an explicit-start, run-mode developer tool. See `README.md` for
-  endpoint discovery, data persistence, and telemetry. Database reset/drop requires
+  endpoint discovery, data persistence, and telemetry. PostgreSQL's **REPL**
+  command opens `psql`; use `\connect ruvents` to select the application database
+  and `\q` to exit. It has normal write permissions. Database reset/drop requires
   an explicit intent to delete the local data. Do not add preview browser logging
   unless explicitly requested.
+- The dashboard retains run history automatically. Keep persisted dashboard data
+  in its user-local default directory and out of shared artifacts: it can contain
+  unredacted credentials. View or export console logs before stopping if they are
+  needed in historical runs; not every console stream is captured automatically.
 - A normal run leaves pgAdmin **Not started**, migrations
   **Finished**, and the web/database resources **Running / Healthy**. Inspect
   resource commands and logs before treating optional or one-shot resource states
@@ -262,3 +286,18 @@ dotnet test --solution Ruvents.slnx
 - Follow the [C# extension members skill](.agents/skills/csharp-extension-members/SKILL.md)
   for receiver/generic rules, migration checks, and compiled examples. Keep this
   repository on C# 14; do not copy preview extension indexers or SDK settings.
+
+## Agent documentation review
+
+- Review documentation as part of implementation work, before any authorized
+  commit and before reporting completion. Update affected instructions and docs;
+  leave accurate documentation unchanged. Briefly report the review outcome.
+  This does not authorize a commit or broaden a read-only task.
+- Keep durable agent conventions here, setup and runtime workflows in `README.md`,
+  build rules in `build/README.md`, and test conventions in `tests/README.md`.
+  Update existing feature and workflow documentation rather than duplicating it.
+- The project-owned Codex `UserPromptSubmit` hook supplies this reminder and
+  records a workspace baseline. The companion `Stop` hook requests at most one
+  finishing review when the workspace changes during a turn. These hooks are
+  advisory, not proof of documentation accuracy or a Git commit gate.
+  See [agent hook maintenance](build/agent-hooks.md) for setup and validation.

@@ -1,7 +1,8 @@
 var builder = DistributedApplication.CreateBuilder(args);
 
 var postgres = builder.AddPostgres("postgres")
-    .WithDataVolume();
+    .WithDataVolume()
+    .WithRepl();
 var database = postgres.AddDatabase("ruventsdb", "ruvents");
 
 var web = builder.AddProject<Projects.Ruvents>("ruvents")

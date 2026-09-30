@@ -44,7 +44,7 @@ identity and are not portable application seed data.
 ## Pack, validate, install
 
 Run PowerShell 7 commands from the Ruvents repository root. Git, the SDK selected
-by `global.json`, and normal NuGet access are needed. Aspire CLI 13.5.4, Docker and
+by `global.json`, and normal NuGet access are needed. Aspire CLI 13.6.0, Docker and
 trusted .NET development HTTPS are additionally needed for the runtime smoke check.
 
 1. Make the starter/authoring changes. Stop this checkout's Aspire instance before
@@ -168,7 +168,7 @@ checkout. Generated secrets and the different AppHost path isolate application
 state. The automated script has not started an AppHost in this directory.
 
 ```powershell
-aspire start --non-interactive
+aspire start --launch-profile https --non-interactive
 aspire wait templatesmoke --timeout 120 --non-interactive
 aspire describe --non-interactive
 ```

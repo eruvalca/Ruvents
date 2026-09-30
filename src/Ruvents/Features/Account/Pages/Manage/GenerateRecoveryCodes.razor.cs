@@ -39,7 +39,7 @@ public sealed partial class GenerateRecoveryCodes
 
         _recoveryCodes = null;
         var result = await AccountTwoFactor.GenerateRecoveryCodesAsync(_user);
-        await result.Match<Task>(
+        await result.Match(
             async generated =>
             {
                 _recoveryCodes = generated.Codes;
