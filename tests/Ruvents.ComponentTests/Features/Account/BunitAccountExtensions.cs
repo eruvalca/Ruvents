@@ -7,6 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using Microsoft.FluentUI.AspNetCore.Components;
 using NSubstitute;
 using Ruvents.Data;
 using Ruvents.Features.Account.Services;
@@ -36,6 +37,10 @@ internal static class BunitAccountExtensions
                 Substitute.For<IAuthenticationSchemeProvider>(), Substitute.For<IUserConfirmation<ApplicationUser>>());
             signIn.GetExternalAuthenticationSchemesAsync().Returns(Array.Empty<AuthenticationScheme>());
             context.Services.AddLogging();
+            context.Services.AddFluentUIComponents();
+            var navigationModule = context.JSInterop.SetupModule("./_content/Microsoft.FluentUI.AspNetCore.Components/Components/Nav/FluentNav.razor.js");
+            navigationModule.SetupVoid("Microsoft.FluentUI.Blazor.Nav.Initialize", _ => true).SetVoidResult();
+            navigationModule.SetupVoid("Microsoft.FluentUI.Blazor.Nav.Dispose", _ => true).SetVoidResult();
             context.Services.AddSingleton(users);
             context.Services.AddSingleton(signIn);
             context.Services.AddSingleton<IUserStore<ApplicationUser>>(store);

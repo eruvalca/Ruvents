@@ -1,0 +1,12 @@
+.counter-content ::deep .counter-card {
+    display: grid;
+    justify-items: start;
+    gap: 1rem;
+    max-width: 36rem;
+    padding: 1.5rem;
+}
+
+p {
+    margin: 0;
+    font-size: var(--fontSizeBase500, 1.25rem);
+}

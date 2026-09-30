@@ -3,6 +3,7 @@ using Bogus;
 using Bunit;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.FluentUI.AspNetCore.Components;
 using Ruvents.UI.Layout;
 using Shouldly;
 using Xunit;
@@ -19,6 +20,7 @@ public sealed class NavMenuTests
     public async Task AuthenticationStateSelectsGuestLinksOrEncodedIdentityAndLogoutAsync(bool authenticated)
     {
         await using var context = new BunitContext();
+        ConfigureFluentNavigation(context);
         var authorization = context.AddAuthorization();
         var faker = new Faker { Random = new Randomizer(7214) };
         var userName = faker.Internet.UserName() + "<admin>";
@@ -29,16 +31,22 @@ public sealed class NavMenuTests
 
         var component = context.Render<NavMenu>();
 
+        foreach (var link in component.FindAll("nav a"))
+        {
+            link.Closest("[data-enhance-nav='false']").ShouldBeNull();
+            link.GetAttribute("tabindex").ShouldBe("0");
+        }
+
         if (authenticated)
         {
-            component.Find("a[href='Account/Manage']").TextContent.ShouldBe(userName);
+            component.Find("a[href='Account/Manage']").TextContent.Trim().ShouldBe(userName);
             component.FindAll("admin, a[href='Account/Login'], a[href='Account/Register']").ShouldBeEmpty();
             component.Find("form[action='Account/Logout']").GetAttribute("method").ShouldBe("post");
         }
         else
         {
-            component.Find("a[href='Account/Login']").TextContent.ShouldBe("Login");
-            component.Find("a[href='Account/Register']").TextContent.ShouldBe("Register");
+            component.Find("a[href='Account/Login']").TextContent.Trim().ShouldBe("Login");
+            component.Find("a[href='Account/Register']").TextContent.Trim().ShouldBe("Register");
             component.FindAll("form[action='Account/Logout'], a[href='Account/Manage']").ShouldBeEmpty();
         }
     }
@@ -47,6 +55,7 @@ public sealed class NavMenuTests
     public async Task LogoutReturnUrlTracksNavigationAndStopsUpdatingAfterDisposalAsync()
     {
         await using var context = new BunitContext();
+        ConfigureFluentNavigation(context);
         context.AddAuthorization().SetAuthorized("member");
         var navigation = context.Services.GetRequiredService<NavigationManager>();
         navigation.NavigateTo("events?search=a%26b#upcoming");
@@ -61,5 +70,13 @@ public sealed class NavMenuTests
         await component.InvokeAsync(() => navigation.NavigateTo("auth"));
 
         component.Find("input[name='ReturnUrl']").GetAttribute("value").ShouldBe("counter?count=2&mode=short#value");
+    }
+
+    private static void ConfigureFluentNavigation(BunitContext context)
+    {
+        context.Services.AddFluentUIComponents();
+        var module = context.JSInterop.SetupModule("./_content/Microsoft.FluentUI.AspNetCore.Components/Components/Nav/FluentNav.razor.js");
+        module.SetupVoid("Microsoft.FluentUI.Blazor.Nav.Initialize", _ => true).SetVoidResult();
+        module.SetupVoid("Microsoft.FluentUI.Blazor.Nav.Dispose", _ => true).SetVoidResult();
     }
 }

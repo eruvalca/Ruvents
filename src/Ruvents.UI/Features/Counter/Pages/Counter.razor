@@ -5,6 +5,15 @@
 
 <h1>Counter</h1>
 
-<p role="status">Current count: @_currentCount</p>
+<div class="counter-content">
+    <FluentCard Class="counter-card">
+        <p role="status">Current count: @_currentCount</p>
+        <FluentButton Appearance="ButtonAppearance.Primary"
+                      Title="Click me"
+                      Disabled="@(!RendererInfo.IsInteractive)"
+                      OnClick="IncrementCount">Click me</FluentButton>
+    </FluentCard>
+</div>
 
-<button @onclick="IncrementCount">Click me</button>
+@* Providers inherit this page's renderer and scoped services. *@
+<FluentProviders />

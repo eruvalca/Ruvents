@@ -1,15 +1,29 @@
 @inherits LayoutComponentBase
 
-<div class="page">
-    <header class="site-header">
-        <div class="content-container">
-            <NavMenu />
-        </div>
-    </header>
+<a class="skip-link" href="#main-content" data-enhance-nav="false">Skip to content</a>
 
-    <main class="content-container">
-        @Body
-    </main>
+<div class="page">
+    <FluentLayout Id="app-layout" Class="app-layout" GlobalScrollbar="true" Height="auto">
+        <FluentLayoutItem Area="LayoutArea.Header">
+            <header class="site-header">
+                <div class="menu-toggle">
+                    <FluentLayoutHamburger Id="site-menu" PanelHeader="Ruvents" />
+                </div>
+                <a class="site-name" href="/">Ruvents</a>
+            </header>
+        </FluentLayoutItem>
+        <FluentLayoutItem Area="LayoutArea.Navigation" Class="site-navigation">
+            <NavMenu />
+        </FluentLayoutItem>
+        <FluentLayoutItem Area="LayoutArea.Content">
+            <main id="main-content" class="content-container" tabindex="-1">
+                @Body
+            </main>
+        </FluentLayoutItem>
+        <FluentLayoutItem Area="LayoutArea.Footer">
+            <footer class="site-footer">Ruvents</footer>
+        </FluentLayoutItem>
+    </FluentLayout>
 </div>
 
 <div id="blazor-error-ui" data-nosnippet>

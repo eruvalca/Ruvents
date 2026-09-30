@@ -1,41 +1,12 @@
-.site-navigation {
-    display: grid;
-    gap: 1rem;
-}
-
-.site-name {
-    justify-self: start;
-    font-weight: 700;
-}
-
-.navigation-links {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr));
-    align-items: start;
-    gap: 0.5rem;
-    margin: 0;
-    padding: 0;
-    list-style: none;
-}
-
-.navigation-links li {
+.navigation-content {
     min-width: 0;
 }
 
-.navigation-links ::deep a,
-.navigation-links button {
-    display: block;
-    width: 100%;
-    padding: 0.5rem;
-    text-align: start;
+.navigation-content ::deep a {
+    white-space: normal;
     overflow-wrap: anywhere;
 }
 
-.navigation-links ::deep a:hover {
-    background: #f4f4f4;
-}
-
-.navigation-links ::deep a.active {
-    background: #eee;
-    font-weight: 700;
+.logout-form {
+    margin: 1rem;
 }

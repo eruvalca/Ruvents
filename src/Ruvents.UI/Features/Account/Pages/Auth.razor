@@ -3,12 +3,16 @@
 @using Microsoft.AspNetCore.Authorization
 
 @attribute [Authorize]
-@rendermode InteractiveAuto
 
 <PageTitle>Auth</PageTitle>
 
 <h1>You are authenticated</h1>
 
 <AuthorizeView>
-    Hello @context.User.Identity?.Name!
+    <div class="account-summary">
+        <FluentCard>
+            <p>Hello @context.User.Identity?.Name!</p>
+            <a href="Account/Manage">Manage your account</a>
+        </FluentCard>
+    </div>
 </AuthorizeView>

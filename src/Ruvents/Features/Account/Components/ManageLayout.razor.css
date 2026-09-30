@@ -1,0 +1,18 @@
+.account-layout {
+    display: grid;
+    grid-template-columns: minmax(12rem, 15rem) minmax(0, 1fr);
+    gap: 1.5rem;
+    align-items: start;
+}
+
+.account-layout ::deep .account-panel {
+    display: block;
+    min-width: 0;
+    padding: clamp(1rem, 2vw, 1.5rem);
+}
+
+@media (max-width: 64rem) {
+    .account-layout {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}

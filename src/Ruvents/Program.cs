@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.FluentUI.AspNetCore.Components;
 using Ruvents.Components;
 using Ruvents.Data;
 using Ruvents.Features.Account.Endpoints;
@@ -19,6 +20,7 @@ builder.Services.AddRazorComponents()
     .AddAuthenticationStateSerialization();
 
 builder.Services.AddCascadingAuthenticationState();
+builder.Services.AddFluentUIComponents();
 builder.Services.AddScoped<IdentityRedirectManager>();
 builder.Services.AddScoped<AccountSignInService>();
 builder.Services.AddScoped<AccountPasskeyService>();

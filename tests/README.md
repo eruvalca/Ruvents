@@ -163,6 +163,24 @@ bUnit tests run in process without starting Aspire, a web server, or a browser.
 They verify component behavior, not browser layout, real JavaScript execution, or
 server/WebAssembly render-mode transitions; those need browser-level tests.
 
+Tests rendering Fluent components register `AddFluentUIComponents()` in their
+own context. `ConfigureAccount` also registers these services and strictly stubs
+the Fluent navigation module's initialize/dispose calls; the shell navigation
+tests configure the same calls locally and verify native links remain keyboard
+reachable without opting out of enhanced navigation. Counter tests stub the
+page's `FluentProviders` to isolate counter behavior from overlay JS, dispatch
+clicks on the rendered `fluent-button` host and assert the displayed count. They set bUnit's
+`RendererInfo` explicitly and check that the button is disabled in static
+prerendering and enabled in Server and WebAssembly rendering. Navigation text
+assertions trim library-rendered whitespace while retaining checks for encoded
+identity text, conditional account links, and the logout POST/return URL.
+These JS stubs do not validate the web components or the static mobile drawer;
+check those in a browser through Aspire, including Auto's WebAssembly path.
+Navigation checks must cover unchanged `performance.timeOrigin` and no document
+requests between Home and Counter, mobile drawer close/reopen across repeated
+navigation and browser history, scroll reset/restoration on long pages, and
+normal Identity POST/cookie round trips.
+
 ## Visual Studio Code
 
 Install and enable the recommended **C# Dev Kit** and **C#** extensions from

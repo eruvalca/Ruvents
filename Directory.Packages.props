@@ -19,6 +19,7 @@
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Tools" Version="10.0.12" />
     <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="10.10.0" />
     <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery" Version="10.10.0" />
+    <PackageVersion Include="Microsoft.FluentUI.AspNetCore.Components" Version="5.0.0" />
     <PackageVersion Include="Microsoft.Testing.Extensions.CodeCoverage" Version="18.11.2" />
     <PackageVersion Include="Microsoft.Testing.Extensions.TrxReport" Version="2.4.1" />
     <PackageVersion Include="Microsoft.Testing.Platform" Version="2.4.1" />

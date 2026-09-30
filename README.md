@@ -145,12 +145,60 @@ Test Explorer without Aspire.
 
 See the [Aspire VS Code extension guide](https://aspire.dev/get-started/aspire-vscode-extension/).
 
-## Styling
+## Fluent UI Blazor and styling
 
-The UI uses standard CSS with Grid as the default for structured layout and
-alignment. The shell has always-visible top navigation; account pages stack
-their sections and use forms capped at 36rem. The baseline is intentionally
-plain: a system font, neutral light colors, native controls, and visible focus.
+`Microsoft.FluentUI.AspNetCore.Components` **5.0.0** is centrally pinned in
+`Directory.Packages.props` and referenced by the server, client, and shared UI.
+Both host `Program.cs` files call `AddFluentUIComponents()` so prerendering,
+Interactive Server, and Interactive WebAssembly resolve the same services.
+The shared kernel has no UI dependency. The optional full icon, emoji, and data
+grid adapter packages are not needed by this starter; the hamburger uses a core icon.
+
+`App.razor` loads the Fluent baseline stylesheet, `Ruvents.styles.css`, then
+`app.css`. The generated solution stylesheet already imports the Fluent component
+CSS bundle; do not add a second link to that bundle. `no-fuib-style` on the body
+prevents Fluent's initializer from adopting another copy of the baseline after
+the application overrides. The package's Blazor JavaScript initializer loads the
+web components automatically, including static layout hamburger behavior. Do not
+add a v4 web-components script or `FluentDesignTheme`. The body selects a light
+theme and application styles use v5 CSS design tokens with fallback values.
+
+The shell uses `FluentLayout`, `FluentNav`, and `FluentNavItem`; the home, counter,
+and authenticated pages use Fluent cards and buttons with native content links.
+Native anchors preserve accessible link names and navigation before JavaScript
+initializes. Account management
+has Fluent navigation and a card around its content. CSS Grid handles application
+layout and spacing, with a mobile drawer below the Fluent layout's 768px breakpoint.
+
+Render boundaries are deliberate:
+
+- `Routes`, `MainLayout`, Home, the authenticated summary, and Identity pages
+  use static SSR. `Counter` opts into `InteractiveAuto` because its button needs
+  .NET event handling. Counter actions are disabled during prerendering until
+  their renderer becomes interactive. Static pages don't start a .NET interactive
+  runtime simply to display navigation or cards.
+- `Counter` hosts `FluentProviders` inside its interactive boundary. Providers
+  inherit its renderer and scoped services for dialogs, toasts, tooltips, and key
+  handling. Add providers inside other interactive pages/subtrees when needed,
+  once per active renderer/service scope. The layout's `Body` never crosses an
+  interactive boundary.
+- Static navigation has ordinary `Href` links with `tabindex="0"`, since Fluent's
+  interactive roving-tabindex setup does not run in SSR. Shell links use Blazor's
+  enhanced navigation: the server renders the destination and Blazor updates the
+  existing document without restarting the page or reloading the runtime.
+  `Ruvents.UI.lib.module.js` registers the collocated `MainLayout.razor.js` handler
+  through `afterWebStarted`. It closes the Fluent mobile drawer on
+  `enhancednavigationstart`, before the DOM update, including back/forward
+  navigation. Stable layout/hamburger IDs preserve their JS wiring across updates.
+  The shell grows with its content and uses document scrolling, allowing Blazor
+  to reset scroll position on navigation and restore it through browser history.
+  The account settings menu does not use interactive categories or event callbacks.
+- Identity forms retain native inputs, submit buttons, form names, antiforgery,
+  and passkey hooks. They receive Fluent token styling while preserving static
+  POST mapping, autofill, and cookie redirects. These POSTs keep normal navigation
+  so cookie changes refresh authentication state. Shared notices retain their
+  `notice`/`data-kind` contract. The reconnect/error UI retains native controls
+  because it must function while the Blazor circuit is unavailable.
 
 Shared styles live in `src/Ruvents/wwwroot/app.css`: sizing, typography, forms
 (`account-form`, `form-field`, `checkbox-field`), action groups (`actions`),
@@ -164,6 +212,12 @@ inline layout styles, `!important`, decorative icons, or animations. Keep form
 labels before their controls and preserve Blazor/Identity behavior hooks when
 editing markup. Check narrow screens, keyboard focus, and text wrapping when
 changing layouts. See `AGENTS.md` for the authoring conventions.
+
+Setup references: [installation](https://www.fluentui-blazor.net/installation),
+[layout](https://www.fluentui-blazor.net/layout), and the
+[released package source](https://github.com/microsoft/fluentui-blazor/tree/358e449b08711f3343ce6c2ffbe6c9f77045bde5).
+Navigation references: [enhanced navigation](https://learn.microsoft.com/aspnet/core/blazor/fundamentals/navigation?view=aspnetcore-10.0#enhanced-navigation-and-form-handling)
+and [JavaScript with static SSR](https://learn.microsoft.com/aspnet/core/blazor/javascript-interoperability/static-server-rendering?view=aspnetcore-10.0).
 
 ## Resource graph and database
 
@@ -333,11 +387,17 @@ tokens, runtime `.aspire` state, telemetry exports, and temporary browser output
 of source control.
 
 The [Fluent UI Blazor v5 usage skill](.agents/skills/fluentui-blazor-usage/SKILL.md)
-includes setup, data-grid, and theming references. Adding the skill does not install
-the component library or configure its MCP server. When using its examples, follow
+includes setup, data-grid, and theming references. The library is configured as
+described above; installing the skill alone does not configure an MCP server.
+When using its examples, follow
 `AGENTS.md` for code-behind, CSS, static account rendering, and central package
 versions. Verify version-sensitive APIs against the Fluent UI Blazor MCP server's
-documentation and check its reported version against the selected package version.
+documentation and the released package source. The v5.0.0 package's assembly file
+version is `5.0.0.26268`, also reported by the installed MCP server. Its version
+checker compares this assembly version against the NuGet version and reports a
+false mismatch; `5.0.0.26268` is not the NuGet package version. Some skill examples
+still use prerelease APIs, so verify component names and parameters against the
+installed package instead of copying them verbatim.
 
 References: [Aspire MCP](https://aspire.dev/reference/cli/commands/aspire-agent-mcp/),
 [Codex skills](https://learn.chatgpt.com/docs/build-skills#where-codex-loads-local-skills),

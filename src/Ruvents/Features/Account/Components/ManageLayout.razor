@@ -2,10 +2,11 @@
 @layout Ruvents.UI.Layout.MainLayout
 
 <h1>Manage your account</h1>
+<p>Change your profile and sign-in settings.</p>
 
-<div>
-    <h2>Change your account settings</h2>
-    <hr />
+<div class="account-layout">
     <ManageNavMenu />
-    @Body
+    <FluentCard Class="account-panel">
+        @Body
+    </FluentCard>
 </div>

@@ -14,8 +14,14 @@ shared kernel, plus Aspire hosting and service defaults.
   `[ExcludeFromInteractiveRouting]` in their page imports, authorization on
   account-management pages, and their HTTP context and cookie contracts. Keep
   form names, POST methods, `[SupplyParameterFromForm]` mapping, and antiforgery
-  hooks intact. Shared interactive pages currently opt into `InteractiveAuto`;
-  do not apply a global interactive render mode that changes account behavior.
+  hooks intact. Default to static SSR with enhanced navigation; opt into
+  `InteractiveAuto` where interaction needs a .NET renderer. Do not apply a global
+  interactive render mode that changes account behavior.
+- Fluent UI Blazor services are registered in both hosts. Keep `MainLayout` and
+  Identity navigation static. Place `FluentProviders` inside the interactive
+  page or subtree that uses them, inheriting its renderer and service scope;
+  do not start an interactive runtime on every static page just for providers.
+  Do not pass the layout's `Body` across a render-mode boundary.
 - `BlazorDisableThrowNavigationException` is enabled. After redirecting, return
   or otherwise terminate the current branch when subsequent work must not
   execute. Do not rely on navigation throwing to stop an account operation.
@@ -60,7 +66,19 @@ shared kernel, plus Aspire hosting and service defaults.
   component markup requires them.
 - Use descriptive classes rather than framework utilities. Do not reintroduce
   Bootstrap, inline layout styles, `!important`, decorative template icons, or
-  animations. Keep the baseline neutral and controls native.
+  animations. Use Fluent UI v5 components for interactive UI and Fluent theme
+  tokens for shared styling. Keep native Identity inputs and submit buttons:
+  their static SSR form mapping, browser autofill, and passkey submitter contracts
+  must work without an interactive form. Do not bulk-convert them to web components.
+- Static `FluentNavItem` links need `tabindex="0"` because their interactive
+  roving-tabindex initialization does not run. Keep enhanced navigation enabled
+  for shell links. The shared UI's JS initializer closes the static Fluent mobile
+  drawer on `enhancednavigationstart`; do not force full reloads to close it.
+  Keep the layout and hamburger IDs stable across server renders. Identity POSTs
+  still perform normal navigation to refresh cookies and authentication state.
+  Keep the shell on document scrolling so enhanced navigation can reset and
+  restore scroll position; a separate layout scrollbar needs its own handling.
+  See `README.md` for Fluent assets and provider setup.
 - Make layouts shrink and wrap on narrow screens, preserve visible keyboard
   focus, and put form labels before their controls. Preserve semantic links,
   buttons, tables, and all Blazor/Identity form and reconnect hooks.

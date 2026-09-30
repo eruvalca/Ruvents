@@ -68,7 +68,7 @@ public sealed class ExternalProviderComponentsTests
         var component = account.Render<ManageNavMenu>(context);
 
         component.FindAll("a[href='Account/Manage/ExternalLogins']").Count.ShouldBe(configured ? 1 : 0);
-        component.Find("a[href='Account/Manage/Passkeys']").TextContent.ShouldBe("Passkeys");
+        component.Find("a[href='Account/Manage/Passkeys']").TextContent.Trim().ShouldBe("Passkeys");
         await account.SignIn.Received(1).GetExternalAuthenticationSchemesAsync();
     }
 }

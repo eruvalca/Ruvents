@@ -1,7 +1,43 @@
 .page {
-    display: grid;
-    grid-template-rows: auto 1fr;
     min-height: 100dvh;
+}
+
+.page ::deep .app-layout {
+    /* Let enhanced navigation manage document scrolling and history restoration. */
+    min-height: 100dvh;
+    overflow: visible;
+}
+
+.site-header {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    align-items: center;
+    gap: 0.75rem;
+    height: 100%;
+    padding-inline: 1.5rem;
+    background: var(--colorBrandBackground, #0f6cbd);
+    color: var(--colorNeutralForegroundOnBrand, #fff);
+}
+
+.site-name {
+    grid-column: 2;
+    justify-self: start;
+    color: inherit;
+    font-size: 1.25rem;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.site-name:focus-visible {
+    outline-color: var(--colorNeutralForegroundOnBrand, #fff);
+}
+
+.page ::deep .site-navigation {
+    width: 15rem;
+    min-width: 0;
+    padding-block: 1rem;
+    background: var(--colorNeutralBackground2, #fafafa);
+    border-inline-end: 1px solid var(--colorNeutralStroke2, #e0e0e0);
 }
 
 .content-container {
@@ -9,11 +45,27 @@
     max-width: 72rem;
     min-width: 0;
     margin-inline: auto;
-    padding: clamp(1rem, 3vw, 2rem);
+    padding: clamp(1rem, 3vw, 2.5rem);
 }
 
-.site-header {
-    border-bottom: 1px solid #ccc;
+.site-footer {
+    padding-inline: 1.5rem;
+    color: var(--colorNeutralForeground2, #424242);
+    border-top: 1px solid var(--colorNeutralStroke2, #e0e0e0);
+    font-size: 0.875rem;
+}
+
+.skip-link {
+    position: fixed;
+    top: -5rem;
+    left: 1rem;
+    z-index: 1000;
+    padding: 0.75rem 1rem;
+    background: var(--colorNeutralBackground1, #fff);
+}
+
+.skip-link:focus {
+    top: 0.5rem;
 }
 
 #blazor-error-ui {
@@ -24,9 +76,9 @@
     max-height: 100dvh;
     overflow: auto;
     padding: 1rem;
-    border-top: 1px solid #9c2525;
-    background: #fff;
-    color: #222;
+    border-top: 1px solid var(--colorPaletteRedBorder2, #9c2525);
+    background: var(--colorNeutralBackground1, #fff);
+    color: var(--colorNeutralForeground1, #242424);
 }
 
 .error-content {
