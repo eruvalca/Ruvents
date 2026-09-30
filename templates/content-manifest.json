@@ -1,0 +1,13 @@
+{
+  "directories": ["src/", "tests/", "build/", ".agents/skills/"],
+  "files": [
+    ".template.config/template.json", ".editorconfig", ".gitattributes", ".gitignore",
+    ".playwright/cli.config.json", ".vscode/extensions.json", ".vscode/launch.json",
+    ".vscode/settings.json", "AGENTS.md", "CodeMetricsConfig.txt",
+    "Directory.Build.props", "Directory.Build.targets", "Directory.Packages.props",
+    "global.json", "Ruvents.slnx", "aspire.config.json", "README.md",
+    "scripts/Test-RazorCodeBehind.ps1"
+  ],
+  "textExtensions": [".cs", ".csproj", ".razor", ".css", ".js", ".json", ".md", ".txt", ".props", ".targets", ".globalconfig", ".slnx", ".ps1", ".yml", ".yaml"],
+  "binaryExtensions": [".png", ".jpg", ".jpeg", ".gif", ".ico", ".webp", ".woff", ".woff2", ".ttf", ".pdf"]
+}

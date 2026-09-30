@@ -3,6 +3,16 @@
 .NET 10 Blazor application with a hosted WebAssembly client, shared UI and kernel,
 Aspire orchestration, and PostgreSQL-backed ASP.NET Core Identity.
 
+<!-- template-authoring:start -->
+## Personal solution template
+
+To create and refresh the local `dotnet new ruvents` snapshot, follow
+[Template maintenance](docs/template/README.md). Packaging uses clean committed
+source, validates generated applications, and installs a local `.nupkg`.
+[Historical acceptance results](docs/template/historical-validation.md) describe
+the original starter and are excluded from generated applications.
+
+<!-- template-authoring:end -->
 ## Local prerequisites
 
 - .NET SDK **10.0.401** (selected by `global.json`).
@@ -16,6 +26,25 @@ Aspire orchestration, and PostgreSQL-backed ASP.NET Core Identity.
 Run `dotnet --version`, `aspire --version`, and `aspire doctor` from the repository
 root to verify the environment. The AppHost is explicitly located by the root
 `aspire.config.json`.
+
+## First run and application identity
+
+Use PowerShell 7 for the scripts in this repository. From the solution root,
+run `dotnet build Ruvents.slnx`, then `aspire run`. The first build/start may
+restore NuGet packages, download Aspire/EF tooling, and pull container images.
+The initial migration creates an empty Identity schema; no accounts or local
+credentials are included. Git initialization is optional and separate.
+
+If this solution was generated, `.template-provenance.json` records its template
+version and source commit. It is an independent snapshot: template updates do not
+update this application. Review SDK/package/skill updates in this repository.
+
+Use a unique application name for projects you run side by side. Different ports
+do not isolate browser cookies on the same hostname. A generated secrets ID is
+unique even when the application name is reused, but the development hostname is
+name-based. Aspire's default data-volume name depends on the AppHost path; moving
+or renaming a checkout can select a different volume. Keep the original secrets
+and volume together if preserving development data.
 
 ## Run through Aspire
 
@@ -176,6 +205,12 @@ Development registration uses the existing no-op email sender: follow the confir
 link on the registration confirmation page before logging in. This setup does not
 configure a production email service or deployment infrastructure.
 
+Before production, replace `IdentityNoOpEmailSender` and remove or deliberately
+gate the scaffold confirmation link. The current shortcut checks the sender type,
+not the hosting environment; it is not restricted to Development. External-login
+provider credentials, production secrets, HTTPS/domain configuration, deployment,
+and the desired exposure of health endpoints also require application-specific work.
+
 ## EF migrations
 
 `Aspire.Hosting.EntityFrameworkCore` **13.5.4-preview.1.26464.4** manages
@@ -286,25 +321,3 @@ dotnet test --solution Ruvents.slnx
 
 See [tests/README.md](tests/README.md) for test conventions and
 [build/README.md](build/README.md) for Razor code-behind validation.
-
-### Local Aspire verification
-
-Verified on September 27, 2026 with the pinned SDK/packages and VS Code Aspire
-extension 1.23.0:
-
-| Check | Result |
-| --- | --- |
-| Environment | `aspire doctor`: 8 passed, 0 warnings, 0 failed. |
-| CLI and IDE startup | PostgreSQL/database healthy; migrations finished; HTTPS web resource healthy in both runs. |
-| VS Code debugging | **Aspire: Ruvents** launched the AppHost and web C# debug sessions. A breakpoint in `RegisterUserAsync` stopped at the Identity create call; variable inspection, stepping over the awaited database operation, and continue succeeded. |
-| VS Code dashboard browser | Reproduced the `debugEdge` browser-attach failure while the web resource was healthy. With workspace `openExternalBrowser`, F5 and Ctrl+F5 opened the dashboard without the dialog; the web resource was healthy, and logs confirmed C# debugging enabled only for F5. |
-| Identity / PostgreSQL | Disposable registration, scaffold confirmation, login/logout, profile update, and passkey-list query succeeded. Account and profile survived a full Aspire restart; the disposable account was deleted afterward. |
-| Migrations | 1 applied, 0 pending; no pending model changes. |
-| Readiness / liveness | Both returned 200 while healthy. With PostgreSQL stopped, `/health` returned 503 and `/alive` remained 200. Readiness recovered to 200 after database restart. |
-| Developer tools | pgAdmin connected to `ruvents`; dashboard/MCP exposed HTTP and PostgreSQL traces and dashboard metrics. |
-| Build / tests | `dotnet build Ruvents.slnx`: 0 warnings/errors. `dotnet test --solution Ruvents.slnx`: 21 passed, 0 failed, 0 skipped. |
-
-Temporary breakpoints, test browsers, and Aspire verification runs were closed.
-These are local acceptance checks, not a new integration-test suite. IDE breakpoint
-verification covered the server-side registration handler; it did not verify
-WebAssembly client breakpoints or Visual Studio debugging.
