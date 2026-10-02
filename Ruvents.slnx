@@ -9,7 +9,11 @@
   </Configurations>
   <Project Path="src/Ruvents.ServiceDefaults/Ruvents.ServiceDefaults.csproj" />
   <Folder Name="/tests/">
+    <Project Path="tests/Ruvents.AspireIntegrationTests/Ruvents.AspireIntegrationTests.csproj" />
     <Project Path="tests/Ruvents.ComponentTests/Ruvents.ComponentTests.csproj" />
+    <Project Path="tests/Ruvents.IntegrationTests/Ruvents.IntegrationTests.csproj" />
+    <Project Path="tests/Ruvents.PlaywrightTests/Ruvents.PlaywrightTests.csproj" />
+    <Project Path="tests/Ruvents.Testing/Ruvents.Testing.csproj" />
     <Project Path="tests/Ruvents.UnitTests/Ruvents.UnitTests.csproj" />
   </Folder>
   <Project Path="src/Ruvents.AppHost/Ruvents.AppHost.csproj" />

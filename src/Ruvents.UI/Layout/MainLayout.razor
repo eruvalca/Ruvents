@@ -6,10 +6,12 @@
     <FluentLayout Id="app-layout" Class="app-layout" GlobalScrollbar="true" Height="auto">
         <FluentLayoutItem Area="LayoutArea.Header">
             <header class="site-header">
-                <div class="menu-toggle">
-                    <FluentLayoutHamburger Id="site-menu" PanelHeader="Ruvents" />
-                </div>
-                <a class="site-name" href="/">Ruvents</a>
+                <FluentStack VerticalAlignment="VerticalAlignment.Center" HorizontalGap="var(--spacingHorizontalM)" Height="100%">
+                    <div class="menu-toggle">
+                        <FluentLayoutHamburger Id="site-menu" PanelHeader="Ruvents" />
+                    </div>
+                    <a class="site-name" href="/">Ruvents</a>
+                </FluentStack>
             </header>
         </FluentLayoutItem>
         <FluentLayoutItem Area="LayoutArea.Navigation" Class="site-navigation">
@@ -27,9 +29,9 @@
 </div>
 
 <div id="blazor-error-ui" data-nosnippet>
-    <div class="error-content">
+    <FluentStack Class="error-content" VerticalAlignment="VerticalAlignment.Center" HorizontalGap="var(--spacingHorizontalL)" Wrap="true">
         <span>An unhandled error has occurred.</span>
         <a href="." class="reload">Reload</a>
         <button type="button" class="dismiss">Dismiss</button>
-    </div>
+    </FluentStack>
 </div>

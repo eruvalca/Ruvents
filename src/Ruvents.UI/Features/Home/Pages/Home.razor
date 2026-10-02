@@ -5,23 +5,33 @@
 <h1>Welcome to Ruvents</h1>
 <p>Make yourself at home. Try the counter or sign in to manage your account.</p>
 
-<div class="home-cards">
-    <FluentCard>
-        <h2>Try the counter</h2>
-        <p>A simple place to try an interactive page.</p>
-        <a href="counter">Open counter</a>
-    </FluentCard>
-    <FluentCard>
-        <h2>Your account</h2>
-        <p>Manage your profile, password, and sign-in options.</p>
-        <AuthorizeView>
-            <Authorized>
-                <a href="Account/Manage">Manage account</a>
-            </Authorized>
-            <NotAuthorized>
-                <a href="Account/Login">Log in</a>
-                <a href="Account/Register">Create an account</a>
-            </NotAuthorized>
-        </AuthorizeView>
-    </FluentCard>
+<div class="home-content">
+    <FluentGrid Class="home-cards" Spacing="6">
+        <FluentGridItem Xs="12" Md="6">
+            <FluentCard>
+                <FluentStack Orientation="Orientation.Vertical" VerticalGap="var(--spacingVerticalM)">
+                    <h2>Try the counter</h2>
+                    <p>A simple place to try an interactive page.</p>
+                    <a href="counter">Open counter</a>
+                </FluentStack>
+            </FluentCard>
+        </FluentGridItem>
+        <FluentGridItem Xs="12" Md="6">
+            <FluentCard>
+                <FluentStack Orientation="Orientation.Vertical" VerticalGap="var(--spacingVerticalM)">
+                    <h2>Your account</h2>
+                    <p>Manage your profile, password, and sign-in options.</p>
+                    <AuthorizeView>
+                        <Authorized>
+                            <a href="Account/Manage">Manage account</a>
+                        </Authorized>
+                        <NotAuthorized>
+                            <a href="Account/Login">Log in</a>
+                            <a href="Account/Register">Create an account</a>
+                        </NotAuthorized>
+                    </AuthorizeView>
+                </FluentStack>
+            </FluentCard>
+        </FluentGridItem>
+    </FluentGrid>
 </div>

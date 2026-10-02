@@ -8,7 +8,7 @@
   </PropertyGroup>
 
   <!-- Identify tests before evaluating analyzer references; project bodies and NuGet props load later. -->
-  <PropertyGroup Condition="'$(IsTestProject)' == '' and ($(MSBuildProjectName.EndsWith('.UnitTests')) or $(MSBuildProjectName.EndsWith('.ComponentTests')))">
+  <PropertyGroup Condition="'$(IsTestProject)' == '' and ($(MSBuildProjectName.EndsWith('.UnitTests')) or $(MSBuildProjectName.EndsWith('.ComponentTests')) or $(MSBuildProjectName.EndsWith('.IntegrationTests')) or $(MSBuildProjectName.EndsWith('.AspireIntegrationTests')) or $(MSBuildProjectName.EndsWith('.PlaywrightTests')))">
     <IsTestProject>true</IsTestProject>
   </PropertyGroup>
 

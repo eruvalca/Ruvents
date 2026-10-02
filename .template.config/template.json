@@ -39,7 +39,7 @@
     "actionId": "AC1156F7-BB77-4DB8-B28F-24EEBCCA1E5C",
     "description": "Next steps",
     "manualInstructions": [{
-      "text": "Enter your output directory, then run: dotnet build; dotnet test; aspire run. See README.md for prerequisites, Aspire endpoint discovery, and production follow-ups. Only files were created; Git initialization is optional."
+      "text": "Enter your output directory and run dotnet build. Follow tests/README.md to install Playwright Chromium and prepare Docker/Aspire before running dotnet test. Use aspire run to start the application. See README.md for prerequisites, endpoint discovery, and production follow-ups. Only files were created; Git initialization is optional."
     }]
   }]
 }

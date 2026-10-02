@@ -5,8 +5,14 @@
 <p>Change your profile and sign-in settings.</p>
 
 <div class="account-layout">
-    <ManageNavMenu />
-    <FluentCard Class="account-panel">
-        @Body
-    </FluentCard>
+    <FluentGrid Spacing="6">
+        <FluentGridItem Xs="12" Lg="3">
+            <ManageNavMenu />
+        </FluentGridItem>
+        <FluentGridItem Xs="12" Lg="9">
+            <FluentCard Class="account-panel">
+                @Body
+            </FluentCard>
+        </FluentGridItem>
+    </FluentGrid>
 </div>

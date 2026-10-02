@@ -55,19 +55,26 @@ shared kernel, plus Aspire hosting and service defaults.
   not runtime validation or a guarantee of non-null values.
 - Use file-scoped namespaces and braces around C# control-flow bodies.
 
-## CSS and layout
+## Fluent UI, styling, and layout
 
-- Use standard CSS and Grid for structured layout and alignment. Use normal
-  document flow for prose and semantic tables; positioning is appropriate for
-  overlays. Use Flexbox only when there is a specific, documented benefit.
+- Fluent UI Blazor v5+ is this solution's UI framework: use its layout,
+  navigation, controls, icons, typography, spacing, and theme tokens. Prefer
+  `FluentLayout`, `FluentGrid`/`FluentGridItem`, and `FluentStack` over hand-built
+  CSS Grid/Flexbox layouts. Verify APIs against the centrally pinned release and
+  Fluent MCP documentation; v4 examples are not compatible and v5+ does not mean
+  floating package versions. Do not introduce a second styling/component framework.
 - Keep the shared baseline and reusable form, action, notice, and table patterns
   in `src/Ruvents/wwwroot/app.css`. Keep component-specific rules in adjacent
   `.razor.css` files, with narrowly scoped `::deep` selectors only when child
-  component markup requires them.
+  component markup requires them. Custom CSS supplements Fluent for application
+  sizing, accessibility, and static Identity forms; it is not a competing design
+  system. Use Fluent design tokens instead of unrelated colors and spacing.
 - Use descriptive classes rather than framework utilities. Do not reintroduce
-  Bootstrap, inline layout styles, `!important`, decorative template icons, or
-  animations. Use Fluent UI v5 components for interactive UI and Fluent theme
-  tokens for shared styling. Keep native Identity inputs and submit buttons:
+  Bootstrap, `!important`, or ornamental animations. Prefer Fluent layout and
+  spacing parameters over handwritten inline styles. Fluent's own generated
+  styles are expected. Use the v5 icons package for meaningful navigation/action
+  icons, keep visible labels, and leave redundant icons nonfocusable and hidden
+  from assistive technology. Keep native Identity inputs and submit buttons:
   their static SSR form mapping, browser autofill, and passkey submitter contracts
   must work without an interactive form. Do not bulk-convert them to web components.
 - Static `FluentNavItem` links need `tabindex="0"` because their interactive
@@ -188,13 +195,22 @@ distinguishes complete success from partial completion.
 ## Tests
 
 - Run commands from the repository root so `global.json` selects the .NET SDK
-  and native Microsoft.Testing.Platform (MTP) runner. Both test projects run
-  headlessly; VS Code, Aspire, a browser, and a database are not required.
+  and native Microsoft.Testing.Platform (MTP) runner. Unit and bUnit tests need no
+  external processes. Integration tests need Docker; Aspire integration and
+  Playwright tests also need Aspire tooling, and Playwright needs its Chromium
+  binary. See `tests/README.md` for setup and layer-specific commands.
 - Use `Ruvents.UnitTests` for server logic and `Ruvents.ComponentTests` for
   Blazor rendering and interactions with bUnit. Run relevant tests while making
-  changes, then run both projects before completing code changes. Keep the full
-  solution build requirement above.
-- Use Shouldly exclusively for assertions in both test projects. Keep xUnit for
+  changes, then run both projects before completing code changes. Use
+  `Ruvents.IntegrationTests` with Testcontainers for in-process persistence,
+  migrations, SQL constraints and focused service/dependency behavior. Use
+  `Ruvents.AspireIntegrationTests` for the actual AppHost graph, migration startup,
+  service discovery, readiness, and cross-process HTTP behavior. Use
+  `Ruvents.PlaywrightTests` for real browser navigation, Fluent web components,
+  responsive layout, and interactive workflows. Run affected infrastructure suites;
+  the full solution test command runs all five projects and requires their tools.
+  Keep the full solution build requirement above.
+- Use Shouldly exclusively for assertions in all test projects. Keep xUnit for
   test discovery and execution; use `xunit.v3.core.mtp-v2` without the xUnit
   assertion package. Do not add xUnit `Assert`, FluentAssertions, or bUnit
   assertion helpers such as `MarkupMatches`. For semantic markup checks, use
@@ -225,6 +241,14 @@ distinguishes complete success from partial completion.
   server/WebAssembly render-mode transitions. Those need browser validation;
   database persistence needs integration validation. Do not claim these are
   covered by the headless unit/component suites.
+- Infrastructure tests own their resources. Testcontainers must use disposable
+  containers and dynamic ports. Aspire/browser tests use `Ruvents.Testing` to
+  remove development volume mounts, retain migration/readiness dependencies,
+  and use the testing builder's random ports. Dispose builders, apps, containers,
+  browsers and contexts even on failure. Never target development databases or
+  disable the resource reaper. Playwright uses the library API with Shouldly to
+  preserve our MTP runner; wait for observable UI state instead of fixed sleeps.
+  Missing prerequisites must fail with an actionable error, not silently skip.
 - Report the commands run and actual passed, failed, and skipped counts. If
   validation is blocked, state the blocker rather than claiming success. See
   [tests/README.md](tests/README.md) for runner details, reports, and conventions.
@@ -237,7 +261,7 @@ dotnet test --project tests/Ruvents.ComponentTests/Ruvents.ComponentTests.csproj
 # Example focused check.
 dotnet test --project tests/Ruvents.ComponentTests/Ruvents.ComponentTests.csproj --filter-class "Ruvents.ComponentTests.Features.Counter.Pages.CounterTests"
 
-# Run both projects before completing code changes.
+# Run all five projects when infrastructure/browser prerequisites are available.
 dotnet test --solution Ruvents.slnx
 ```
 

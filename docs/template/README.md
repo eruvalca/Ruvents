@@ -15,6 +15,7 @@ dotnet new list ruvents
 dotnet new ruvents --name MyNewApp --output D:\repos\MyNewApp
 Set-Location D:\repos\MyNewApp
 dotnet build MyNewApp.slnx
+pwsh ./tests/MyNewApp.PlaywrightTests/bin/Debug/net10.0/playwright.ps1 install chromium
 dotnet test --solution MyNewApp.slnx
 aspire run
 ```
@@ -44,8 +45,10 @@ identity and are not portable application seed data.
 ## Pack, validate, install
 
 Run PowerShell 7 commands from the Ruvents repository root. Git, the SDK selected
-by `global.json`, and normal NuGet access are needed. Aspire CLI 13.6.0, Docker and
-trusted .NET development HTTPS are additionally needed for the runtime smoke check.
+by `global.json`, and normal NuGet access are needed. Full validation also needs
+Aspire CLI 13.6.0, Docker, trusted .NET development HTTPS and Playwright Chromium.
+The validation script installs the matching Chromium binary after the first build
+of each generated solution. Linux agents also need Playwright system dependencies.
 
 1. Make the starter/authoring changes. Stop this checkout's Aspire instance before
    full builds. Run `dotnet build Ruvents.slnx` and
@@ -147,8 +150,9 @@ solution references, fresh secrets, binary integrity and absence of post-generat
 output are checked before any builds. The compiler-conditional probe is separate
 and never enters the real package.
 
-Both `TemplateSmoke` and `MyNewApp2` are built in Debug and Release, with both
-existing test projects run after each build. The Razor policy script is run in
+Both `TemplateSmoke` and `MyNewApp2` are built in Debug and Release, with all
+five test projects run after each build, including isolated PostgreSQL, Aspire,
+and browser tests. The Razor policy script is run in
 both generated roots. Logs contain actual test totals and build errors. A generation
 or build failure is reported separately from test execution.
 
@@ -165,7 +169,9 @@ template testing. Recheck this authoring interface when upgrading the SDK.
 
 Use `TemplateSmoke` from the full receipt's `runRoot`, never the original Ruvents
 checkout. Generated secrets and the different AppHost path isolate application
-state. The automated script has not started an AppHost in this directory.
+state. Automated tests start and dispose isolated AppHosts; they do not populate
+the generated application's development database. Start a separate development
+instance for this manual workflow.
 
 ```powershell
 aspire start --launch-profile https --non-interactive
@@ -196,9 +202,10 @@ of these were actually exercised.
 ## Reproduced and external setup
 
 The full Blazor architecture, sample pages, Identity/passkey implementation,
-styles, migrations, two test suites, build policies, `AGENTS.md`, checked-in
-skills, VS Code settings and Playwright configuration are included. The baseline
-does not include an integration-test project or `AspireCliInvocationMode=DnxPinned`.
+Fluent UI v5 components/icons and styles, migrations, five test suites and their
+shared Aspire support library, build policies, `AGENTS.md`, checked-in skills,
+VS Code settings and Playwright configuration are included. The baseline does
+not set `AspireCliInvocationMode=DnxPinned`.
 
 Machine prerequisites remain external: .NET SDK, Aspire CLI, Docker, PowerShell 7,
 Edge/browser tooling, certificate trust, installed IDE extensions, agent plugins

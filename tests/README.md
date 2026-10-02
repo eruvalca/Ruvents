@@ -1,6 +1,6 @@
-# Unit and component tests
+# Testing
 
-Both test projects target .NET 10 and use xUnit with native
+All five test projects target .NET 10 and use xUnit with native
 Microsoft.Testing.Platform (MTP) integration. Open the repository root so both
 the CLI and editor find `global.json` and `Ruvents.slnx`.
 
@@ -8,10 +8,17 @@ the CLI and editor find `global.json` and `Ruvents.slnx`.
 | --- | --- |
 | `Ruvents.UnitTests` | Account services and extensions, outcome decoding, redirects, authentication-state revalidation, Identity endpoint behavior, and service defaults. |
 | `Ruvents.ComponentTests` | Account sign-in and management workflows, validation, shared account components, navigation, error request IDs, and the shared UI's `Counter`, using bUnit. |
+| `Ruvents.IntegrationTests` | Focused in-process integration with real PostgreSQL via Testcontainers: migrations, EF/Identity stores, persistence across contexts, and dependency behavior. |
+| `Ruvents.AspireIntegrationTests` | The real AppHost, database/migration startup dependencies, readiness, resource endpoints, and cross-process HTTP behavior. |
+| `Ruvents.PlaywrightTests` | Real Chromium: Fluent icons/web components, desktop/mobile navigation, drawer behavior, counter interaction, and document continuity. |
+
+`Ruvents.Testing` is a shared support library, not a test project. It configures
+isolated AppHost builders for the Aspire and Playwright projects.
 
 ## Supported stack
 
-Stable versions selected on September 26, 2026:
+Existing stack selected September 26, 2026; infrastructure/browser additions
+verified October 2, 2026:
 
 | Component | Version |
 | --- | --- |
@@ -25,19 +32,23 @@ Stable versions selected on September 26, 2026:
 | Microsoft.Testing.Extensions.TrxReport | 2.4.1 |
 | Microsoft.Testing.Extensions.CodeCoverage | 18.11.2 |
 | xunit.analyzers | 2.1.0 |
+| Aspire.Hosting.Testing (matches AppHost) | 13.6.0 |
+| Testcontainers.PostgreSql | 4.15.0 |
+| Microsoft.Playwright | 1.63.0 |
 | C# Dev Kit (stable baseline) | 3.40.210 |
 
 Package versions are centralized in `Directory.Packages.props`. Explicit MTP
 runtime and MSBuild references advance xUnit's transitive 2.4.0 dependencies to
-2.4.1. Test package references use `PrivateAssets="all"`. Both test projects
+2.4.1. Test package references use `PrivateAssets="all"`. All test projects
 reference xUnit's core MTP package, which supplies the framework and runner
 without `xunit.v3.assert`; xUnit analyzers remain included by the root build props.
 
-The root build props recognize project names ending in `.UnitTests` or `.ComponentTests` before
+The root build props recognize the five test-project name suffixes before
 evaluating shared analyzer references. Tests inherit nullable analysis, code style
 rules, and warnings-as-errors. xUnit test classes are public and sealed; their
 type-level CA1515 suppression documents the discovery requirement. The server
-grants `Ruvents.UnitTests` and `Ruvents.ComponentTests` access to its internal types.
+grants unit, component, and focused integration tests access to its internal types.
+Aspire/browser tests interact across process boundaries instead of accessing server DI.
 The component project uses the Razor SDK and references both `Ruvents.UI` and the
 server project. The server also grants `DynamicProxyGenAssembly2` internal access
 so NSubstitute can proxy Identity dependencies closed over the internal
@@ -51,7 +62,7 @@ execution, and Shouldly is the exclusive assertion library.
 
 Use Bogus for realistic generated fixture values with a per-instance seed
 (`UseSeed` or a locally assigned `Randomizer`). Do not set the global
-`Randomizer.Seed`: both test projects run test methods and theory rows in parallel.
+`Randomizer.Seed`: test methods and theory rows can run in parallel.
 Keep explicit literals for boundaries, encoded tokens, and expected results.
 
 Account tests use `context.ConfigureAccount()` and `context.CaptureLogs<TComponent>()`
@@ -70,6 +81,14 @@ Run these commands from the repository root:
 dotnet build Ruvents.slnx
 dotnet test --project tests/Ruvents.UnitTests/Ruvents.UnitTests.csproj
 dotnet test --project tests/Ruvents.ComponentTests/Ruvents.ComponentTests.csproj
+
+# Install after building; repeat after updating Microsoft.Playwright.
+pwsh ./tests/Ruvents.PlaywrightTests/bin/Debug/net10.0/playwright.ps1 install chromium
+dotnet test --project tests/Ruvents.IntegrationTests/Ruvents.IntegrationTests.csproj
+dotnet test --project tests/Ruvents.AspireIntegrationTests/Ruvents.AspireIntegrationTests.csproj
+dotnet test --project tests/Ruvents.PlaywrightTests/Ruvents.PlaywrightTests.csproj
+
+# All five projects; requires the infrastructure/browser prerequisites below.
 dotnet test --solution Ruvents.slnx --no-build --report-trx --coverage --coverage-output-format cobertura --results-directory TestResults
 ```
 
@@ -87,9 +106,76 @@ nonzero exit code.
 
 ## Configuration
 
+### Choosing an integration layer
+
+Use **Testcontainers** when the subject is server code plus one real dependency:
+PostgreSQL SQL translation, migrations, constraints, transactions, Identity stores,
+or a service whose dependency injection you need to control. The initial test
+applies real migrations, writes an Identity user, reads it in a fresh scope, and
+checks normalized duplicate-name handling. Each test owns a disposable container
+with dynamic ports, using `postgres:18.3` to match Aspire 13.6.0. Keep the resource
+reaper enabled; do not use development connection strings or container reuse.
+For future in-process HTTP tests, `WebApplicationFactory` can be combined with
+these containers. This project does not verify AppHost wiring or browser behavior.
+
+Use **Aspire integration tests** when the subject is the assembled application:
+resource references, connection injection, migrations before web startup, readiness,
+service discovery and HTTP contracts across process boundaries. These use
+`Aspire.Hosting.Testing` 13.6.0, matching the AppHost rather than independently
+upgrading its testing package. The initial test waits for the real web health
+check and migration completion, then checks health, liveness, Home and Login.
+Aspire starts actual processes, so test DI does not replace services in the web
+process. Configure resources before `BuildAsync`; retain startup dependencies.
+
+Use **Playwright** for browser-observable behavior: Fluent web components and
+icons, responsive navigation, focus, forms, cookies and render-mode transitions.
+The initial tests run Home → Counter → Home at desktop and mobile widths, increment
+the counter, check the mobile drawer closes, check for JavaScript errors/overflow,
+and verify `performance.timeOrigin` is unchanged. This demonstrates document
+continuity and working Auto interaction; it does not establish which Auto renderer
+was selected, passkey ceremonies, or every account workflow.
+
+Both Aspire and Playwright tests use `Ruvents.Testing.TestAppHost`, a small shared
+library that removes container volume/bind mounts and enforces session lifetimes
+on the real AppHost model. Aspire's testing builder disables the dashboard and
+randomizes proxied ports by default. Each test disposes its builder and application,
+including on failure; optional pgAdmin remains unstarted. No manually running
+development AppHost or CLI start/stop is required for these test-managed runs.
+Readiness uses Aspire notifications with bounded cancellation, not HTTP polling
+or fixed sleeps. Use a new browser context for each test; no authentication state
+is shared. Only these local HTTPS contexts ignore development certificate errors.
+
+Prerequisites: a running Linux-container Docker engine and available images for
+all three projects; Aspire CLI/bundle and the .NET development HTTPS certificate
+for Aspire/browser tests; the package-matched Chromium binary for Playwright.
+On Linux, install Playwright OS dependencies with `playwright.ps1 install --with-deps chromium`
+in the build agent image/setup. Missing dependencies fail tests rather than
+silently skipping them. Unit/bUnit projects still need none of this infrastructure.
+
+Playwright uses `Microsoft.Playwright` directly with our xUnit core MTP runner and
+Shouldly. Do not add a runner integration that brings VSTest or xUnit assertions
+back into the solution. Locator actions auto-wait; await observable readiness
+with locators before asserting values with Shouldly. Do not use `WaitForTimeout`.
+Each navigation case attempts to retain `page.png` and `trace.zip` independently
+in a unique `bin/<configuration>/net10.0/TestResults/navigation-*` directory.
+Artifact capture is best effort: failures are reported through xUnit test output
+and do not replace the original test failure or prevent the other capture attempt.
+`BrowserArtifactsTests` checks closed-page and unwritable-directory failures;
+its disposable outputs use `TestResults/artifact-capture-*`. Inspect the trace
+with the generated `playwright.ps1 show-trace <path>` command. These artifacts are
+ignored; do not commit traces containing cookies or future test account data.
+Keep the existing parallel settings: test processes, ports, containers and browser
+contexts must be isolated. On constrained CI agents, bound test-module concurrency
+with `--max-parallel-test-modules 1`; this does not change test discovery or skip suites.
+
+References (reviewed October 2, 2026): [Aspire testing overview](https://aspire.dev/testing/overview/),
+[AppHost lifecycle and isolation](https://aspire.dev/testing/manage-app-host/),
+[Testcontainers PostgreSQL](https://dotnet.testcontainers.org/modules/postgres/),
+and [Playwright .NET library](https://playwright.dev/dotnet/docs/library).
+
 ### Assertions
 
-Use Shouldly for every assertion in both test projects. The stable version is
+Use Shouldly for every assertion in all test projects. The stable version is
 centrally pinned to 4.3.0 (verified against NuGet's live version feed on September
 26, 2026); the newer 5.0 releases are previews. Import `Shouldly` in test files and
 use APIs such as `ShouldBe`, `ShouldBeTrue`, `ShouldBeEmpty`,

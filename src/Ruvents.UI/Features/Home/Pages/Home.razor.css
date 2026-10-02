@@ -1,17 +1,11 @@
-.home-cards {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
-    gap: 1.5rem;
-    margin-top: 2rem;
+.home-content ::deep .home-cards {
+    margin-top: var(--spacingVerticalXXL);
 }
 
-.home-cards ::deep .fluent-card {
-    display: grid;
-    align-content: start;
-    justify-items: start;
-    gap: 1rem;
+.home-content ::deep .home-cards .fluent-card {
     min-width: 0;
-    padding: 1.5rem;
+    height: 100%;
+    padding: var(--spacingVerticalXXL) var(--spacingHorizontalXXL);
 }
 
 h2, p {

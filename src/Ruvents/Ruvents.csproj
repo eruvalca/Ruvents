@@ -10,6 +10,7 @@
   <ItemGroup>
     <InternalsVisibleTo Include="Ruvents.UnitTests" />
     <InternalsVisibleTo Include="Ruvents.ComponentTests" />
+    <InternalsVisibleTo Include="Ruvents.IntegrationTests" />
     <!-- NSubstitute proxies Identity dependencies whose generic user type is internal. -->
     <InternalsVisibleTo Include="DynamicProxyGenAssembly2" />
   </ItemGroup>

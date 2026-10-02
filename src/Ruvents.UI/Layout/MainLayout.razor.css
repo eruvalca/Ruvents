@@ -9,10 +9,6 @@
 }
 
 .site-header {
-    display: grid;
-    grid-template-columns: auto 1fr;
-    align-items: center;
-    gap: 0.75rem;
     height: 100%;
     padding-inline: 1.5rem;
     background: var(--colorBrandBackground, #0f6cbd);
@@ -20,8 +16,6 @@
 }
 
 .site-name {
-    grid-column: 2;
-    justify-self: start;
     color: inherit;
     font-size: 1.25rem;
     font-weight: 600;
@@ -81,18 +75,7 @@
     color: var(--colorNeutralForeground1, #242424);
 }
 
-.error-content {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto auto;
-    align-items: center;
-    gap: 1rem;
+#blazor-error-ui ::deep .error-content {
     max-width: 72rem;
     margin-inline: auto;
-}
-
-@media (max-width: 30rem) {
-    .error-content {
-        grid-template-columns: minmax(0, 1fr);
-        justify-items: start;
-    }
 }

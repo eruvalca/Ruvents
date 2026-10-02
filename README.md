@@ -151,8 +151,17 @@ See the [Aspire VS Code extension guide](https://aspire.dev/get-started/aspire-v
 `Directory.Packages.props` and referenced by the server, client, and shared UI.
 Both host `Program.cs` files call `AddFluentUIComponents()` so prerendering,
 Interactive Server, and Interactive WebAssembly resolve the same services.
-The shared kernel has no UI dependency. The optional full icon, emoji, and data
-grid adapter packages are not needed by this starter; the hamburger uses a core icon.
+The shared kernel has no UI dependency. Fluent UI Blazor v5+ is the application's
+layout, styling, and component framework. Use its components and design tokens
+for new UI; do not introduce a parallel CSS framework or default to custom Grid/Flexbox.
+
+`Microsoft.FluentUI.AspNetCore.Components.Icons` **5.0.0** is referenced by the
+shared UI and flows to both hosts. Navigation uses `IconRest`/`IconActive` with
+regular/filled system icons; the counter uses `IconStart`. Use strongly typed
+instances such as `new Icons.Regular.Size20.Home()` (the Razor imports define the
+`Icons` alias) so publishing can retain referenced icons. Keep meaningful visible
+labels; redundant icons are decorative and not extra tab stops. No icon font,
+CDN, script, service registration, or separate emoji package is needed.
 
 `App.razor` loads the Fluent baseline stylesheet, `Ruvents.styles.css`, then
 `app.css`. The generated solution stylesheet already imports the Fluent component
@@ -167,8 +176,10 @@ The shell uses `FluentLayout`, `FluentNav`, and `FluentNavItem`; the home, count
 and authenticated pages use Fluent cards and buttons with native content links.
 Native anchors preserve accessible link names and navigation before JavaScript
 initializes. Account management
-has Fluent navigation and a card around its content. CSS Grid handles application
-layout and spacing, with a mobile drawer below the Fluent layout's 768px breakpoint.
+has Fluent navigation and a card around its content. `FluentGrid`/`FluentGridItem`
+provide responsive page columns and `FluentStack` provides content spacing, with
+a mobile drawer below the Fluent layout's 768px breakpoint. Keep grid adaptive
+rendering off for static SSR; responsive CSS does not need a .NET event handler.
 
 Render boundaries are deliberate:
 
@@ -206,9 +217,11 @@ notices (`notice` with a semantic `data-kind`), and table overflow
 (`table-container`). Component-specific styles belong in adjacent `.razor.css`
 files. Use narrowly scoped `::deep` selectors for child component markup.
 
-Use normal flow for prose and semantic tables, and positioning for overlays.
-Flexbox needs a specific benefit; do not recreate Bootstrap utilities or add
-inline layout styles, `!important`, decorative icons, or animations. Keep form
+Custom CSS is limited to application sizing, accessibility, and static form
+compatibility, using Fluent tokens. Prefer Fluent layout/spacing parameters;
+the library's generated styles are expected. Use normal flow for prose and
+semantic tables. Do not recreate Bootstrap utilities or add `!important` or
+ornamental animations. Use icons to clarify navigation/actions. Keep form
 labels before their controls and preserve Blazor/Identity behavior hooks when
 editing markup. Check narrow screens, keyboard focus, and text wrapping when
 changing layouts. See `AGENTS.md` for the authoring conventions.
@@ -408,16 +421,23 @@ References: [Aspire MCP](https://aspire.dev/reference/cli/commands/aspire-agent-
 
 For every change set, run formatting from the repository root, review the fixes,
 and require a clean verification pass. Stop Aspire first on Windows. After code
-changes, also build and run both existing headless test suites, which use native
-Microsoft.Testing.Platform and Shouldly and do not require Aspire or PostgreSQL:
+changes, also build and run the unit and bUnit projects. All five test projects use
+native Microsoft.Testing.Platform and Shouldly. The complete suite additionally
+requires Docker, Aspire tooling, development HTTPS, and Playwright Chromium:
 
 ```powershell
 dotnet format Ruvents.slnx --severity warn
 dotnet format Ruvents.slnx --severity warn --verify-no-changes
 dotnet build Ruvents.slnx
+pwsh ./tests/Ruvents.PlaywrightTests/bin/Debug/net10.0/playwright.ps1 install chromium
 dotnet test --solution Ruvents.slnx
 ```
 
-See [tests/README.md](tests/README.md) for test conventions and
+The unit and component projects can still run individually without external
+processes. Testcontainers covers focused database integration, Aspire integration
+covers the real resource graph and HTTP behavior, and Playwright covers browser
+interaction against its own isolated Aspire application. Test resources are
+disposable and never use the development database volumes. See
+[tests/README.md](tests/README.md) for commands, prerequisites, layer selection, and
 [build/README.md](build/README.md) for formatting scope, analyzer rules, and Razor
 code-behind validation. Formatting does not replace checks for other file types.

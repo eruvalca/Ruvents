@@ -67,7 +67,7 @@ to suggestion remain review guidance rather than bulk refactoring requirements.
 solution's supported source documents and available analyzer fixes. Review Razor
 markup, scripts, documentation, and configuration separately for their applicable
 EditorConfig settings. A clean formatting check does not replace the solution
-build, the Razor policy checks when required, or both test suites after code
+build, the Razor policy checks when required, or the relevant test suites after code
 changes. [Command reference](https://learn.microsoft.com/dotnet/core/tools/dotnet-format).
 
 Text files use UTF-8 without a byte-order mark (`charset = utf-8`), including C#,

@@ -125,6 +125,9 @@ try {
                 # These are fresh directories; no Aspire instance has been started here.
                 foreach ($configuration in @('Debug', 'Release')) {
                     Invoke-ValidationCommand dotnet @('build', "$name.slnx", '--configuration', $configuration, '--nologo') "$name-$configuration-build.log"
+                    if ($configuration -eq 'Debug') {
+                        Invoke-ValidationCommand pwsh @('-NoProfile', '-File', "tests/$name.PlaywrightTests/bin/Debug/net10.0/playwright.ps1", 'install', 'chromium') "$name-browser-install.log"
+                    }
                     Invoke-ValidationCommand dotnet @('test', '--solution', "$name.slnx", '--configuration', $configuration, '--no-build') "$name-$configuration-test.log"
                 }
                 Invoke-ValidationCommand pwsh @('-NoProfile', '-File', 'scripts/Test-RazorCodeBehind.ps1') "$name-razor-policy.log"
