@@ -21,12 +21,31 @@ hashes, candidate paths, and a commit ID under ignored
 or file contents. The baseline covers staged and unstaged changes, non-ignored
 untracked files, and `HEAD`. Repeated prompt events keep the original baseline.
 
-`Stop` compares the baseline with the current workspace. If it changed, the hook
-requests one final documentation review through Codex's `decision: "block"`
+`Stop` compares the baseline with the current workspace. For a changed workspace,
+it checks the event's `last_assistant_message` for the completion report requested
+by `UserPromptSubmit` and `AGENTS.md`. After reviewing, the agent includes a plain,
+unquoted line starting exactly with `Documentation review: complete.` followed
+on the same line by the outcome, for example:
+
+```text
+Documentation review: complete. Updated build/agent-hooks.md for the new behavior.
+Documentation review: complete. Existing setup and feature guidance remains accurate; no updates needed.
+```
+
+Either outcome lets the turn finish without an extra prompt. The line must be
+ordinary response text, outside quotes and code blocks, without a list prefix or
+bold formatting. The hook does not infer completion from a changed Markdown file,
+a plan to review, or arbitrary prose. It reads no transcript and saves no response
+text; it remembers only the reviewed workspace fingerprint, so repeated stops
+for that state remain quiet and subsequent changes need a fresh report.
+
+If the report is absent (including when the event has no assistant message), the
+hook requests one final documentation review through Codex's `decision: "block"`
 response. This continues the agent; it does not reject a Git commit or ask the
-user for approval. The agent reviews the relevant documentation through its
-usual tools, updates it if needed, and reports the outcome. If the review is
-already complete, it can confirm the result without repeating the work.
+user for approval. The agent reviews the relevant documentation through its usual
+tools, updates it if needed, and reports the outcome. If the review was already
+complete, it reports the outcome without repeating the work. A pending or blocked
+review must not use the completion line; report the limitation and finish instead.
 
 A per-turn marker and `stop_hook_active` prevent repeat passes. Plan-mode turns,
 unchanged workspaces, and missing baselines do not request a finishing review.
@@ -68,8 +87,9 @@ pwsh ./scripts/Test-DocumentationReviewHook.ps1
 ```
 
 The checks run in isolated Git fixtures under ignored `artifacts/`. They cover
-baseline comparisons, dirty files, staging, commits, failure handling, and
-finishing-pass loop prevention. On Windows, they exercise both registered
-commands through PowerShell 7, Windows PowerShell, and `cmd.exe` from a
+baseline comparisons, dirty files, staging, commits, completion reports (including
+no documentation changes), missing/pending/quoted reports, later edits and turns,
+failure handling, and finishing-pass loop prevention. On Windows, they exercise
+both registered commands through PowerShell 7, Windows PowerShell, and `cmd.exe` from a
 subdirectory in a path with spaces. They do not establish that the current Codex
 session has loaded or trusted the hooks; verify that separately in Codex.

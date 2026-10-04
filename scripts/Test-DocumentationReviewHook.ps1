@@ -71,6 +71,8 @@ Set-FixtureFile 'README.md' "# Fixture`n"
 $result = Invoke-Hook 'UserPromptSubmit' 'unborn'
 Assert-Result 'Initial repository receives pre-commit review instructions' (
     $result.hookSpecificOutput.additionalContext -match 'Before any authorized commit')
+Assert-Result 'Early reminder explains the final-response completion contract' (
+    $result.hookSpecificOutput.additionalContext.Contains('Documentation review: complete.'))
 Assert-Result 'Unchanged untracked files do not trigger a finishing pass' (
     (Invoke-Hook 'Stop' 'unborn').Count -eq 0)
 Set-FixtureFile 'new file.md' "# New document`n"
@@ -108,6 +110,61 @@ Invoke-FixtureGit @('add', 'README.md')
 Invoke-FixtureGit @('commit', '--quiet', '-m', 'Fixture change')
 Assert-Result 'A commit during the turn still triggers review' (
     (Invoke-Hook 'Stop' 'commit').decision -eq 'block')
+
+# A reported review can finish in the first pass, with or without doc edits.
+$completedReports = @(
+    'Documentation review: complete. Updated README.md for the new setup.'
+    "Implemented the change.`r`n`r`nDocumentation review: complete. Existing guidance remains accurate; no updates needed."
+    "``````text`nAn example without a report.`n```````nDocumentation review: complete. Reviewed AGENTS.md; no change needed."
+)
+for ($index = 0; $index -lt $completedReports.Count; $index++) {
+    $turn = "completed-$index"
+    Invoke-Hook 'UserPromptSubmit' $turn | Out-Null
+    Set-FixtureFile 'source.cs' "class ReviewedFixture$index;"
+    Assert-Result "Completed review $index avoids the first continuation" (
+        (Invoke-Hook 'Stop' $turn @{ last_assistant_message = $completedReports[$index] }).Count -eq 0)
+    Assert-Result "Completed review $index stays quiet when a repeated event omits the message" (
+        (Invoke-Hook 'Stop' $turn).Count -eq 0)
+}
+Set-FixtureFile 'source.cs' 'class ChangedAfterReview;'
+Assert-Result 'Later edits invalidate the remembered review fingerprint' (
+    (Invoke-Hook 'Stop' $turn).decision -eq 'block')
+Invoke-Hook 'UserPromptSubmit' 'after-completed-turn' | Out-Null
+Set-FixtureFile 'source.cs' 'class ChangedInNextTurn;'
+Assert-Result 'Review completion does not leak into a new turn' (
+    (Invoke-Hook 'Stop' 'after-completed-turn').decision -eq 'block')
+
+Invoke-Hook 'UserPromptSubmit' 'reviewed-commit' | Out-Null
+Invoke-FixtureGit @('add', 'source.cs')
+Invoke-FixtureGit @('commit', '--quiet', '-m', 'Reviewed fixture change')
+Assert-Result 'A reported review also suppresses a redundant pass after a commit' (
+    (Invoke-Hook 'Stop' 'reviewed-commit' @{ last_assistant_message = $completedReports[1] }).Count -eq 0)
+Assert-Result 'Completion state stores no final-response text' (
+    -not ((Get-ChildItem -LiteralPath (Join-Path $fixtureRoot 'artifacts/agent-hooks/documentation') -Filter '*.json' |
+                Get-Content -Raw) -match 'Documentation review:|ReviewedFixture|ChangedInNextTurn'))
+
+$incompleteReports = @(
+    $null
+    ''
+    'I will review the documentation before finishing.'
+    'Documentation review: pending. Still checking setup instructions.'
+    'Documentation review: blocked. Could not read the relevant docs.'
+    'Documentation review: incomplete. README.md still needs an update.'
+    'Documentation review: complete.'
+    'Use "Documentation review: complete. No changes needed." after reviewing.'
+    '> Documentation review: complete. This is a quoted example.'
+    '    Documentation review: complete. This is an indented code example.'
+    "``````text`nDocumentation review: complete. This is a fenced example.`n``````"
+    "~~~~text`n~~~`nDocumentation review: complete. A shorter fence did not close the example.`n~~~~"
+    "``````text`n~~~`nDocumentation review: complete. A different fence did not close the example.`n``````"
+)
+for ($index = 0; $index -lt $incompleteReports.Count; $index++) {
+    $turn = "incomplete-$index"
+    Invoke-Hook 'UserPromptSubmit' $turn | Out-Null
+    Set-FixtureFile 'source.cs' "class UnreviewedFixture$index;"
+    Assert-Result "Missing, incomplete or example report $index still requests a review" (
+        (Invoke-Hook 'Stop' $turn @{ last_assistant_message = $incompleteReports[$index] }).decision -eq 'block')
+}
 
 Invoke-Hook 'UserPromptSubmit' 'delete' | Out-Null
 Remove-Item -LiteralPath (Join-Path $fixtureRoot 'new file.md')
@@ -181,6 +238,15 @@ if ($IsWindows) {
             Assert-Result "$shell Stop launcher stays quiet for an unchanged workspace" (
                 $execution.ExitCode -eq 0 -and ($execution.Output | ConvertFrom-Json -AsHashtable).Count -eq 0)
             Set-FixtureFile "launcher-$shell.md" 'A change after the manifest prompt hook.'
+            $payload.last_assistant_message = $completedReports[0]
+            $execution = Invoke-WindowsManifestHook $stopHandler $payload $shell
+            Assert-Result "$shell Stop launcher accepts a completed review after an edit" (
+                $execution.ExitCode -eq 0 -and ($execution.Output | ConvertFrom-Json -AsHashtable).Count -eq 0)
+            $payload.Remove('last_assistant_message')
+            $execution = Invoke-WindowsManifestHook $stopHandler $payload $shell
+            Assert-Result "$shell Stop launcher remembers a completed review" (
+                $execution.ExitCode -eq 0 -and ($execution.Output | ConvertFrom-Json -AsHashtable).Count -eq 0)
+            Set-FixtureFile "launcher-$shell.md" 'Another change after the completed review.'
             $execution = Invoke-WindowsManifestHook $stopHandler $payload $shell
             Assert-Result "$shell Stop launcher requests a review after an edit" (
                 $execution.ExitCode -eq 0 -and ($execution.Output | ConvertFrom-Json -AsHashtable).decision -eq 'block')

@@ -333,13 +333,17 @@ dotnet test --solution Ruvents.slnx
 
 - Review documentation as part of implementation work, before any authorized
   commit and before reporting completion. Update affected instructions and docs;
-  leave accurate documentation unchanged. Briefly report the review outcome.
+  leave accurate documentation unchanged. Once reviewed, include a plain,
+  unquoted final-response line starting exactly with
+  `Documentation review: complete.` followed on the same line by the outcome.
+  Use this only after completing the review; report any blocker instead.
   This does not authorize a commit or broaden a read-only task.
 - Keep durable agent conventions here, setup and runtime workflows in `README.md`,
   build rules in `build/README.md`, and test conventions in `tests/README.md`.
   Update existing feature and workflow documentation rather than duplicating it.
 - The project-owned Codex `UserPromptSubmit` hook supplies this reminder and
   records a workspace baseline. The companion `Stop` hook requests at most one
-  finishing review when the workspace changes during a turn. These hooks are
-  advisory, not proof of documentation accuracy or a Git commit gate.
+  finishing review when the workspace changes during a turn and the final
+  response does not report completion. These hooks are advisory, not proof of
+  documentation accuracy or a Git commit gate.
   See [agent hook maintenance](build/agent-hooks.md) for setup and validation.

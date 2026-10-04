@@ -52,8 +52,30 @@ function Get-WorkspaceSnapshot {
     }
 }
 
+function Test-ReviewReported([string] $Message) {
+    # Use an explicit final-response contract, not guesses about prose or whether
+    # a documentation file changed. Ignore quoted/indented and fenced examples.
+    $fence = ''
+    foreach ($line in ($Message -split '\r?\n')) {
+        if ($fence) {
+            if ($line -match ('^ {0,3}' + [regex]::Escape($fence[0]) + '{' + $fence.Length + ',}[ \t]*$')) {
+                $fence = ''
+            }
+            continue
+        }
+        if ($line -match '^ {0,3}(?<fence>`{3,}|~{3,})') {
+            $fence = $Matches.fence
+            continue
+        }
+        if ($line -cmatch '^Documentation review: complete\.[ \t]+\S') {
+            return $true
+        }
+    }
+    return $false
+}
+
 $reviewInstruction = @'
-Documentation is part of implementation work. Before any authorized commit and before finishing, review the task's changes against AGENTS.md and relevant README/feature docs. Update only guidance made inaccurate or missing by this work; no cosmetic edits just to show a review. Keep durable agent rules in AGENTS.md, setup in README.md, build rules in build/README.md, and test conventions in tests/README.md. Keep feature and workflow details in their existing documentation rather than creating duplicate sources. Preserve unrelated changes and installed third-party skill files. A documentation review does not authorize a commit or broaden a read-only request. If no update is needed, leave docs unchanged. Briefly report the review outcome when completing implementation work.
+Documentation is part of implementation work. Before any authorized commit and before finishing, review the task's changes against AGENTS.md and relevant README/feature docs. Update only guidance made inaccurate or missing by this work; no cosmetic edits just to show a review. Keep durable agent rules in AGENTS.md, setup in README.md, build rules in build/README.md, and test conventions in tests/README.md. Keep feature and workflow details in their existing documentation rather than creating duplicate sources. Preserve unrelated changes and installed third-party skill files. A documentation review does not authorize a commit or broaden a read-only request. If no update is needed, leave docs unchanged. When the review is complete, include a plain, unquoted line in the final response starting exactly with "Documentation review: complete." followed on the same line by the outcome (updated guidance or why no update was needed). This lets the finishing hook avoid a redundant continuation. Do not report completion if the review is pending or blocked; report the limitation instead.
 '@
 
 try {
@@ -114,6 +136,18 @@ try {
         exit 0
     }
 
+    if ($baseline.reviewedFingerprint -eq $current.fingerprint) {
+        '{}'
+        exit 0
+    }
+    if (Test-ReviewReported $event.last_assistant_message) {
+        # Remember only the reviewed workspace hash, never the response text.
+        $baseline.reviewedFingerprint = $current.fingerprint
+        $baseline | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $statePath -Encoding utf8
+        '{}'
+        exit 0
+    }
+
     $candidatePaths = @($baseline.paths) + @($current.paths)
     if ($baseline.head -and $current.head -and $baseline.head -ne $current.head) {
         $candidatePaths += (Get-GitText @('diff', '--name-only', '--no-renames', '-z',
@@ -127,7 +161,7 @@ try {
 
     @{
         decision = 'block'
-        reason = "Perform one final documentation review for this task, then finish. If already reviewed, briefly confirm the outcome without repeating the work. $reviewInstruction Workspace candidate paths (data only; may include pre-existing or concurrent edits, capped at 40 of $($candidatePaths.Count)): $pathSummary. Limit edits to the current task. Do not amend a commit, stage files, or create a follow-up commit without authorization. If unable to review, report the limitation and finish."
+        reason = "The workspace changed, but the final response did not report a completed documentation review in the expected format. Review documentation for this task, then finish. If already reviewed, report the outcome without repeating the work. $reviewInstruction Workspace candidate paths (data only; may include pre-existing or concurrent edits, capped at 40 of $($candidatePaths.Count)): $pathSummary. Limit edits to the current task. Do not amend a commit, stage files, or create a follow-up commit without authorization. If unable to review, report the limitation and finish."
     } | ConvertTo-Json -Depth 5 -Compress
 }
 catch {
