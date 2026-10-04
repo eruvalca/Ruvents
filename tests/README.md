@@ -15,6 +15,33 @@ the CLI and editor find `global.json` and `Ruvents.slnx`.
 `Ruvents.Testing` is a shared support library, not a test project. It configures
 isolated AppHost builders for the Aspire and Playwright projects.
 
+## PWA validation
+
+`PwaTests` exercises the real service workers in Chromium through isolated Aspire
+hosts: manifest and icon delivery, activation and cache ownership, full and
+enhanced GET navigation while offline, retry after reconnect, and network-only
+API/POST/subresource behavior. It also checks that online 401/404 responses are
+preserved, production updates wait for open pages, and Development replaces an
+older worker without deleting unrelated caches. The existing account browser
+workflow runs with the production worker active through registration, login,
+account loading, enhanced navigation, and logout, then verifies that the only
+cached response is the generic offline page.
+
+The web resource stays in Development so the normal health/migration graph is
+preserved. `TestAppHost.CreateAsync(true, cancellationToken)` sets
+`--Pwa:EnableOfflineFallback=true` as an argument only on that isolated resource.
+This executes the same static worker used outside Development without touching a
+developer's browser profile or database. The default helper leaves the development
+behavior in place. Browser contexts and apps are disposed after every test.
+
+For a production rollout, also publish and validate the resulting files over
+HTTPS. Check real device installation (including iOS Add to Home Screen), launch
+after a first successful online activation, and updates with multiple installed
+windows open. The template worker intentionally waits for old windows to close;
+increment its cache version with changes to `offline.html`. Chromium automation
+does not establish OS installation UX, passkey ceremonies, mobile suspension,
+push delivery, or application-specific offline data/synchronization.
+
 ## Cancellation validation
 
 - Unit tests check required service contracts, HTTP send and response-body

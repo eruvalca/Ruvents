@@ -167,6 +167,15 @@ models mutually exclusive inputs;
 [EnableAuthenticatorOutcome](src/Ruvents/Features/Account/Models/EnableAuthenticatorOutcome.cs)
 distinguishes complete success from partial completion.
 
+## Progressive Web App
+
+- The PWA baseline owns installation and a generic offline document only. Keep
+  personalized SSR, Identity responses, API data, and non-GET requests out of its
+  cache. Preserve enhanced navigation online and the network semantics of forms.
+  Offline business data, queued writes, and push require an explicit feature scope.
+  Keep the worker cache version in sync with changes to `offline.html`; see
+  README.md for development cleanup, deployment, and customization.
+
 ## Cancellation
 
 - Application-owned asynchronous I/O contracts require a final, non-optional

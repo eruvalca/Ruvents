@@ -10,6 +10,6 @@
     "scripts/Test-RazorCodeBehind.ps1",
     "scripts/Invoke-DocumentationReviewHook.ps1", "scripts/Test-DocumentationReviewHook.ps1"
   ],
-  "textExtensions": [".cs", ".csproj", ".razor", ".css", ".js", ".json", ".md", ".txt", ".props", ".targets", ".globalconfig", ".slnx", ".ps1", ".yml", ".yaml"],
+  "textExtensions": [".cs", ".csproj", ".razor", ".css", ".js", ".json", ".webmanifest", ".html", ".md", ".txt", ".props", ".targets", ".globalconfig", ".slnx", ".ps1", ".yml", ".yaml"],
   "binaryExtensions": [".png", ".jpg", ".jpeg", ".gif", ".ico", ".webp", ".woff", ".woff2", ".ttf", ".pdf"]
 }

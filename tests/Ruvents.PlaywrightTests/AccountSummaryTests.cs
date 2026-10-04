@@ -16,7 +16,7 @@ public sealed class AccountSummaryTests(ITestOutputHelper output)
     {
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
         timeout.CancelAfter(TimeSpan.FromMinutes(3));
-        await using var builder = await TestAppHost.CreateAsync(timeout.Token);
+        await using var builder = await TestAppHost.CreateAsync(enableOfflineFallback: true, timeout.Token);
         await using var app = await builder.BuildAsync(timeout.Token);
         await app.StartAsync(timeout.Token);
         await app.ResourceNotifications.WaitForResourceHealthyAsync("ruvents", timeout.Token);
@@ -36,6 +36,7 @@ public sealed class AccountSummaryTests(ITestOutputHelper output)
             var email = $"cancellation-{Guid.NewGuid():N}@example.test";
             const string Password = "Test-only-Account!123";
             await page.GotoAsync("/Account/Register");
+            await using var worker = await page.WaitForFunctionAsync("() => navigator.serviceWorker.controller?.scriptURL.endsWith('/service-worker.js') && navigator.serviceWorker.controller.state === 'activated'");
             await page.GetByLabel("Email", new() { Exact = true }).FillAsync(email);
             await page.GetByLabel("Password", new() { Exact = true }).FillAsync(Password);
             await page.GetByLabel("Confirm Password", new() { Exact = true }).FillAsync(Password);
@@ -73,6 +74,12 @@ public sealed class AccountSummaryTests(ITestOutputHelper output)
             await page.GetByText($"Hello {email}!", new() { Exact = true }).WaitForAsync();
             (await page.TitleAsync()).ShouldBe("Auth");
             (await page.EvaluateAsync<double>("performance.timeOrigin")).ShouldBe(documentOrigin);
+            await page.GetByRole(AriaRole.Button, new() { Name = "Logout", Exact = true }).ClickAsync();
+            await page.GetByRole(AriaRole.Heading, new() { Name = "Log in", Exact = true }).WaitForAsync();
+            (await page.EvaluateAsync<int>("async () => (await fetch('/api/account/summary')).status")).ShouldBe(401);
+            (await page.Locator("body").InnerTextAsync()).ShouldNotContain($"Hello {email}!");
+            (await page.EvaluateAsync<string[]>("async () => (await Promise.all((await caches.keys()).map(async key => (await (await caches.open(key)).keys()).map(request => new URL(request.url).pathname)))).flat()"))
+                .ShouldBe(["/offline.html"]);
             errors.ShouldBeEmpty();
         }
         finally

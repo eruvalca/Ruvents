@@ -8,6 +8,9 @@ namespace Ruvents.Testing;
 public static class TestAppHost
 {
     public static async Task<IDistributedApplicationTestingBuilder> CreateAsync(CancellationToken cancellationToken)
+        => await CreateAsync(enableOfflineFallback: false, cancellationToken);
+
+    public static async Task<IDistributedApplicationTestingBuilder> CreateAsync(bool enableOfflineFallback, CancellationToken cancellationToken)
     {
         var builder = await DistributedApplicationTestingBuilder.CreateAsync<Projects.Ruvents_AppHost>(
             ["--environment=Development"], cancellationToken);
@@ -23,6 +26,13 @@ public static class TestAppHost
                 }
 
                 builder.CreateResourceBuilder(container).WithLifetime(ContainerLifetime.Session);
+            }
+
+            if (enableOfflineFallback)
+            {
+                var web = builder.Resources.OfType<ProjectResource>().Single(resource => string.Equals(resource.Name, "ruvents", StringComparison.Ordinal));
+                // Keep Aspire's environment/connection-string configuration intact.
+                builder.CreateResourceBuilder(web).WithArgs("--Pwa:EnableOfflineFallback=true");
             }
 
             return builder;

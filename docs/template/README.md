@@ -112,6 +112,10 @@ source snapshot; pack and install the next local version explicitly.
   type names change; migration identifiers and `RUV001`–`RUV004` stay stable.
 - Binary assets are copied byte for byte. Unknown extensions fail packaging until
   classified in the manifest; add new binary formats to `copyOnly` too.
+  PWA `.webmanifest` and `.html` files are classified as text so installed names
+  and offline-page text receive application-name replacements. Worker cache
+  prefixes also receive the lowercase name replacement. The SDK placeholder PNG
+  icons remain byte-for-byte copies; generated applications supply their branding.
   The name-independent Razor policy script is also copy-only: its embedded C#
   `#if` fixture would otherwise be interpreted by the template engine. Packaging
   fails if an application name or secrets GUID is later added to copy-only text.
@@ -192,6 +196,14 @@ through its account-management page, then stop this generated AppHost:
 ```powershell
 aspire stop --non-interactive
 ```
+
+PWA browser tests validate worker behavior and manifest names in generated apps.
+Also inspect the generated `wwwroot/manifest.webmanifest`, offline title/text,
+and worker cache prefixes for the chosen application name. Production installation
+uses HTTPS and the production worker; see the generated README and tests/README.md
+for the Development default and the `Pwa:EnableOfflineFallback` validation override.
+An updated template package only changes future generated apps, including their
+PWA files; it does not update an already installed PWA at an application's origin.
 
 Do not attach to or reset the original Ruvents database. Persistent validation
 volumes may be retained; removing a volume requires positively identifying that

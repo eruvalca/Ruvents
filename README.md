@@ -13,6 +13,54 @@ source, validates generated applications, and installs a local `.nupkg`.
 the original starter and are excluded from generated applications.
 
 <!-- template-authoring:end -->
+## Progressive Web App baseline
+
+The starter is installable in supporting browsers and provides a generic
+connection-required page when a document cannot reach the server. It preserves
+static SSR, enhanced navigation, interactive Auto components, and Identity forms.
+It does not provide offline business data, authentication, synchronization, or
+push notifications; generated applications can add those features deliberately.
+
+`src/Ruvents/wwwroot/manifest.webmanifest` defines the installed name, start URL,
+scope, colors, and standalone display. The 192/512 PNGs under `wwwroot/icons` are
+the .NET SDK PWA template's placeholder icons; replace them with application
+branding (and add a purpose-built maskable icon if desired). `App.razor` links
+the manifest and Apple touch icon without starting an interactive renderer.
+The baseline assumes hosting at `/`, like the existing Blazor base URL. For
+subpath hosting, adjust the manifest identity/scope/start URL and document base
+together, then validate installation and worker scope on the deployed URL.
+
+The root `service-worker.js` fetches document GETs from the network and only
+returns the cached, self-contained `offline.html` after a network failure.
+Enhanced GET navigation falls back to a full document load in that case; online
+enhanced navigation is preserved. API/framework requests, ordinary subresource
+fetches, and non-GET requests remain on the network. HTTP errors are preserved.
+No personalized HTML, form responses, or API data are added to the worker cache.
+The fallback cannot complete or queue a failed form submission.
+
+Offline fallback is enabled outside `Development` by default. In Development,
+`service-worker.development.js` immediately replaces an older worker and removes
+only caches with this application's `ruvents-offline-` prefix. It has no fetch
+handler. Set `Pwa:EnableOfflineFallback` (`Pwa__EnableOfflineFallback` as an
+environment variable) to override that choice for a local validation run or to
+disable offline fallback in a deployed application. Registration failures leave
+ordinary online use available and are reported in the browser console.
+
+Increment the cache version in `service-worker.js` whenever `offline.html` changes;
+keep the prefix consistent with the development worker. Production updates wait
+for existing controlled windows/tabs to close, then remove obsolete caches for
+this application. They do not force a reload of an in-progress form. Registration
+uses a stable worker URL and `updateViaCache: 'none'`. No app bundle is precached
+and no `ServiceWorkerAssetsManifest` SDK conversion is needed for this SSR baseline.
+
+Installation requires HTTPS (localhost is suitable for local testing). Install
+using the browser's menu or the device's Add to Home Screen flow. A first online
+visit must successfully activate the worker before the offline fallback is
+available. Installation does not keep server circuits running when the device
+suspends the app. Validate published output and actual target devices; a mobile
+viewport alone does not establish installation support. See
+[PWA validation](tests/README.md#pwa-validation) for automated coverage and limits.
+
 ## Cancellation across components and services
 
 The authorized `/auth` account summary is the first complete cancellable read
