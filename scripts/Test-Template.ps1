@@ -118,6 +118,13 @@ try {
     finally { Pop-Location }
 
     if (-not $StructureOnly) {
+        # Build before any default outputs exist, so a stale validator cannot hide
+        # a hard-coded bin path. Keep this separate from the normal runtime matrix.
+        Push-Location (Join-Path $runRoot 'first/SameName')
+        try {
+            Invoke-ValidationCommand dotnet @('build', 'SameName.slnx', '--artifacts-path', './custom build output', '--nologo') 'SameName-artifacts-build.log'
+        }
+        finally { Pop-Location }
         foreach ($case in $cases[0..1]) {
             $name = $case.name
             Push-Location (Join-Path $runRoot $case.directory)

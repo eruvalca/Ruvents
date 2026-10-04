@@ -35,8 +35,8 @@ function Set-Fixture([string] $Markup, [AllowNull()] $CodeBehind) {
     }
 }
 
-function Assert-Build([string] $Name, [string] $ExpectedCode = '') {
-    $output = & dotnet build $projectPath --nologo --verbosity quiet 2>&1
+function Assert-Build([string] $Name, [string] $ExpectedCode = '', [string[]] $BuildArguments = @()) {
+    $output = & dotnet build $projectPath --nologo --verbosity quiet @BuildArguments 2>&1
     $exitCode = $LASTEXITCODE
     $text = $output -join "`n"
     if ($ExpectedCode) {
@@ -122,5 +122,12 @@ Set-Fixture '<h1>Excluded companion</h1>' $validClass
 $excludedProject = $projectText.Replace('</Project>', '<ItemGroup><Compile Remove="Probe.razor.cs" /></ItemGroup></Project>')
 Set-Content -LiteralPath $projectPath -Value $excludedProject -Encoding utf8
 Assert-Build 'Companion must be compiled' 'RUV004'
+
+Set-Content -LiteralPath $projectPath -Value $projectText -Encoding utf8
+Set-Fixture '<h1>Custom build output</h1>' $validClass
+$customOutput = @('--artifacts-path', (Join-Path $fixtureRoot 'custom build output'))
+Assert-Build 'Custom artifacts path with spaces' -BuildArguments $customOutput
+Set-Fixture '<h1>Custom build output</h1>' $null
+Assert-Build 'Custom artifacts path still enforces missing companions' 'RUV001' $customOutput
 
 Write-Host "All Razor code-behind checks passed. Fixtures: $fixtureRoot"

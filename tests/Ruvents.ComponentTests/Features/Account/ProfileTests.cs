@@ -2,6 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using Bogus;
 using Bunit;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
@@ -20,6 +21,7 @@ public sealed class ProfileTests
     {
         await using var context = new BunitContext();
         var account = context.ConfigureAccount();
+        account.Http.Request.Method = HttpMethods.Get;
         var user = account.Authenticate();
         var fake = new Faker { Random = new Randomizer(724) };
         var username = fake.Internet.UserName();
@@ -41,13 +43,15 @@ public sealed class ProfileTests
     [Theory]
     [InlineData("+1 (312) 555-0123")]
     [InlineData(null)]
+    [InlineData("")]
     public async Task ChangedOrRemovedPhoneIsSavedBeforeRefreshingSessionAsync(string? phone)
     {
         await using var context = new BunitContext();
         var account = context.ConfigureAccount();
         var user = account.Authenticate();
         account.Users.GetPhoneNumberAsync(user).Returns("+1 (312) 555-0199");
-        account.Users.SetPhoneNumberAsync(user, phone).Returns(IdentityResult.Success);
+        var savedPhone = string.IsNullOrEmpty(phone) ? null : phone;
+        account.Users.SetPhoneNumberAsync(user, savedPhone).Returns(IdentityResult.Success);
         var navigation = context.Services.GetRequiredService<NavigationManager>();
         navigation.NavigateTo("Account/Manage?from=profile");
         var component = account.Render<Profile>(context);
@@ -64,11 +68,11 @@ public sealed class ProfileTests
         await component.Find("form").SubmitAsync();
 
         component.FindAll(".error-text[role='alert']").ShouldBeEmpty();
-        await account.Users.Received(1).SetPhoneNumberAsync(user, phone);
+        await account.Users.Received(1).SetPhoneNumberAsync(user, savedPhone);
         await account.SignIn.Received(1).RefreshSignInAsync(user);
         Received.InOrder(() =>
         {
-            _ = account.Users.SetPhoneNumberAsync(user, phone);
+            _ = account.Users.SetPhoneNumberAsync(user, savedPhone);
             _ = account.SignIn.RefreshSignInAsync(user);
         });
         account.StatusCookie.ShouldContain("Your profile has been updated");
@@ -97,7 +101,6 @@ public sealed class ProfileTests
     }
 
     [Theory]
-    [InlineData("")]
     [InlineData("not a phone number")]
     public async Task InvalidPhoneNumberDoesNotWriteOrRefreshSessionAsync(string phone)
     {

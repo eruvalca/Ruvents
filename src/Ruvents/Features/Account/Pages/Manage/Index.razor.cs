@@ -31,7 +31,10 @@ public sealed partial class Index
         _username = await UserManager.GetUserNameAsync(_user);
         _phoneNumber = await UserManager.GetPhoneNumberAsync(_user);
 
-        Input.PhoneNumber ??= _phoneNumber;
+        if (HttpMethods.IsGet(HttpContext.Request.Method))
+        {
+            Input.PhoneNumber = _phoneNumber;
+        }
     }
 
     private async Task OnValidSubmitAsync()
@@ -60,6 +63,10 @@ public sealed partial class Index
     {
         [Phone]
         [Display(Name = "Phone number")]
-        public string? PhoneNumber { get; set; }
+        public string? PhoneNumber
+        {
+            get;
+            set => field = string.IsNullOrEmpty(value) ? null : value;
+        }
     }
 }

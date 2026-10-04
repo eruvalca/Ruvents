@@ -684,7 +684,9 @@ create an unrelated class to bypass the policy. An empty matching partial class
 is appropriate for a component that only contains markup.
 
 The validator runs in a separate process so reusable MSBuild nodes do not lock its
-assemblies while agents edit the validator. The Razor parser handles comments,
+assemblies while agents edit the validator. Its executable path comes from the
+build-only project reference's target output, so `dotnet build --artifacts-path`
+uses the validator built in that output directory. The Razor parser handles comments,
 strings, inherited namespaces, and directives;
 validation does not use regular expressions to recognize member blocks. The C#
 parser honors the project's conditional compilation symbols. Because the validator
@@ -695,4 +697,5 @@ pwsh ./scripts/Test-RazorCodeBehind.ps1
 dotnet build Ruvents.slnx
 ```
 
-The check script creates isolated fixtures under the ignored `artifacts/` directory.
+The check script creates isolated fixtures under the ignored `artifacts/` directory,
+including successful and invalid-component builds with a custom artifacts path.

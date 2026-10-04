@@ -154,7 +154,10 @@ solution references, fresh secrets, binary integrity and absence of post-generat
 output are checked before any builds. The compiler-conditional probe is separate
 and never enters the real package.
 
-Both `TemplateSmoke` and `MyNewApp2` are built in Debug and Release, with all
+Before any default build outputs exist, one `SameName` instance is built with
+`--artifacts-path` into a directory containing spaces. This checks that the Razor
+validator resolves its actual build output rather than relying on a stale default
+binary. Both `TemplateSmoke` and `MyNewApp2` are built in Debug and Release, with all
 five test projects run after each build, including isolated PostgreSQL, Aspire,
 and browser tests. The Razor policy script is run in
 both generated roots. Logs contain actual test totals and build errors. A generation

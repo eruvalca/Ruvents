@@ -24,7 +24,8 @@ API/POST/subresource behavior. It also checks that online 401/404 responses are
 preserved, production updates wait for open pages, and Development replaces an
 older worker without deleting unrelated caches. The existing account browser
 workflow runs with the production worker active through registration, login,
-account loading, enhanced navigation, and logout, then verifies that the only
+account loading, profile phone removal, virtual passkey registration/sign-in,
+enhanced navigation, and logout, then verifies that the only
 cached response is the generic offline page.
 
 The web resource stays in Development so the normal health/migration graph is
@@ -39,7 +40,7 @@ HTTPS. Check real device installation (including iOS Add to Home Screen), launch
 after a first successful online activation, and updates with multiple installed
 windows open. The template worker intentionally waits for old windows to close;
 increment its cache version with changes to `offline.html`. Chromium automation
-does not establish OS installation UX, passkey ceremonies, mobile suspension,
+does not establish OS installation UX, real-device passkey behavior, mobile suspension,
 push delivery, or application-specific offline data/synchronization.
 
 ## Cancellation validation
@@ -384,8 +385,13 @@ substituted dependencies; they never start their application or send a network
 request. Revalidation tests invoke the framework's protected validation hook
 directly, avoiding its 30-minute background timer. bUnit tests use actual form
 events; the existing form helper supplies posted values only where bUnit does not
-run static SSR form mapping. For example, an empty phone string fails validation,
-while an explicitly null posted phone value removes the saved number.
+run static SSR form mapping. Empty and null phone values both remove the saved
+number; malformed nonempty values fail validation. The account browser workflow
+also submits a cleared phone through static SSR and reloads to verify persistence.
+It registers a Chromium virtual passkey for a plus-addressed email, asserts that
+the actual sign-in request returns that account's credential filter, and completes
+sign-in. Conditional autofill is disabled in that check to exercise the explicit
+passkey button deterministically; hardware authenticators remain a manual check.
 
 ## Initial test scope
 
