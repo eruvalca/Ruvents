@@ -15,6 +15,30 @@ the CLI and editor find `global.json` and `Ruvents.slnx`.
 `Ruvents.Testing` is a shared support library, not a test project. It configures
 isolated AppHost builders for the Aspire and Playwright projects.
 
+## Cancellation validation
+
+- Unit tests check required service contracts, HTTP send and response-body
+  cancellation, request-aware Identity store propagation, pre-canceled registration,
+  and revalidation scope/token behavior (including a store ignoring cancellation).
+- bUnit checks disposal/cleanup, independent operations, deadlines, superseded
+  results and errors in both completion orders, loading-state recovery, and
+  independent dependency cancellation. The account deadline test waits for its
+  observable timeout notice (up to 20 seconds), not a fixed sleep.
+- `AccountQueryCancellationTests` runs the production endpoint/query on an isolated
+  Kestrel host and disposable PostgreSQL. It holds a real table lock, aborts HTTP,
+  and waits for EF/Npgsql to report command cancellation before releasing the lock.
+  It also verifies authenticated direct reads, missing users, and anonymous denial.
+- Aspire verifies the deployed endpoint rejects anonymous requests. Playwright
+  exercises static registration/confirmation/login, the interactive account panel,
+  refresh, and the cookie-authenticated API in an isolated AppHost. It verifies the
+  `Auth` document title after login and enhanced navigation back to the page, along
+  with document continuity. Auto chooses the available renderer; this test doesn't
+  force a server-to-WebAssembly transition.
+
+These layers do not guarantee immediate abort detection through every deployed
+proxy, nor do they establish transactional rollback for canceled Identity writes.
+All test databases/accounts are isolated and disposed with their test resources.
+
 ## Supported stack
 
 Existing stack selected September 26, 2026; infrastructure/browser additions

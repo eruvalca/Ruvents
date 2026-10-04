@@ -11,6 +11,7 @@ using Ruvents.Data;
 using Ruvents.Features.Account.Pages.Manage;
 using Shouldly;
 using Xunit;
+using TestContext = Xunit.TestContext;
 
 namespace Ruvents.ComponentTests.Features.Account;
 
@@ -45,8 +46,10 @@ public sealed class ExternalLoginManagementTests
     [InlineData(true, 1, true)]
     public async Task RemoveActionsRequirePasswordOrAnotherLinkedLoginAsync(bool hasPassword, int loginCount, bool canRemove)
     {
+        using var request = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
         await using var context = new BunitContext();
         var account = context.ConfigureAccount();
+        account.Http.RequestAborted = request.Token;
         var user = account.Authenticate();
         var store = Substitute.For<IUserPasswordStore<ApplicationUser>>();
         store.GetPasswordHashAsync(user, account.Http.RequestAborted).Returns(hasPassword ? "password-hash" : null);

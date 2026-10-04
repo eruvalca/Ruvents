@@ -30,4 +30,5 @@ if (builder.ExecutionContext.IsRunMode)
     postgres.WithPgAdmin(pgAdmin => pgAdmin.WithExplicitStart());
 }
 
-await builder.Build().RunAsync();
+// Aspire/ConsoleLifetime owns shutdown; no component or request token defines the host lifetime.
+await builder.Build().RunAsync(CancellationToken.None);

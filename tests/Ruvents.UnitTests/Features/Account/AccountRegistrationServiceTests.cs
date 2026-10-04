@@ -32,7 +32,7 @@ public sealed class AccountRegistrationServiceTests
         });
         var service = new AccountRegistrationService(identity.Users, identity.Store);
 
-        var result = await service.PasswordAsync("member@example.test", "secret");
+        var result = await service.PasswordAsync("member@example.test", "secret", TestContext.Current.CancellationToken);
 
         var user = result.Value.ShouldBeOfType<RegistrationOutcome.Created>().User;
         user.ShouldBeSameAs(createdUser);
@@ -51,7 +51,7 @@ public sealed class AccountRegistrationServiceTests
         identity.Users.CreateAsync(Arg.Any<ApplicationUser>(), "secret").Returns(RejectedCreation());
         var service = new AccountRegistrationService(identity.Users, identity.Store);
 
-        var result = await service.PasswordAsync("member@example.test", "secret");
+        var result = await service.PasswordAsync("member@example.test", "secret", TestContext.Current.CancellationToken);
 
         var errors = result.Value.ShouldBeOfType<RegistrationOutcome.CreationRejected>().Errors;
         errors.Select(error => error.Code).ShouldBe(_creationErrorCodes);
@@ -79,7 +79,7 @@ public sealed class AccountRegistrationServiceTests
         });
         var service = new AccountRegistrationService(identity.Users, identity.Store);
 
-        var result = await service.ExternalAsync("member@example.test", login);
+        var result = await service.ExternalAsync("member@example.test", login, TestContext.Current.CancellationToken);
 
         var user = result.Value.ShouldBeOfType<RegistrationOutcome.Created>().User;
         user.ShouldBeSameAs(createdUser);
@@ -97,7 +97,7 @@ public sealed class AccountRegistrationServiceTests
         identity.Users.CreateAsync(Arg.Any<ApplicationUser>()).Returns(RejectedCreation());
         var service = new AccountRegistrationService(identity.Users, identity.Store);
 
-        var result = await service.ExternalAsync("member@example.test", CreateExternalLogin());
+        var result = await service.ExternalAsync("member@example.test", CreateExternalLogin(), TestContext.Current.CancellationToken);
 
         var errors = result.Value.ShouldBeOfType<RegistrationOutcome.CreationRejected>().Errors;
         errors.Select(error => error.Code).ShouldBe(_creationErrorCodes);
@@ -120,7 +120,7 @@ public sealed class AccountRegistrationServiceTests
             .Returns(IdentityResult.Failed(new IdentityError { Code = "ProviderConflict", Description = "Provider is already linked" }));
         var service = new AccountRegistrationService(identity.Users, identity.Store);
 
-        var result = await service.ExternalAsync("member@example.test", CreateExternalLogin());
+        var result = await service.ExternalAsync("member@example.test", CreateExternalLogin(), TestContext.Current.CancellationToken);
 
         var failure = result.Value.ShouldBeOfType<ExternalRegistrationOutcome.ExternalLoginLinkFailed>();
         failure.User.ShouldBeSameAs(createdUser);
@@ -140,7 +140,7 @@ public sealed class AccountRegistrationServiceTests
         identity.Users.SupportsUserEmail.Returns(false);
         var service = new AccountRegistrationService(identity.Users, identity.Store);
 
-        await Should.ThrowAsync<NotSupportedException>(() => service.PasswordAsync("member@example.test", "secret"));
+        await Should.ThrowAsync<NotSupportedException>(() => service.PasswordAsync("member@example.test", "secret", TestContext.Current.CancellationToken));
 
         await identity.Users.DidNotReceiveWithAnyArgs().CreateAsync(default!, default!);
     }
@@ -149,13 +149,13 @@ public sealed class AccountRegistrationServiceTests
     {
         var steps = new List<string>();
         identity.Users.SupportsUserEmail.Returns(true);
-        identity.Store.SetUserNameAsync(Arg.Any<ApplicationUser>(), "member@example.test", CancellationToken.None).Returns(call =>
+        identity.Store.SetUserNameAsync(Arg.Any<ApplicationUser>(), "member@example.test", TestContext.Current.CancellationToken).Returns(call =>
         {
             steps.Add("username");
             call.Arg<ApplicationUser>().UserName = call.Arg<string>();
             return Task.CompletedTask;
         });
-        identity.Store.SetEmailAsync(Arg.Any<ApplicationUser>(), "member@example.test", CancellationToken.None).Returns(call =>
+        identity.Store.SetEmailAsync(Arg.Any<ApplicationUser>(), "member@example.test", TestContext.Current.CancellationToken).Returns(call =>
         {
             steps.Add("email");
             call.Arg<ApplicationUser>().Email = call.Arg<string>();

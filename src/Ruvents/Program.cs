@@ -8,6 +8,7 @@ using Ruvents.Data;
 using Ruvents.Features.Account.Endpoints;
 using Ruvents.Features.Account.Services;
 using Ruvents.ServiceDefaults;
+using Ruvents.SharedKernel.Features.Account;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -27,6 +28,8 @@ builder.Services.AddScoped<AccountPasskeyService>();
 builder.Services.AddScoped<AccountRegistrationService>();
 builder.Services.AddScoped<AccountEmailChangeService>();
 builder.Services.AddScoped<AccountTwoFactorService>();
+builder.Services.AddScoped<AccountQueries>();
+builder.Services.AddScoped<IAccountQueries>(services => services.GetRequiredService<AccountQueries>());
 builder.Services.AddScoped<AuthenticationStateProvider, IdentityRevalidatingAuthenticationStateProvider>();
 
 builder.Services.AddAuthentication(options =>
@@ -59,6 +62,7 @@ builder.Services.AddIdentityCore<ApplicationUser>(options =>
         options.Stores.SchemaVersion = IdentitySchemaVersions.Version3;
     })
     .AddEntityFrameworkStores<ApplicationDbContext>()
+    .AddUserManager<AspNetUserManager<ApplicationUser>>()
     .AddSignInManager()
     .AddDefaultTokenProviders();
 
@@ -91,6 +95,7 @@ app.MapRazorComponents<App>()
 
 // Add additional endpoints required by the Identity /Account Razor components.
 app.MapAdditionalIdentityEndpoints();
+app.MapGet("/api/account/summary", AccountSummaryEndpoint.HandleAsync).RequireAuthorization();
 app.MapDefaultEndpoints();
 
 await app.RunAsync();

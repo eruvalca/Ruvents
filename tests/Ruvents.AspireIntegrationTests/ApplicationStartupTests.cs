@@ -34,5 +34,8 @@ public sealed class ApplicationStartupTests
         var home = await client.GetStringAsync(new Uri("/", UriKind.Relative), timeout.Token);
         home.ShouldContain("Welcome to Ruvents");
         home.ShouldContain("fluent-layout");
+
+        using var unauthorized = await client.GetAsync(new Uri("/api/account/summary", UriKind.Relative), timeout.Token);
+        unauthorized.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
     }
 }

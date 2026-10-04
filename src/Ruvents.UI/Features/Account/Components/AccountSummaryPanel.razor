@@ -1,0 +1,27 @@
+@inherits Ruvents.UI.Components.CancelableComponentBase
+
+<AuthorizeView>
+    <div class="account-summary">
+        <FluentCard>
+            <FluentStack Orientation="Orientation.Vertical" VerticalGap="var(--spacingVerticalM)">
+                @if (_loading)
+                {
+                    <p role="status">Loading your account…</p>
+                }
+                else if (_error is not null)
+                {
+                    <p class="notice" data-kind="error" role="alert">@_error</p>
+                }
+                else if (_summary is not null)
+                {
+                    <p>Hello @_summary.UserName!</p>
+                    <p>Email confirmed: @(_summary.EmailConfirmed ? "Yes" : "No")</p>
+                }
+                <FluentButton Title="Refresh account" OnClick="LoadAsync">Refresh account</FluentButton>
+                <a href="Account/Manage">Manage your account</a>
+            </FluentStack>
+        </FluentCard>
+    </div>
+</AuthorizeView>
+
+<FluentProviders />

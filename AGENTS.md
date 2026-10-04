@@ -167,6 +167,30 @@ models mutually exclusive inputs;
 [EnableAuthenticatorOutcome](src/Ruvents/Features/Account/Models/EnableAuthenticatorOutcome.cs)
 distinguishes complete success from partial completion.
 
+## Cancellation
+
+- Application-owned asynchronous I/O contracts require a final, non-optional
+  `CancellationToken`; forward it through HTTP send/body reads, EF operations,
+  and asynchronous enumeration. Avoid tokenless overloads. `None`/`default` must
+  represent a deliberate lifetime boundary, not an analyzer workaround.
+- Shared interactive components that own asynchronous work may inherit
+  `CancelableComponentBase`. Use its cleanup hook, not a competing `Dispose` or
+  `DisposeAsync`. Use a separate `LatestOperation` per replaceable load; gate
+  results, errors, and loading state on the current operation and component
+  lifetime. The caller disposes an operation after its work finishes.
+- Static Identity pages use `HttpContext.RequestAborted`. Identity's tokenless
+  manager APIs are request-bound exceptions, backed by `AspNetUserManager`;
+  pass the request token to explicit store calls and registration initialization.
+  Do not reuse these adapters as circuit/background services. Revalidation uses
+  its supplied token and a fresh store scope instead.
+- Cancellation does not roll back writes. Preserve partial Identity outcomes and
+  let cancellation propagate; do not report success after a canceled command.
+  Define transaction/idempotency or durable-job policy for new multi-step writes.
+- Preserve endpoint authorization and enforce equivalent authorization for direct
+  server query calls. Tokens are not HTTP payloads: client abort signals a separate
+  server request token. See README.md and build/README.md for the implemented path
+  and enforcement limits.
+
 ## Validation
 
 - Compiler and analyzer warnings fail builds through `TreatWarningsAsErrors`.

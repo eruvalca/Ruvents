@@ -12,6 +12,9 @@ public sealed partial class Register
 {
     private IEnumerable<IdentityError>? _identityErrors;
 
+    [CascadingParameter]
+    private HttpContext HttpContext { get; set; } = default!;
+
     [SupplyParameterFromForm]
     private InputModel Input { get; set; } = default!;
 
@@ -24,7 +27,7 @@ public sealed partial class Register
 
     public async Task RegisterUserAsync(EditContext editContext)
     {
-        var result = await AccountRegistration.PasswordAsync(Input.Email, Input.Password);
+        var result = await AccountRegistration.PasswordAsync(Input.Email, Input.Password, HttpContext.RequestAborted);
         await result.Match(
             created => CompleteRegistrationAsync(created.User),
             rejected =>

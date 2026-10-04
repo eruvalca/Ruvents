@@ -1,6 +1,7 @@
 @page "/auth"
 
 @using Microsoft.AspNetCore.Authorization
+@using Ruvents.UI.Features.Account.Components
 
 @attribute [Authorize]
 
@@ -8,13 +9,4 @@
 
 <h1>You are authenticated</h1>
 
-<AuthorizeView>
-    <div class="account-summary">
-        <FluentCard>
-            <FluentStack Orientation="Orientation.Vertical" VerticalGap="var(--spacingVerticalM)">
-                <p>Hello @context.User.Identity?.Name!</p>
-                <a href="Account/Manage">Manage your account</a>
-            </FluentStack>
-        </FluentCard>
-    </div>
-</AuthorizeView>
+<AccountSummaryPanel @rendermode="new InteractiveAutoRenderMode(prerender: false)" />

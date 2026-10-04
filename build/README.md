@@ -39,6 +39,29 @@ control. Do not introduce nested `Directory.Packages.props` files or per-project
 `VersionOverride` entries without a documented need: NuGet automatically imports
 only the nearest central package file.
 
+## Cancellation enforcement
+
+`.editorconfig` promotes `CA2016`, `CA1068`, `MA0032`, `MA0040`, `MA0079`, and
+`MA0080` to warnings. The shared warnings-as-errors setting makes missing token
+forwarding, token-capable calls without a token in scope, incorrect token ordering,
+and uncancelable async enumeration fail builds. The existing SDK/Meziantou packages
+provide these checks; no additional analyzer package is needed. Compiler warning
+`CS8425` also checks async iterator token plumbing with `EnumeratorCancellation`.
+
+Use required final token parameters on application-owned I/O contracts; omitting
+one then fails compilation. `CancellationContractTests` checks task/value-task/async
+enumerable methods on SharedKernel interfaces and public declared service methods
+in the server's `.Services` namespaces. The four tokenless Identity manager adapters
+and the framework email-sender contract are explicit exceptions: their request-bound
+policy is documented in README.md. Registration's explicit store operations and
+the account query contract are checked. New exceptions need a reviewed reason.
+
+Analyzers do not prove cancellation behavior: explicit `None`/`default`, an ignored
+parameter, or a dependency with no token API can escape forwarding checks. Review
+such boundaries and require behavioral tests. The AppHost's explicit `None` leaves
+shutdown to Aspire/ConsoleLifetime; the Razor validator uses a Ctrl+C source and
+forwards it through file reads, Razor processing, syntax parsing, and traversal.
+
 ## Formatting
 
 For every change set, including configuration and documentation changes, run from

@@ -13,6 +13,54 @@ source, validates generated applications, and installs a local `.nupkg`.
 the original starter and are excluded from generated applications.
 
 <!-- template-authoring:end -->
+## Cancellation across components and services
+
+The authorized `/auth` account summary is the first complete cancellable read
+path. The `Auth` route wrapper renders its heading and `PageTitle` with static SSR,
+so the title reaches the shell's static `HeadOutlet` on full and enhanced navigation.
+Its `AccountSummaryPanel` child uses `InteractiveAuto` without prerendering to avoid
+duplicate account loads and give each load one interactive component lifetime.
+The panel owns cancellation and hosts its Fluent providers. Identity form pages
+and the navigation/layout remain static.
+
+`IAccountQueries.GetCurrentAsync` requires a token. On the server, `AccountQueries`
+checks the circuit's authenticated principal and creates/disposes an independent
+EF context per operation. In WebAssembly, `HttpAccountQueries` forwards the token
+to both HTTP sending and JSON reading. The authorized `/api/account/summary`
+minimal endpoint binds its token to `HttpContext.RequestAborted` and uses the same
+server query with the request's principal. Only that principal's account is read;
+the browser never supplies a user ID. Client tokens aren't serialized: aborting
+HTTP signals the server's separate token when the transport detects the abort.
+
+`CancelableComponentBase` owns one component lifetime. Adoption is opt-in; sync
+components, static Identity pages, and existing specialized base classes don't
+need it. Put cleanup in `OnDisposeAsync`. Each `LatestOperation` owns one replaceable
+activity: refresh cancels the previous operation, a 15-second account-load deadline
+bounds that operation, and stale results/errors cannot overwrite newer state.
+Timeouts and independent dependency cancellation produce a retry message. Component
+disposal cancels work but doesn't join every task; each operation retains its own
+context/source until completion. Circuit reconnection retention can delay disposal;
+there is no blanket cancellation on transient circuit disconnects.
+
+Static account forms now use request-aware `AspNetUserManager<ApplicationUser>`.
+Its tokenless Identity APIs forward the captured request token into the store.
+Registration also forwards the explicit request token to user initialization.
+These wrappers remain request-bound and aren't general circuit/job services.
+Security-stamp revalidation instead reads through a fresh store scope using its
+framework-supplied token. It preserves the .NET 10 framework's cancellation
+exception/token contract, preventing a canceled, stale check from signing out a
+replacement authentication state.
+
+Cancellation is cooperative and **does not roll back writes**. A canceled Identity
+sequence can leave earlier steps committed, and a lost response can leave a caller
+uncertain whether a write completed. Cancellation propagates instead of becoming
+a success outcome; existing partial-result handling is preserved. Future commands
+that require all-or-nothing behavior need a transaction/idempotency policy, and
+durable background jobs need their own lifetime rather than a page/request token.
+
+See [build enforcement](build/README.md#cancellation-enforcement) and
+[cancellation validation](tests/README.md#cancellation-validation).
+
 ## Local prerequisites
 
 - .NET SDK **10.0.401** (selected by `global.json`).
@@ -183,16 +231,17 @@ rendering off for static SSR; responsive CSS does not need a .NET event handler.
 
 Render boundaries are deliberate:
 
-- `Routes`, `MainLayout`, Home, the authenticated summary, and Identity pages
-  use static SSR. `Counter` opts into `InteractiveAuto` because its button needs
-  .NET event handling. Counter actions are disabled during prerendering until
-  their renderer becomes interactive. Static pages don't start a .NET interactive
-  runtime simply to display navigation or cards.
-- `Counter` hosts `FluentProviders` inside its interactive boundary. Providers
-  inherit its renderer and scoped services for dialogs, toasts, tooltips, and key
-  handling. Add providers inside other interactive pages/subtrees when needed,
-  once per active renderer/service scope. The layout's `Body` never crosses an
-  interactive boundary.
+- `Routes`, `MainLayout`, Home, the `Auth` route wrapper, and Identity pages use
+  static SSR. `Auth` keeps its heading and `PageTitle` in that renderer and hosts
+  an `AccountSummaryPanel` child with non-prerendered `InteractiveAuto` for account
+  queries and refresh. `Counter` opts into `InteractiveAuto` with prerendering;
+  its actions are disabled until the renderer becomes interactive. Static pages
+  don't start a .NET interactive runtime simply to display navigation or cards.
+- `Counter` and `AccountSummaryPanel` each host `FluentProviders` inside their
+  interactive boundaries. Providers inherit the enclosing renderer and scoped
+  services for dialogs, toasts, tooltips, and key handling. Add providers inside
+  other interactive pages/subtrees when needed, once per active renderer/service
+  scope. The layout's `Body` never crosses an interactive boundary.
 - Static navigation has ordinary `Href` links with `tabindex="0"`, since Fluent's
   interactive roving-tabindex setup does not run in SSR. Shell links use Blazor's
   enhanced navigation: the server renders the destination and Blazor updates the
