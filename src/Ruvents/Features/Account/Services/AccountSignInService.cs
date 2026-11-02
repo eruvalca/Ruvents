@@ -5,15 +5,21 @@ using Ruvents.Features.Account.Models;
 
 namespace Ruvents.Features.Account.Services;
 
-internal sealed class AccountSignInService(SignInManager<ApplicationUser> signInManager, IAdminPromotionService adminPromotion)
+internal sealed class AccountSignInService(
+    SignInManager<ApplicationUser> signInManager,
+    IAdminPromotionService adminPromotion,
+    IdentityCancellation cancellation)
 {
     public async Task<SignInOutcome> PasswordAsync(string email, string password, bool rememberMe)
     {
         var outcome = (await signInManager.PasswordSignInAsync(email, password, rememberMe, lockoutOnFailure: false)).ToSignInOutcome();
         if (outcome.IsT0)
         {
-            // Sign-in has already committed the cookie, so these follow-ups must not be
-            // abandoned by request cancellation.
+            // Sign-in has committed the cookie, so the promotion follow-up must not be
+            // abandoned by request cancellation; CancellableUserManager forwards the
+            // scoped token, so it has to be cleared rather than merely ignored here.
+            cancellation.CompleteWrite();
+
             var user = await signInManager.UserManager.FindByEmailAsync(email);
             if (user is not null && await adminPromotion.PromoteIfConfiguredAsync(user, CancellationToken.None))
             {

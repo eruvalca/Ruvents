@@ -60,6 +60,7 @@ public sealed class PostgresAppFixture : IAsyncLifetime
         services.AddScoped<INotificationPublisher>(provider => provider.GetRequiredService<NotificationService>());
         services.AddScoped<INotificationQueries>(provider => provider.GetRequiredService<NotificationService>());
         services.AddScoped<AdministrationService>();
+        services.AddScoped<Features.Account.Services.AccountDeletionService>();
         Services = services.BuildServiceProvider();
 
         await using var scope = Services.CreateAsyncScope();
@@ -69,10 +70,22 @@ public sealed class PostgresAppFixture : IAsyncLifetime
 
     public async ValueTask DisposeAsync()
     {
-        await Services.DisposeAsync();
-        if (_postgres is not null)
+        try
         {
-            await _postgres.DisposeAsync();
+            // Initialization can fail before the provider is built, so tolerate a
+            // partially initialized fixture instead of throwing over the real error.
+            if (Services is not null)
+            {
+                await Services.DisposeAsync();
+            }
+        }
+        finally
+        {
+            // The container must be released even when provider disposal fails.
+            if (_postgres is not null)
+            {
+                await _postgres.DisposeAsync();
+            }
         }
     }
 

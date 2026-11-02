@@ -15,15 +15,16 @@ public sealed partial class Admin
     protected override async Task OnInitializedAsync()
     {
         using var operation = CreateOperation();
-        _users = await Api.ListUsersAsync(null, operation.Token);
         _groups = await Api.ListGroupsAsync(operation.Token);
+        // The initial list shares the supersede guard, so a fast search cannot be
+        // overwritten when this slower first read finishes later.
+        await LoadUsersAsync();
     }
 
-    private async Task LoadUsersAsync()
-    {
-        using var operation = CreateOperation();
-        _users = await Api.ListUsersAsync(_search, operation.Token);
-    }
+    private async Task LoadUsersAsync() =>
+        await LoadLatestAsync(
+            token => Api.ListUsersAsync(_search, token),
+            users => _users = users);
 
     private async Task ResetAsync(string userId)
     {

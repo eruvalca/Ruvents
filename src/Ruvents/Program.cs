@@ -55,6 +55,8 @@ builder.Services.AddScoped<ProfilePhotoService>();
 builder.Services.AddScoped<IProfilePhotoStore>(provider => provider.GetRequiredService<ProfilePhotoService>());
 builder.Services.AddScoped<IProfilePhotoUploadReader, HttpFormPhotoReader>();
 builder.Services.AddScoped<ProfilePhotoWriter>();
+builder.Services.AddScoped<AccountDeletionService>();
+builder.Services.AddScoped<IAccountDeletionData>(provider => provider.GetRequiredService<AccountDeletionService>());
 builder.Services.AddCropper();
 // The avatar cropper returns a data URL through the interactive circuit; the default
 // 32 KiB limit is far too small for an image.

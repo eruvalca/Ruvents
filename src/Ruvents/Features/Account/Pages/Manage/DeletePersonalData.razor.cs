@@ -10,6 +10,8 @@ public sealed partial class DeletePersonalData
 {
     [Inject] private IdentityCancellation Cancellation { get; set; } = default!;
 
+    [Inject] private IAccountDeletionData AccountData { get; set; } = default!;
+
     private string? _message;
     private ApplicationUser? _user;
     private bool _requirePassword;
@@ -47,17 +49,21 @@ public sealed partial class DeletePersonalData
             return;
         }
 
+        // Everything from here is irreversible, starting with the account's planning
+        // data, so it must not be abandoned partway by request cancellation.
+        Cancellation.CompleteWrite();
+
+        var userId = _user.Id;
+        await AccountData.DeleteOwnedDataAsync(userId, Cancellation.Token);
+
         var result = await UserManager.DeleteAsync(_user);
         if (!result.Succeeded)
         {
             throw new InvalidOperationException("Unexpected error occurred deleting user.");
         }
 
-        Cancellation.CompleteWrite();
-
         await SignInManager.SignOutAsync();
 
-        var userId = await UserManager.GetUserIdAsync(_user);
         LogUserDeleted(Logger, userId);
 
         RedirectManager.RedirectToCurrentPage();

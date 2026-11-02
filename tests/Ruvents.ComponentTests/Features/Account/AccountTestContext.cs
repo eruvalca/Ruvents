@@ -14,7 +14,8 @@ internal sealed class AccountTestContext(
     SignInManager<ApplicationUser> signIn,
     IEmailSender<ApplicationUser> emails,
     IProfilePhotoStore photos,
-    IProfilePhotoUploadReader uploads)
+    IProfilePhotoUploadReader uploads,
+    IAccountDeletionData accountData)
 {
     public DefaultHttpContext Http { get; } = http;
     public UserManager<ApplicationUser> Users { get; } = users;
@@ -22,6 +23,7 @@ internal sealed class AccountTestContext(
     public IEmailSender<ApplicationUser> Emails { get; } = emails;
     public IProfilePhotoStore Photos { get; } = photos;
     public IProfilePhotoUploadReader Uploads { get; } = uploads;
+    public IAccountDeletionData AccountData { get; } = accountData;
 
     public IRenderedComponent<TComponent> Render<TComponent>(BunitContext context)
         where TComponent : IComponent => context.Render<TComponent>(parameters => parameters.AddCascadingValue<HttpContext>(Http));

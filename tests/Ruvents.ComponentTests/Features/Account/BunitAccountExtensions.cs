@@ -66,10 +66,12 @@ internal static class BunitAccountExtensions
             context.Services.AddScoped<AccountEmailChangeService>();
             context.Services.AddScoped<AccountTwoFactorService>();
             context.Services.AddScoped<ProfilePhotoWriter>();
+            var accountData = Substitute.For<IAccountDeletionData>();
+            context.Services.AddScoped(_ => accountData);
             context.Services.AddSingleton(UrlEncoder.Default);
             context.Services.AddScoped<IdentityRedirectManager>();
             http.RequestServices = context.Services;
-            return new(http, users, signIn, emails, photos, uploads);
+            return new(http, users, signIn, emails, photos, uploads, accountData);
         }
 
         /// <summary>

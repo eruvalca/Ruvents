@@ -56,4 +56,18 @@ public sealed class EventTimingTests : IDisposable
         text.ShouldContain("2:00 PM");
         text.ShouldContain("3:00 PM");
     }
+
+    [Fact]
+    public void TimedRangeThatEndsOnAnotherDayShowsTheEndDate()
+    {
+        var start = new DateTimeOffset(2026, 6, 1, 22, 0, 0, TimeSpan.Zero);
+
+        // 22:00 UTC on 1 June is 18:00 in New York; three days later is 3 June there.
+        var text = EventTiming.FormatRange(start, start.AddDays(3).AddHours(1), isAllDay: false, WesternZone);
+
+        text.ShouldContain("Jun 1, 2026");
+        text.ShouldContain("6:00 PM");
+        text.ShouldContain("Jun 4, 2026");
+        text.ShouldContain("7:00 PM");
+    }
 }

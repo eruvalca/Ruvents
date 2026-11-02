@@ -30,9 +30,18 @@ public static class EventTiming
         var zone = ResolveTimeZone(timeZoneId);
         var start = TimeZoneInfo.ConvertTime(startUtc, zone);
         var result = start.ToString("ddd, MMM d, yyyy h:mm tt", CultureInfo.CurrentCulture);
-        return endUtc is null
-            ? result
-            : $"{result} – {TimeZoneInfo.ConvertTime(endUtc.Value, zone).ToString("h:mm tt", CultureInfo.CurrentCulture)}";
+        if (endUtc is null)
+        {
+            return result;
+        }
+
+        // A multi-day timed event must show its end date; otherwise a June 1 to June 3
+        // range reads as ending at 7 PM on June 1.
+        var end = TimeZoneInfo.ConvertTime(endUtc.Value, zone);
+        var endText = end.Date == start.Date
+            ? end.ToString("h:mm tt", CultureInfo.CurrentCulture)
+            : end.ToString("ddd, MMM d, yyyy h:mm tt", CultureInfo.CurrentCulture);
+        return $"{result} – {endText}";
     }
 
     public static string FormatDate(DateTimeOffset instant, bool isAllDay, string timeZoneId) =>

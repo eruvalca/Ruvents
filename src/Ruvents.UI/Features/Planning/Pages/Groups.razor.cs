@@ -39,12 +39,14 @@ public sealed partial class Groups
         Navigation.NavigateTo($"groups/{groupId}");
     }
 
-    private async Task SearchAsync()
-    {
-        using var operation = CreateOperation();
-        _results = await Api.SearchFamiliesAsync(_search, operation.Token);
-        _searched = true;
-    }
+    private async Task SearchAsync() =>
+        await LoadLatestAsync(
+            token => Api.SearchFamiliesAsync(_search, token),
+            results =>
+            {
+                _results = results;
+                _searched = true;
+            });
 
     private async Task JoinAsync(Guid familyGroupId)
     {
@@ -59,7 +61,10 @@ public sealed partial class Groups
                 _ => "That group could not be found.",
             },
             result == JoinRequestResult.Requested ? "success" : "error");
-        _results = await Api.SearchFamiliesAsync(_search, operation.Token);
+        // Refresh through the same guard so a slower, older search cannot replace it.
+        await LoadLatestAsync(
+            token => Api.SearchFamiliesAsync(_search, token),
+            results => _results = results);
     }
 
     private void Report(string message, string kind)

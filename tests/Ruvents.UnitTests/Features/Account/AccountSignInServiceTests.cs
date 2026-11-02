@@ -19,13 +19,17 @@ public sealed class AccountSignInServiceTests
     public async Task PasswordPreservesRememberMeWithoutCountingFailuresAsync(bool rememberMe)
     {
         using var identity = IdentityTestContext.Create();
+        using var request = new CancellationTokenSource();
+        identity.Cancellation.Token = request.Token;
         identity.SignIn.PasswordSignInAsync("member@example.test", "secret", rememberMe, false).Returns(SignInResult.Success);
-        var service = new AccountSignInService(identity.SignIn, Substitute.For<IAdminPromotionService>());
+        var service = new AccountSignInService(identity.SignIn, Substitute.For<IAdminPromotionService>(), identity.Cancellation);
 
         var result = await service.PasswordAsync("member@example.test", "secret", rememberMe);
 
         result.Value.ShouldBeOfType<SignInOutcome.Succeeded>();
         await identity.SignIn.Received(1).PasswordSignInAsync("member@example.test", "secret", rememberMe, false);
+        // The cookie is committed, so the promotion follow-up must not observe request cancellation.
+        identity.Cancellation.Token.ShouldBe(CancellationToken.None);
     }
 
     [Fact]
@@ -33,7 +37,7 @@ public sealed class AccountSignInServiceTests
     {
         using var identity = IdentityTestContext.Create();
         identity.SignIn.PasskeySignInAsync("{\"credential\":1}").Returns(SignInResult.NotAllowed);
-        var service = new AccountSignInService(identity.SignIn, Substitute.For<IAdminPromotionService>());
+        var service = new AccountSignInService(identity.SignIn, Substitute.For<IAdminPromotionService>(), identity.Cancellation);
 
         var result = await service.PasskeyAsync("{\"credential\":1}");
 
@@ -51,7 +55,7 @@ public sealed class AccountSignInServiceTests
     {
         using var identity = IdentityTestContext.Create();
         identity.SignIn.TwoFactorAuthenticatorSignInAsync("123456", rememberMe, rememberMachine).Returns(SignInResult.LockedOut);
-        var service = new AccountSignInService(identity.SignIn, Substitute.For<IAdminPromotionService>());
+        var service = new AccountSignInService(identity.SignIn, Substitute.For<IAdminPromotionService>(), identity.Cancellation);
 
         var result = await service.AuthenticatorAsync("12 3-45 6", rememberMe, rememberMachine);
 
@@ -64,7 +68,7 @@ public sealed class AccountSignInServiceTests
     {
         using var identity = IdentityTestContext.Create();
         identity.SignIn.TwoFactorRecoveryCodeSignInAsync("ABC-123").Returns(SignInResult.Failed);
-        var service = new AccountSignInService(identity.SignIn, Substitute.For<IAdminPromotionService>());
+        var service = new AccountSignInService(identity.SignIn, Substitute.For<IAdminPromotionService>(), identity.Cancellation);
 
         var result = await service.RecoveryCodeAsync(" AB C-1 23 ");
 
@@ -77,7 +81,7 @@ public sealed class AccountSignInServiceTests
     {
         using var identity = IdentityTestContext.Create();
         identity.SignIn.ExternalLoginSignInAsync("Provider", "key", false, true).Returns(SignInResult.NotAllowed);
-        var service = new AccountSignInService(identity.SignIn, Substitute.For<IAdminPromotionService>());
+        var service = new AccountSignInService(identity.SignIn, Substitute.For<IAdminPromotionService>(), identity.Cancellation);
 
         var result = await service.ExternalAsync("Provider", "key");
 
@@ -91,7 +95,7 @@ public sealed class AccountSignInServiceTests
         using var identity = IdentityTestContext.Create();
         var failure = new InvalidOperationException("Unavailable identity service");
         identity.SignIn.PasskeySignInAsync("credential").ThrowsAsync(failure);
-        var service = new AccountSignInService(identity.SignIn, Substitute.For<IAdminPromotionService>());
+        var service = new AccountSignInService(identity.SignIn, Substitute.For<IAdminPromotionService>(), identity.Cancellation);
 
         var actual = await Should.ThrowAsync<InvalidOperationException>(() => service.PasskeyAsync("credential"));
 
@@ -103,7 +107,7 @@ public sealed class AccountSignInServiceTests
     {
         using var identity = IdentityTestContext.Create();
         identity.SignIn.PasskeySignInAsync("credential").Returns(Task.FromCanceled<SignInResult>(new CancellationToken(canceled: true)));
-        var service = new AccountSignInService(identity.SignIn, Substitute.For<IAdminPromotionService>());
+        var service = new AccountSignInService(identity.SignIn, Substitute.For<IAdminPromotionService>(), identity.Cancellation);
 
         var operation = service.PasskeyAsync("credential");
 

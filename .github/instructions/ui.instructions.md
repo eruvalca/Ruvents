@@ -36,7 +36,9 @@ enforcement.
   overwrites, including when the parameter is `[EditorRequired]`. Keep Blazor
   `[CascadingParameter]` inputs on the same terms.
 - Components that own asynchronous work cancel superseded operations and discard
-  stale results instead of overwriting newer state. Component lifetime is the
+  stale results instead of overwriting newer state. `CancellableComponentBase.LoadLatestAsync`
+  does both for reads a newer request can supersede; use it rather than re-deriving the
+  cancellation and version check. Component lifetime is the
   cancellation owner for interactive work; the repository-wide
   [cancellation rules](../copilot-instructions.md#validation) own the shared token
   requirements, including the ban on serializing tokens or reusing a completed

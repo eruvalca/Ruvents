@@ -50,8 +50,11 @@ public sealed class DeletePersonalDataTests
         }
         await account.Users.Received(1).DeleteAsync(user);
         await account.SignIn.Received(1).SignOutAsync();
+        // The account's planning data is cleared first, while the account still exists.
+        await account.AccountData.Received(1).DeleteOwnedDataAsync(user.Id, Arg.Any<CancellationToken>());
         Received.InOrder(() =>
         {
+            _ = account.AccountData.DeleteOwnedDataAsync(user.Id, Arg.Any<CancellationToken>());
             _ = account.Users.DeleteAsync(user);
             _ = account.SignIn.SignOutAsync();
         });
@@ -79,6 +82,7 @@ public sealed class DeletePersonalDataTests
         await account.Users.Received(1).CheckPasswordAsync(user, password);
         await account.Users.DidNotReceiveWithAnyArgs().DeleteAsync(default!);
         await account.SignIn.DidNotReceive().SignOutAsync();
+        await account.AccountData.DidNotReceiveWithAnyArgs().DeleteOwnedDataAsync(default!, Xunit.TestContext.Current.CancellationToken);
         logger.GetLoggedEventIds().ShouldNotContain(1013);
     }
 
