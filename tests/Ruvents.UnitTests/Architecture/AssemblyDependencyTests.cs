@@ -1,8 +1,8 @@
 using System.Diagnostics.CodeAnalysis;
-using Ruvents.SharedKernel;
-using Ruvents.UI;
 using ArchUnitNET.Domain;
 using ArchUnitNET.Loader;
+using Ruvents.SharedKernel;
+using Ruvents.UI;
 using Shouldly;
 using Xunit;
 using static ArchUnitNET.Fluent.ArchRuleDefinition;

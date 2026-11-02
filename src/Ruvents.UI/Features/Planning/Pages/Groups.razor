@@ -1,0 +1,98 @@
+@page "/groups"
+@inherits CancellableComponentBase
+@rendermode InteractiveAuto
+
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+
+@inject IPlanningApi Api
+
+<PageTitle>Family groups</PageTitle>
+
+<h1>Family groups</h1>
+
+@if (_message is not null)
+{
+    <Notice Message="@_message" Kind="@_messageKind" />
+}
+
+<section>
+    <h2>Your groups</h2>
+    @if (_groups.Count == 0)
+    {
+        <p>You are not in a family group yet. Create one below, or search for an existing group.</p>
+    }
+    else
+    {
+        <ul class="card-grid">
+            @foreach (var familyGroup in _groups)
+            {
+                <li>
+                    <a class="event-title" href="@($"groups/{familyGroup.Id}")">@familyGroup.Name</a>
+                    <p class="event-where">@familyGroup.MemberCount members</p>
+                    <span class="chip">@familyGroup.Role</span>
+                </li>
+            }
+        </ul>
+    }
+</section>
+
+<section>
+    <h2>Create a group</h2>
+    <EditForm Model="_createModel" OnValidSubmit="CreateAsync">
+        <DataAnnotationsValidator />
+        <ValidationSummary class="validation-summary-errors" role="alert" />
+        <div class="form-field">
+            <label for="group-name">Group name</label>
+            <InputText id="group-name" @bind-Value="_createModel.Name" maxlength="120" aria-required="true" />
+            <ValidationMessage For="() => _createModel.Name" class="validation-message" />
+        </div>
+        <div class="form-field">
+            <label for="group-description">Description</label>
+            <InputText id="group-description" @bind-Value="_createModel.Description" maxlength="2000" />
+            <ValidationMessage For="() => _createModel.Description" class="validation-message" />
+        </div>
+        <button type="submit">Create group</button>
+    </EditForm>
+</section>
+
+<section>
+    <h2>Find a group</h2>
+    <div class="form-field">
+        <label for="search">Group name</label>
+        <input id="search" @bind="_search" maxlength="120" />
+    </div>
+    <button type="button" @onclick="SearchAsync">Search</button>
+
+    @if (_searched)
+    {
+        @if (_results.Count == 0)
+        {
+            <p>No groups match that name.</p>
+        }
+        else
+        {
+            <ul class="card-grid">
+                @foreach (var item in _results)
+                {
+                    <li>
+                        <strong class="event-title">@item.Name</strong>
+                        <p class="event-where">@item.MemberCount members</p>
+                        @if (item.IsMember)
+                        {
+                            <span class="chip" data-tone="mint">Member</span>
+                        }
+                        else if (item.HasPendingRequest)
+                        {
+                            <span class="chip" data-tone="accent">Pending</span>
+                        }
+                        else
+                        {
+                            <button type="button" @onclick="() => JoinAsync(item.Id)">Request to join</button>
+                        }
+                    </li>
+                }
+            </ul>
+        }
+    }
+</section>

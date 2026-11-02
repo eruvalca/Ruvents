@@ -1,8 +1,8 @@
 using System.Diagnostics.CodeAnalysis;
-using Ruvents.Data;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Ruvents.Data;
 using Shouldly;
 using Testcontainers.PostgreSql;
 using Xunit;

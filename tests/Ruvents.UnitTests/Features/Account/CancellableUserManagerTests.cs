@@ -1,10 +1,10 @@
 using System.Diagnostics.CodeAnalysis;
-using Ruvents.Data;
-using Ruvents.Features.Account.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using NSubstitute;
+using Ruvents.Data;
+using Ruvents.Features.Account.Services;
 using Shouldly;
 using Xunit;
 

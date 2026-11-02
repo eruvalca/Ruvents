@@ -1,8 +1,8 @@
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
-using Ruvents.Features.Errors.Pages;
 using Bunit;
 using Microsoft.AspNetCore.Http;
+using Ruvents.Features.Errors.Pages;
 using Shouldly;
 using Xunit;
 

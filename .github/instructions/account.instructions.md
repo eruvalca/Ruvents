@@ -25,9 +25,22 @@ Account tests also follow the [test guide](tests.instructions.md).
   hooks intact. Account pages stay on static SSR under the repository-wide
   [render-mode rules](../copilot-instructions.md#project-boundaries-and-rendering);
   do not apply a global interactive render mode that changes account behavior.
+- Registration and the photo page use `PhotoCropField`. The cropped image arrives in
+  the `PhotoData` form field, is validated by `ProfilePhotoService`, and is written
+  after the account write commits. Keep the `<noscript>` file input working, and read
+  `HttpContext.Request.Form` only when the request actually carries a form.
+  Replacing a photo on an existing account goes through `ProfilePhotoWriter`, which
+  the gate page and `Account/Manage/Photo` share and which refreshes the sign-in
+  cookie so the photo claim stays accurate. `PhotoCropField` owns the form's submit
+  button because its crop state lives behind the render-mode boundary, where the
+  static page cannot read it; keep the `<noscript>` fallback's own button.
 - `BlazorDisableThrowNavigationException` is enabled. After redirecting, return
   or otherwise terminate the current branch when subsequent work must not
   execute. Do not rely on navigation throwing to stop an account operation.
+- A plain `<form method="post">` on a static SSR page must declare `@formname`
+  with a page-unique value. Without it the POST fails with
+  `400 The POST request does not specify which form is being submitted.`, and no
+  server exception is logged. `EditForm` satisfies this with its `FormName`.
 - Account services in `Features/Account/Services` own the workflows whose result is a
   named outcome (`SignInOutcome`, `RegistrationOutcome`, `EmailChangeOutcome`, …), so
   a completed write stays distinguishable from a failed follow-up. Pages and the

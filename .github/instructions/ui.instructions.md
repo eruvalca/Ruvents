@@ -44,11 +44,16 @@ enforcement.
 
 ## Layout and styling
 
-- This solution has no UI component library and, deliberately, no visual design
-  yet. Keep the interface bare bones and functional: semantic HTML, CSS Grid for
-  layout, and CSS only where a rule is needed for behavior or accessibility. Do
-  not add a component framework, a CSS framework, a CSS preprocessor, or utility
-  classes.
+- This solution has no UI component library. The visual identity lives in
+  `src/Ruvents.UI/wwwroot/theme.css` as design tokens plus shared element and card
+  styling, and each page may add a scoped `.razor.css` for local layout. Extend
+  those tokens and component classes instead of inventing new colours or one-off
+  styling, and keep meaning in text as well as colour. Do not add a component
+  framework, a CSS framework, a CSS preprocessor, or utility classes.
+- `Ruvents.UI` is a Razor class library, so its `wwwroot` files are served under
+  `_content/Ruvents.UI/`, not the site root: reference them as
+  `@Assets["_content/Ruvents.UI/theme.css"]`. A root path such as `/theme.css`
+  returns 404.
 - Use native elements (`<button>`, `<a>`, `<ul>`, `<section>`) and Blazor's own
   components (`NavLink`, `AuthorizeView`, `PageTitle`, `AntiforgeryToken`,
   `EditForm` with the `Input*` family, `ValidationMessage`, `Router`,
@@ -57,10 +62,9 @@ enforcement.
   `@onclick` is the stock click handler.
 - `src/Ruvents/wwwroot/app.css` holds functional rules only — keeping form controls
   at 16px so mobile browsers do not zoom on focus, and bounding `.table-container`
-  so wide account tables scroll instead of widening the page. Do not turn it into a
-  design system: no colour, typography, or component styling belongs there. Add
-  presentational CSS only when a task explicitly asks for it, in the narrowest
-  scope that covers the need.
+  so wide tables scroll instead of widening the page. Presentational rules belong in
+  `theme.css` (shared design system) or a scoped `.razor.css` (local layout), never
+  in `app.css`.
 - Layout lives in a few CSS Grids: `MainLayout.razor.css` (named `header`,
   `navigation`, `content`, and `footer` areas, one column below 48rem),
   `ManageLayout.razor.css` (account menu beside the content once there is room),
@@ -69,6 +73,10 @@ enforcement.
 - The navigation is always rendered and stacks above the content on narrow
   screens. Do not reintroduce a hidden drawer, toggle widget, or overlay; they
   need JavaScript and focus management that static SSR does not provide.
+- On narrow screens the navigation tiles wrap into even columns; never give the
+  rail `overflow-x`. A single scrolling row hides destinations with no affordance,
+  and only the page may scroll horizontally. `NavigationTests` asserts that no
+  navigation item sits outside the viewport.
 - A malformed `.razor.css` rule is not a build error. It reaches the generated
   scoped-CSS bundle as written, and an unterminated block swallows every following
   rule in the assembly, breaking unrelated pages. Verify scoped-CSS edits with a
@@ -89,6 +97,18 @@ enforcement.
   `NavLink`s. Native anchors are focusable without a `tabindex` override, and
   `NavLink` supplies `aria-current="page"`. The shell provides the grid cell, not
   a second navigation landmark.
+- Interactive third-party components are allowed only where the browser must do the
+  work — currently Cropper.Blazor for the avatar crop. Keep their result in an
+  ordinary form field so a static post still works, and keep a `<noscript>` fallback.
+  Cropper.js builds its DOM itself, so its styling cannot live in a scoped
+  `.razor.css`; put it in `theme.css` scoped under the component's own class
+  (`.photo-crop`). The vendor stylesheet loads after `theme.css`, so an unscoped,
+  equal-specificity rule silently loses to it.
+- Colour mode is explicit state: `theme.js` toggles `data-theme` on the root element
+  and `theme.css` owns both dark blocks. Add new presentational state to that
+  attribute rather than to inline styles.
+- `NavLink` renders the anchor itself, so a scoped `.razor.css` rule never matches it
+  (the scope attribute stops at the component). Style navigation in `theme.css`.
 - Keep native Identity inputs and submit buttons: their static SSR form mapping,
   browser autofill, and passkey submitter contracts must work without an
   interactive form. Do not replace them with interactive components.

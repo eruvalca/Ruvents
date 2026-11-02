@@ -4,19 +4,31 @@
 
 <div class="page">
     <header class="site-header">
-        <a class="site-name" href="/">Ruvents</a>
+        <div class="site-header-inner">
+            <a class="site-name" href="/">
+                <span class="site-mark" aria-hidden="true"></span>
+                <span class="site-wordmark">Ruvents</span>
+            </a>
+            <p class="site-tagline">Family moments, organized</p>
+            <button type="button" class="theme-toggle" data-theme-toggle aria-label="Switch colour theme">
+                <span data-theme-toggle-label>Auto</span>
+            </button>
+        </div>
     </header>
-    <div class="site-navigation">
-        <NavMenu />
+
+    <div class="page-body">
+        <div class="site-navigation">
+            <NavMenu />
+        </div>
+        <main id="main-content" class="content-container" tabindex="-1">
+            @Body
+        </main>
+        <footer class="site-footer">
+            <PwaUpdateNotice />
+            <PwaControls />
+            <span>Ruvents — made for the people you gather with.</span>
+        </footer>
     </div>
-    <main id="main-content" class="content-container" tabindex="-1">
-        @Body
-    </main>
-    <footer class="site-footer">
-        <PwaUpdateNotice />
-        <PwaControls />
-        <span>Ruvents</span>
-    </footer>
 </div>
 
 <div id="blazor-error-ui" data-nosnippet>

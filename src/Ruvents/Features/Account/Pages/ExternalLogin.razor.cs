@@ -1,11 +1,11 @@
 using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
+using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Identity;
 using Ruvents.Data;
 using Ruvents.Features.Account.Extensions;
 using Ruvents.Features.Account.Models;
-using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Identity;
 
 namespace Ruvents.Features.Account.Pages;
 

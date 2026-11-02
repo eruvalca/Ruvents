@@ -1,6 +1,6 @@
-using Ruvents.Data;
 using Microsoft.AspNetCore.Identity;
 using OneOf;
+using Ruvents.Data;
 
 namespace Ruvents.Features.Account.Models;
 

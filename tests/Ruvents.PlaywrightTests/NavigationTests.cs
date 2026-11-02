@@ -1,8 +1,8 @@
 using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
-using Ruvents.Testing;
 using Aspire.Hosting.Testing;
 using Microsoft.Playwright;
+using Ruvents.Testing;
 using Shouldly;
 using Xunit;
 
@@ -12,6 +12,8 @@ namespace Ruvents.PlaywrightTests;
 [Collection<BrowserAppHostDefinition>]
 public sealed class NavigationTests(ITestOutputHelper output)
 {
+    private const string HomeHeading = "Gather everyone, without the group-chat chaos.";
+
     [Theory]
     [InlineData(1280)]
     [InlineData(390)]
@@ -52,24 +54,43 @@ public sealed class NavigationTests(ITestOutputHelper output)
     {
         var errors = new ConcurrentQueue<string>();
         page.PageError += (_, error) => errors.Enqueue(error);
-        await page.GotoAsync("/");
-        await page.GetByRole(AriaRole.Heading, new() { Name = "Welcome to Ruvents", Exact = true }).WaitForAsync();
-        await page.WaitForFunctionAsync("() => typeof Blazor !== 'undefined'");
-        var origin = await page.EvaluateAsync<double>("performance.timeOrigin");
 
-        await page.GetByRole(AriaRole.Link, new() { Name = "Counter", Exact = true }).ClickAsync();
+        // The counter is the interactive harness for verifying that a renderer
+        // attaches and that in-app navigation keeps the same document.
+        await page.GotoAsync("/counter");
+        await page.GetByRole(AriaRole.Heading, new() { Name = "Counter", Exact = true }).WaitForAsync();
+        await page.WaitForFunctionAsync("() => typeof Blazor !== 'undefined'");
         // The button is disabled during prerendering until the renderer is interactive.
         await page.Locator("button:not([disabled])").Filter(new() { HasText = "Click me" }).WaitForAsync();
         var increment = page.GetByRole(AriaRole.Button, new() { Name = "Click me", Exact = true });
         await increment.ClickAsync();
         await page.GetByRole(AriaRole.Status).Filter(new() { HasText = "Current count: 1" }).WaitForAsync();
         (await page.GetByRole(AriaRole.Status).InnerTextAsync()).ShouldBe("Current count: 1");
-        (await page.EvaluateAsync<double>("performance.timeOrigin")).ShouldBe(origin);
+        var origin = await page.EvaluateAsync<double>("performance.timeOrigin");
 
         await page.GetByRole(AriaRole.Link, new() { Name = "Home", Exact = true }).ClickAsync();
-        await page.GetByRole(AriaRole.Heading, new() { Name = "Welcome to Ruvents", Exact = true }).WaitForAsync();
+        await page.GetByRole(AriaRole.Heading, new() { Name = HomeHeading, Exact = true }).WaitForAsync();
         (await page.EvaluateAsync<double>("performance.timeOrigin")).ShouldBe(origin);
+        (await page.Locator("[data-theme-toggle]").IsVisibleAsync()).ShouldBeTrue();
         (await page.EvaluateAsync<bool>("document.documentElement.scrollWidth <= innerWidth")).ShouldBeTrue();
+
+        // The navigation must wrap instead of scrolling sideways: a single scrolling
+        // row hides destinations behind an affordance nobody notices on a phone.
+        var navigationOverflow = await page.EvaluateAsync<string?>("""
+            () => {
+                const rail = document.querySelector('.site-navigation');
+                if (!rail) return 'the navigation rail is missing';
+                if (rail.scrollWidth > rail.clientWidth + 1) {
+                    return `the rail scrolls ${rail.scrollWidth}px inside ${rail.clientWidth}px`;
+                }
+                const clipped = [...rail.querySelectorAll('a, button')].filter(element => {
+                    const box = element.getBoundingClientRect();
+                    return box.left < -1 || box.right > innerWidth + 1;
+                });
+                return clipped.length === 0 ? null : `${clipped.length} navigation item(s) sit outside the viewport`;
+            }
+            """);
+        navigationOverflow.ShouldBeNull();
 
         // Enlarged browser text must not make the grid overflow horizontally.
         await page.EvaluateAsync("() => { document.documentElement.style.fontSize = '20px'; }");

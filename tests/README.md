@@ -8,9 +8,9 @@ the CLI and editor find `global.json` and `Ruvents.slnx`.
 | --- | --- |
 | `Ruvents.UnitTests` | Account services and extensions, outcome decoding, redirects, authentication-state revalidation, Identity endpoint behavior, and service defaults. |
 | `Ruvents.ComponentTests` | Account sign-in and management workflows, validation, shared account components, navigation, error request IDs, and the shared UI's `Counter`, using bUnit. |
-| `Ruvents.IntegrationTests` | Focused in-process integration with real PostgreSQL via Testcontainers: migrations, EF/Identity stores, persistence across contexts, and dependency behavior. |
+| `Ruvents.IntegrationTests` | In-process integration with real PostgreSQL via Testcontainers (Docker required): migrations, EF/Identity stores, persistence across contexts, dependency behavior, and family-scale scenarios — 15 siblings with four household members each, RSVP volume, concurrent potluck claims, multi-level discussion, deadlines and permissions, 120-event lists, and administration cleanup. |
 | `Ruvents.AspireIntegrationTests` | The real AppHost, database/migration startup dependencies, readiness, resource endpoints, and cross-process HTTP behavior. |
-| `Ruvents.PlaywrightTests` | Real Chromium: responsive navigation, counter interaction, document continuity, progressive-web-app installation, consent-based updates and the offline fallback, and axe heading-order/color-contrast checks with a 16px text-entry minimum. |
+| `Ruvents.PlaywrightTests` | Real Chromium: responsive navigation that never scrolls sideways, counter interaction, document continuity, progressive-web-app installation, consent-based updates and the offline fallback, and axe heading-order/color-contrast checks in both the light and dark palettes with a 16px text-entry minimum. |
 
 `Ruvents.Testing` is a shared support library, not a test project. It configures
 isolated AppHost builders for the Aspire and Playwright projects.

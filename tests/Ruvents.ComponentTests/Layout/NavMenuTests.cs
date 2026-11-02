@@ -1,9 +1,9 @@
 using System.Diagnostics.CodeAnalysis;
-using Ruvents.UI.Layout;
 using Bogus;
 using Bunit;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
+using Ruvents.UI.Layout;
 using Shouldly;
 using Xunit;
 

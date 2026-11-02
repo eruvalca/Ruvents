@@ -1,9 +1,9 @@
 using System.Diagnostics.CodeAnalysis;
-using Ruvents.Testing;
 using Aspire.Hosting.Testing;
 using Deque.AxeCore.Commons;
 using Deque.AxeCore.Playwright;
 using Microsoft.Playwright;
+using Ruvents.Testing;
 using Shouldly;
 using Xunit;
 
@@ -13,6 +13,8 @@ namespace Ruvents.PlaywrightTests;
 [Collection<BrowserAppHostDefinition>]
 public sealed class AccessibilityTests(ITestOutputHelper output)
 {
+    private const string HomeHeading = "Gather everyone, without the group-chat chaos.";
+
     [Fact]
     [Trait("Category", "BrowserSmoke")]
     public async Task CorePagesHaveOrderedHeadingsReadableControlsAndContrastAsync()
@@ -36,7 +38,7 @@ public sealed class AccessibilityTests(ITestOutputHelper output)
         try
         {
             await page.GotoAsync("/");
-            await page.GetByRole(AriaRole.Heading, new() { Name = "Welcome to Ruvents", Exact = true }).WaitForAsync();
+            await page.GetByRole(AriaRole.Heading, new() { Name = HomeHeading, Exact = true }).WaitForAsync();
             await page.WaitForFunctionAsync("() => typeof Blazor !== 'undefined'");
             await AssertAccessibilityAsync(page, "Home");
 
@@ -51,6 +53,16 @@ public sealed class AccessibilityTests(ITestOutputHelper output)
             await page.GotoAsync("/Account/Register");
             await page.GetByRole(AriaRole.Heading, new() { Name = "Register", Exact = true }).WaitForAsync();
             await AssertAccessibilityAsync(page, "Register");
+
+            // The dark palette must meet the same contrast budget as the light one.
+            await page.EmulateMediaAsync(new() { ColorScheme = ColorScheme.Dark });
+            await page.GotoAsync("/");
+            await page.GetByRole(AriaRole.Heading, new() { Name = HomeHeading, Exact = true }).WaitForAsync();
+            await AssertAccessibilityAsync(page, "Home (dark)");
+
+            await page.GotoAsync("/Account/Register");
+            await page.GetByRole(AriaRole.Heading, new() { Name = "Register", Exact = true }).WaitForAsync();
+            await AssertAccessibilityAsync(page, "Register (dark)");
         }
         finally
         {

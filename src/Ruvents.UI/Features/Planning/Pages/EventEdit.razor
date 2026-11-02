@@ -1,0 +1,113 @@
+@page "/events/new"
+@page "/events/{EventId:guid}/edit"
+@inherits CancellableComponentBase
+@rendermode InteractiveAuto
+
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+
+@inject IPlanningApi Api
+@inject NavigationManager Navigation
+
+<PageTitle>@(EventId is null ? "New event" : "Edit event")</PageTitle>
+
+<h1>@(EventId is null ? "New event" : "Edit event")</h1>
+
+@if (_message is not null)
+{
+    <Notice Message="@_message" Kind="@_messageKind" />
+}
+
+@if (_groups.Count == 0 && EventId is null)
+{
+    <p>You are not in a family group yet.</p>
+    <p><a href="groups">Find or create a family group</a>, then create an event.</p>
+}
+else
+{
+    @if (EventId is null && _groups.Count > 1)
+    {
+        <div class="form-field">
+            <label for="group">Family group</label>
+            <select id="group" @bind="_selectedGroupId" aria-required="true">
+                <option value="">Choose a group</option>
+                @foreach (var group in _groups)
+                {
+                    <option value="@group.Id">@group.Name</option>
+                }
+            </select>
+        </div>
+    }
+    else if (_selectedGroupName is not null)
+    {
+        <p>Group: <strong>@_selectedGroupName</strong></p>
+    }
+
+    <EditForm Model="_model" OnValidSubmit="SaveAsync">
+        <DataAnnotationsValidator />
+        <ValidationSummary class="validation-summary-errors" role="alert" />
+        <div class="form-field">
+            <label for="title">Title</label>
+            <InputText id="title" @bind-Value="_model.Title" maxlength="200" aria-required="true" />
+            <ValidationMessage For="() => _model.Title" class="validation-message" />
+        </div>
+        <div class="form-field">
+            <label for="description">Description</label>
+            <InputTextArea id="description" @bind-Value="_model.Description" rows="4" maxlength="4000" />
+        </div>
+        <div class="form-field">
+            <label for="locationName">Location</label>
+            <InputText id="locationName" @bind-Value="_model.LocationName" maxlength="200" aria-required="true" />
+            <ValidationMessage For="() => _model.LocationName" class="validation-message" />
+        </div>
+        <div class="form-field">
+            <label for="locationAddress">Address</label>
+            <InputText id="locationAddress" @bind-Value="_model.LocationAddress" maxlength="500" />
+        </div>
+        <div class="form-field">
+            <label for="mapLink">Map link</label>
+            <InputText id="mapLink" @bind-Value="_model.MapLink" maxlength="2000" />
+        </div>
+        <div class="form-field">
+            <label for="timeZoneId">Time zone</label>
+            <select id="timeZoneId" @bind="_model.TimeZoneId">
+                @foreach (var zone in _zones)
+                {
+                    <option value="@zone.Id">@zone.DisplayName</option>
+                }
+            </select>
+        </div>
+        <div class="form-field">
+            <label for="start">Starts</label>
+            <InputDate id="start" @bind-Value="_model.StartLocal" @bind-Value:after="OnStartChanged" Type="InputDateType.DateTimeLocal" aria-required="true" />
+            <ValidationMessage For="() => _model.StartLocal" class="validation-message" />
+        </div>
+        <div class="form-field">
+            <label for="end">Ends</label>
+            <InputDate id="end" @bind-Value="_model.EndLocal" Type="InputDateType.DateTimeLocal" />
+            <ValidationMessage For="() => _model.EndLocal" class="validation-message" />
+        </div>
+        <div>
+            <label class="checkbox-field">
+                <InputCheckbox @bind-Value="_model.IsAllDay" />
+                All-day event (the time is ignored)
+            </label>
+        </div>
+        <div class="form-field">
+            <label for="rsvpDeadline">RSVP deadline</label>
+            <InputDate id="rsvpDeadline" @bind-Value="_model.RsvpDeadlineLocal" Type="InputDateType.DateTimeLocal" />
+            <ValidationMessage For="() => _model.RsvpDeadlineLocal" class="validation-message" />
+        </div>
+        <div class="form-field">
+            <label for="cover">Cover image</label>
+            <InputFile id="cover" accept="image/jpeg,image/png,image/webp" OnChange="OnCoverSelectedAsync" />
+            <p>Optional. JPEG, PNG, or WebP, up to 5 MB.</p>
+        </div>
+        <button type="submit">Save event</button>
+    </EditForm>
+
+    @if (EventId is not null)
+    {
+        <p><a href="@($"events/{EventId}")">Back to the event</a></p>
+    }
+}

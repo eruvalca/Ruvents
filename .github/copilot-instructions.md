@@ -53,10 +53,16 @@ otherwise; Markdown links are relative to their containing file.
   [architecture tests](../tests/README.md#architecture-boundaries).
   Update the documented design and its checks together when intentionally changing
   them. Server feature and persistence rules live in the server guide.
-- The UI is deliberately bare bones: plain HTML, CSS Grid layout, and stock
-  Blazor components, with no component library or design system. Keep
+- The UI uses plain HTML, CSS Grid layout, and stock Blazor components, with no
+  component library. `src/Ruvents.UI/wwwroot/theme.css` owns the design tokens and
+  shared element styles; scoped `.razor.css` files own local layout. Keep
   `MainLayout` and Identity navigation static, and do not pass the layout's
   `Body` across a render-mode boundary.
+- Razor pages and components live in `Ruvents.UI` by default so `InteractiveAuto`
+  can serve them from the server or the WebAssembly host. Account and Identity
+  pages stay in `Ruvents` because they depend on static form posts, cookies, and
+  `HttpContext`. Planning pages depend on `IPlanningApi` rather than server
+  feature types.
 - Account pages use static server-side rendering (SSR). Preserve
   `[ExcludeFromInteractiveRouting]` in their page imports, authorization on
   account-management pages, and their HTTP context and cookie contracts. Keep

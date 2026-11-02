@@ -1,12 +1,27 @@
-using Ruvents.Components;
-using Ruvents.Data;
-using Ruvents.Features.Account.Endpoints;
-using Ruvents.Features.Account.Services;
-using Ruvents.ServiceDefaults;
+using Cropper.Blazor.Extensions;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Options;
+using Ruvents.Components;
+using Ruvents.Data;
+using Ruvents.Features.Account.Endpoints;
+using Ruvents.Features.Account.Services;
+using Ruvents.Features.Administration.Contracts;
+using Ruvents.Features.Administration.Services;
+using Ruvents.Features.Events.Contracts;
+using Ruvents.Features.Events.Endpoints;
+using Ruvents.Features.Events.Services;
+using Ruvents.Features.Families.Contracts;
+using Ruvents.Features.Families.Services;
+using Ruvents.Features.Notifications.Contracts;
+using Ruvents.Features.Notifications.Services;
+using Ruvents.Features.PlanningApi;
+using Ruvents.Features.Potluck.Contracts;
+using Ruvents.Features.Potluck.Services;
+using Ruvents.ServiceDefaults;
+using Ruvents.Storage;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -24,15 +39,57 @@ builder.Services.AddRazorComponents()
     .AddInteractiveWebAssemblyComponents()
     .AddAuthenticationStateSerialization();
 
+// Profile photos and event covers are stored in Blob Storage (Azurite locally). The
+// client is only registered when an endpoint is configured so EF design-time hosts,
+// which reference only the database, can build the host.
+var blobsConfigured = !string.IsNullOrEmpty(builder.Configuration.GetConnectionString("blobs"))
+    || !string.IsNullOrEmpty(builder.Configuration["Aspire:Azure:Storage:Blobs:ServiceUri"]);
+if (blobsConfigured)
+{
+    builder.AddAzureBlobServiceClient("blobs");
+}
+
+builder.Services.AddSingleton(provider =>
+    new BlobStorage(provider.GetService<Azure.Storage.Blobs.BlobServiceClient>()));
+builder.Services.AddScoped<ProfilePhotoService>();
+builder.Services.AddScoped<IProfilePhotoStore>(provider => provider.GetRequiredService<ProfilePhotoService>());
+builder.Services.AddScoped<IProfilePhotoUploadReader, HttpFormPhotoReader>();
+builder.Services.AddScoped<ProfilePhotoWriter>();
+builder.Services.AddCropper();
+// The avatar cropper returns a data URL through the interactive circuit; the default
+// 32 KiB limit is far too small for an image.
+builder.Services.Configure<Microsoft.AspNetCore.SignalR.HubOptions>(options =>
+    options.MaximumReceiveMessageSize = 512 * 1024);
+
 builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddScoped<IdentityRedirectManager>();
 builder.Services.AddScoped<IdentityCancellation>();
+builder.Services.AddScoped<IAdminPromotionService, AdminPromotionService>();
 builder.Services.AddScoped<AccountSignInService>();
 builder.Services.AddScoped<AccountPasskeyService>();
 builder.Services.AddScoped<AccountRegistrationService>();
 builder.Services.AddScoped<AccountEmailChangeService>();
 builder.Services.AddScoped<AccountTwoFactorService>();
 builder.Services.AddScoped<AuthenticationStateProvider, IdentityRevalidatingAuthenticationStateProvider>();
+
+// Family, event, potluck, notification, and administration application services.
+builder.Services.AddScoped<IFamilyAccess, FamilyAccess>();
+builder.Services.AddScoped<IFamilyGroups, FamilyService>();
+builder.Services.AddScoped<IJoinRequests, JoinRequestService>();
+builder.Services.AddScoped<IHouseholdDirectory, HouseholdService>();
+builder.Services.AddScoped<IEventAccess, EventAccessService>();
+builder.Services.AddScoped<EventService>();
+builder.Services.AddScoped<IEventDirectory>(provider => provider.GetRequiredService<EventService>());
+builder.Services.AddScoped<IRsvpDirectory, RsvpService>();
+builder.Services.AddScoped<IEventPostDirectory, EventPostService>();
+builder.Services.AddScoped<CoverImageService>();
+builder.Services.AddScoped<IEventCovers>(provider => provider.GetRequiredService<CoverImageService>());
+builder.Services.AddScoped<IPotluckBoard, PotluckService>();
+builder.Services.AddScoped<NotificationService>();
+builder.Services.AddScoped<INotificationPublisher>(provider => provider.GetRequiredService<NotificationService>());
+builder.Services.AddScoped<INotificationQueries>(provider => provider.GetRequiredService<NotificationService>());
+builder.Services.AddScoped<IAdministration, AdministrationService>();
+builder.Services.AddScoped<Ruvents.UI.Planning.IPlanningApi, ServerPlanningApi>();
 
 builder.Services.AddAuthentication(options =>
     {
@@ -41,8 +98,19 @@ builder.Services.AddAuthentication(options =>
     })
     .AddIdentityCookies();
 
-var connectionString = builder.Configuration.GetConnectionString("ruventsdb")
-    ?? throw new InvalidOperationException("Connection string 'ruventsdb' not found. Start the application through Aspire or configure ConnectionStrings:ruventsdb.");
+var connectionString = builder.Configuration.GetConnectionString("ruventsdb");
+if (string.IsNullOrEmpty(connectionString) && builder.Configuration.GetValue<bool>("Ruvents:DesignTime"))
+{
+    // The deployment pipeline builds and bundles the model before Azure resolves the
+    // database connection string. The AppHost sets this flag on the migration tool only,
+    // so a running application never falls back to a placeholder.
+    connectionString = "Host=localhost;Database=ruvents";
+}
+
+if (string.IsNullOrEmpty(connectionString))
+{
+    throw new InvalidOperationException("Connection string 'ruventsdb' not found. Start the application through Aspire or configure ConnectionStrings:ruventsdb.");
+}
 // The factory supports one context per Blazor operation and also registers the scoped context used by Identity.
 builder.Services.AddDbContextFactory<ApplicationDbContext>(options => options.UseNpgsql(connectionString));
 builder.EnrichNpgsqlDbContext<ApplicationDbContext>();
@@ -58,13 +126,19 @@ builder.Services.PostConfigure<HealthCheckServiceOptions>(options =>
 });
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
+builder.Services.Configure<PlatformAdminOptions>(builder.Configuration.GetSection(PlatformAdminOptions.SectionName));
 builder.Services.AddIdentityCore<ApplicationUser>(options =>
     {
-        options.SignIn.RequireConfirmedAccount = true;
+        // Accounts activate immediately: the deployment does not send email, and password
+        // resets are an administrator action.
+        options.SignIn.RequireConfirmedAccount = false;
         options.Stores.SchemaVersion = IdentitySchemaVersions.Version3;
     })
+    .AddRoles<IdentityRole>()
     .AddEntityFrameworkStores<ApplicationDbContext>()
+    .AddClaimsPrincipalFactory<ProfilePhotoClaimsPrincipalFactory>()
     .AddSignInManager()
+    .AddUserConfirmation<SuspensionAwareUserConfirmation>()
     .AddUserManager<CancellableUserManager>()
     .AddDefaultTokenProviders();
 
@@ -98,6 +172,23 @@ app.UseHttpsRedirection();
 // Register these explicitly so authentication runs after the token initialization above.
 // Cookie security-stamp validation then uses the request token instead of None.
 app.UseAuthentication();
+
+// Every account must have a profile photo. The claim is issued at sign-in and refreshed
+// after an upload, so this check does not query the database per request.
+app.Use(async (context, next) =>
+{
+    if (context.User.Identity?.IsAuthenticated == true
+        && !context.User.HasClaim(ProfilePhotoClaimsPrincipalFactory.PhotoClaimType, "1")
+        && !ProfilePhotoGate.IsExempt(context.Request.Path))
+    {
+        var returnUrl = context.Request.PathBase + context.Request.Path + context.Request.QueryString;
+        context.Response.Redirect($"/account/photo?returnUrl={Uri.EscapeDataString(returnUrl)}");
+        return;
+    }
+
+    await next(context);
+});
+
 app.UseAuthorization();
 
 app.UseAntiforgery();
@@ -117,6 +208,9 @@ app.MapRazorComponents<App>()
 
 // Add additional endpoints required by the Identity /Account Razor components.
 app.MapAdditionalIdentityEndpoints();
+app.MapProfilePhotoEndpoints();
+app.MapEventCoverEndpoints();
+app.MapPlanningEndpoints();
 app.MapDefaultEndpoints();
 
 await app.RunAsync();

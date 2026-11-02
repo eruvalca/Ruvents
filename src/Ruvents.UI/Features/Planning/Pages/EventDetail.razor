@@ -1,0 +1,356 @@
+@page "/events/{EventId:guid}"
+@inherits CancellableComponentBase
+@rendermode InteractiveAuto
+
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+
+@inject IPlanningApi Api
+
+<PageTitle>@(_event?.Title ?? "Event")</PageTitle>
+
+@if (_message is not null)
+{
+    <Notice Message="@_message" Kind="@_messageKind" />
+}
+
+@if (_event is null)
+{
+    <h1>Event not found</h1>
+    <p>This event does not exist, or you are not a member of its group.</p>
+    <p><a href="groups">Back to your groups</a></p>
+}
+else
+{
+    <h1>@_event.Title</h1>
+    <p>
+        <a href="@($"groups/{_event.FamilyGroupId}")">@_event.GroupName</a>
+        @if (_event.Status == EventStatus.Cancelled)
+        {
+            <span class="chip" data-tone="danger">Cancelled</span>
+        }
+        @if (_event.IsAllDay)
+        {
+            <span class="chip" data-tone="muted">All day</span>
+        }
+    </p>
+
+    @if (_event.HasCoverImage)
+    {
+        <p><img src="@($"events/{EventId}/cover")" alt="" width="480" /></p>
+    }
+
+    <section>
+        <h2>Details</h2>
+        <p>@EventTiming.FormatRange(_event.StartUtc, _event.EndUtc, _event.IsAllDay, _event.TimeZoneId)</p>
+        <p>
+            @_event.LocationName
+            @if (!string.IsNullOrWhiteSpace(_event.LocationAddress))
+            {
+                <span> — @_event.LocationAddress</span>
+            }
+        </p>
+        @if (!string.IsNullOrWhiteSpace(_event.MapLink))
+        {
+            <p><a href="@_event.MapLink" rel="noreferrer noopener" target="_blank">Map</a></p>
+        }
+        @if (!string.IsNullOrWhiteSpace(_event.Description))
+        {
+            <p>@_event.Description</p>
+        }
+        @if (_event.RsvpDeadlineUtc is not null)
+        {
+            <p>RSVP by @EventTiming.FormatDate(_event.RsvpDeadlineUtc.Value, false, _event.TimeZoneId)</p>
+        }
+    </section>
+
+    @if (_event.CanManage)
+    {
+        <section>
+            <h2>Manage</h2>
+            <p><a href="@($"events/{EventId}/edit")">Edit event</a></p>
+            <button type="button" @onclick="ToggleCancelledAsync">
+                @(_event.Status == EventStatus.Cancelled ? "Restore event" : "Cancel event")
+            </button>
+            <div class="form-field">
+                <label for="cover">Cover image</label>
+                <InputFile id="cover" accept="image/jpeg,image/png,image/webp" OnChange="UploadCoverAsync" />
+            </div>
+        </section>
+    }
+
+    <section>
+        <h2>Your RSVP</h2>
+        @if (_rsvp.IsLocked)
+        {
+            <p>RSVP is closed for this event.</p>
+        }
+        else
+        {
+            <div>
+                <label class="checkbox-field">
+                    <input type="checkbox" @bind="_rsvpAttending" />
+                    I am attending
+                </label>
+            </div>
+            @if (_household.Count > 0)
+            {
+                <fieldset>
+                    <legend>Household members attending</legend>
+                    @foreach (var member in _household)
+                    {
+                        <label class="checkbox-field">
+                            <input type="checkbox"
+                                   checked="@_attendingHousehold.Contains(member.Id)"
+                                   @onchange="e => ToggleHousehold(member.Id, e.Value)" />
+                            @member.Name
+                        </label>
+                    }
+                </fieldset>
+            }
+            <div class="form-field">
+                <label for="guests">Additional guests (one name per line)</label>
+                <textarea id="guests" rows="3" @bind="_guestsText"></textarea>
+            </div>
+            <div class="form-field">
+                <label for="note">Note</label>
+                <textarea id="note" rows="2" maxlength="1000" @bind="_rsvpNote"></textarea>
+            </div>
+            <button type="button" @onclick="SaveRsvpAsync">Save RSVP</button>
+        }
+    </section>
+
+    <section>
+        <h2>Who is coming</h2>
+        @if (_attendees.Count == 0)
+        {
+            <p>No responses yet.</p>
+        }
+        else
+        {
+            <ul>
+                @foreach (var entry in _attendees)
+                {
+                    <li>
+                        <strong>@entry.DisplayName</strong>
+                        @if (!entry.IsAttending)
+                        {
+                            <span> (not attending)</span>
+                        }
+                        @if (entry.HouseholdAttendees.Count > 0)
+                        {
+                            <span> with @string.Join(", ", entry.HouseholdAttendees)</span>
+                        }
+                        @if (entry.Guests.Count > 0)
+                        {
+                            <span> plus @string.Join(", ", entry.Guests)</span>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(entry.Note))
+                        {
+                            <span> — “@entry.Note”</span>
+                        }
+                    </li>
+                }
+            </ul>
+        }
+    </section>
+
+    <section>
+        <h2>Potluck</h2>
+        @if (_board is null || !_board.Enabled)
+        {
+            <p>Potluck sign-up is closed.</p>
+            @if (_board?.CanManage == true)
+            {
+                <button type="button" @onclick="() => SetPotluckAsync(true)">Open potluck sign-up</button>
+            }
+        }
+        else
+        {
+            @if (_board.CanManage)
+            {
+                <button type="button" @onclick="() => SetPotluckAsync(false)">Close potluck sign-up</button>
+            }
+
+            <ul>
+                @foreach (var slot in _board.Slots)
+                {
+                    var remaining = slot.QuantityNeeded - slot.QuantityClaimed;
+                    <li>
+                        <div class="slot-head">
+                            <strong>@slot.Name</strong>
+                            @if (!string.IsNullOrWhiteSpace(slot.Description))
+                            {
+                                <span class="muted">— @slot.Description</span>
+                            }
+                            <span class="muted">(@slot.QuantityClaimed of @slot.QuantityNeeded claimed)</span>
+                            @if (_board.CanManage)
+                            {
+                                <button type="button" @onclick="() => StartSlotEdit(slot)">Edit slot</button>
+                            }
+                        </div>
+
+                        @if (_editingSlotId == slot.Id)
+                        {
+                            <div class="inline-fields">
+                                <label>
+                                    Name
+                                    <input @bind="_editName" maxlength="120" />
+                                </label>
+                                <label>
+                                    Description
+                                    <input @bind="_editDescription" maxlength="500" />
+                                </label>
+                                <label>
+                                    Needed
+                                    <input type="number" min="1" max="100" @bind="_editQuantity" />
+                                </label>
+                                <button type="button" @onclick="() => SaveSlotAsync(slot.Id)">Save slot</button>
+                                <button type="button" @onclick="CancelSlotEdit">Cancel</button>
+                            </div>
+                        }
+
+                        @if (slot.Claims.Count > 0)
+                        {
+                            <ul>
+                                @foreach (var claim in slot.Claims)
+                                {
+                                    <li>
+                                        <span>@claim.DisplayName: @claim.Quantity</span>
+                                        @if (!string.IsNullOrWhiteSpace(claim.DishNote))
+                                        {
+                                            <span class="muted">— @claim.DishNote</span>
+                                        }
+                                        @if (claim.IsMine && _board.CanClaim)
+                                        {
+                                            <button type="button" @onclick="() => UnclaimAsync(slot.Id)">Remove mine</button>
+                                        }
+                                        else if (_board.CanManage)
+                                        {
+                                            <button type="button" @onclick="() => RemoveClaimAsync(slot.Id, claim.UserId)">Remove claim</button>
+                                        }
+                                    </li>
+                                }
+                            </ul>
+                        }
+
+                        @if (_board.CanClaim && remaining > 0)
+                        {
+                            <div class="inline-fields">
+                                <label>
+                                    Quantity
+                                    <input type="number" min="1" max="@remaining" @bind="_claimQuantity[slot.Id]" />
+                                </label>
+                                <label>
+                                    What are you bringing
+                                    <input maxlength="300" @bind="_claimNote[slot.Id]" />
+                                </label>
+                                <button type="button" @onclick="() => ClaimSlotAsync(slot.Id, remaining)">Claim</button>
+                            </div>
+                        }
+
+                        @if (_board.CanManage && _members.Count > 0)
+                        {
+                            <div class="inline-fields">
+                                <label>
+                                    Assign to
+                                    <select @bind="_assignUser[slot.Id]">
+                                        @foreach (var member in _members)
+                                        {
+                                            <option value="@member.UserId">@member.DisplayName</option>
+                                        }
+                                    </select>
+                                </label>
+                                <label>
+                                    Quantity
+                                    <input type="number" min="1" max="@slot.QuantityNeeded" @bind="_assignQuantity[slot.Id]" />
+                                </label>
+                                <button type="button" @onclick="() => AssignAsync(slot.Id)">Assign</button>
+                            </div>
+                            <button type="button" @onclick="() => RemoveSlotAsync(slot.Id)">Remove slot</button>
+                        }
+                    </li>
+                }
+            </ul>
+
+            @if (_board.CanClaim)
+            {
+                <h3>Add something not on the list</h3>
+                <div class="form-field">
+                    <label for="custom-name">Item</label>
+                    <input id="custom-name" @bind="_customItem" maxlength="120" />
+                </div>
+                <button type="button" @onclick="AddCustomItemAsync">Add and claim</button>
+            }
+
+            @if (_board.CanManage)
+            {
+                <h3>Add a slot</h3>
+                <div class="form-field">
+                    <label for="slot-name">Slot</label>
+                    <input id="slot-name" @bind="_newSlotName" maxlength="120" />
+                </div>
+                <div class="form-field">
+                    <label for="slot-qty">Quantity needed</label>
+                    <input id="slot-qty" type="number" min="1" max="100" @bind="_newSlotQuantity" />
+                </div>
+                <button type="button" @onclick="AddSlotAsync">Add slot</button>
+            }
+        }
+    </section>
+
+    <section>
+        <h2>Announcements and comments</h2>
+
+        @if (_event.CanManage)
+        {
+            <div class="form-field">
+                <label for="announcement">Post an announcement</label>
+                <textarea id="announcement" rows="2" maxlength="4000" @bind="_announcement"></textarea>
+            </div>
+            <button type="button" @onclick="() => PostAsync(true, null)">Post announcement</button>
+        }
+
+        <div class="form-field">
+            <label for="comment">Add a comment</label>
+            <textarea id="comment" rows="2" maxlength="4000" @bind="_comment"></textarea>
+        </div>
+        <button type="button" @onclick="() => PostAsync(false, null)">Post comment</button>
+
+        <ul>
+            @foreach (var post in _posts.Where(item => item.ParentPostId is null))
+            {
+                <li>
+                    <strong>@post.AuthorName</strong>
+                    @if (post.Kind == EventPostKind.Announcement)
+                    {
+                        <span class="chip" data-tone="accent">Announcement</span>
+                    }
+                    <span> — @post.Body</span>
+                    @if (post.CanDelete)
+                    {
+                        <button type="button" @onclick="() => DeletePostAsync(post.Id)">Delete</button>
+                    }
+                    <ul>
+                        @foreach (var reply in _posts.Where(item => item.ParentPostId == post.Id))
+                        {
+                            <li>
+                                <strong>@reply.AuthorName</strong>
+                                <span> — @reply.Body</span>
+                                @if (reply.CanDelete)
+                                {
+                                    <button type="button" @onclick="() => DeletePostAsync(reply.Id)">Delete</button>
+                                }
+                            </li>
+                        }
+                        <li>
+                            <label for="@($"reply-{post.Id}")">Reply</label>
+                            <textarea id="@($"reply-{post.Id}")" rows="1" maxlength="4000" @bind="_reply"></textarea>
+                            <button type="button" @onclick="() => PostAsync(false, post.Id)">Reply</button>
+                        </li>
+                    </ul>
+                </li>
+            }
+        </ul>
+    </section>
+}

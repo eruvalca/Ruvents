@@ -1,10 +1,10 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Text.RegularExpressions;
-using Ruvents.Data;
 using ArchUnitNET.Domain;
 using ArchUnitNET.Fluent.Slices;
 using ArchUnitNET.Loader;
 using Microsoft.AspNetCore.Components;
+using Ruvents.Data;
 using Shouldly;
 using Xunit;
 using static ArchUnitNET.Fluent.ArchRuleDefinition;

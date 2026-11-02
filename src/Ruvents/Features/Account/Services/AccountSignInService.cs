@@ -1,17 +1,37 @@
+using Microsoft.AspNetCore.Identity;
 using Ruvents.Data;
 using Ruvents.Features.Account.Extensions;
 using Ruvents.Features.Account.Models;
-using Microsoft.AspNetCore.Identity;
 
 namespace Ruvents.Features.Account.Services;
 
-internal sealed class AccountSignInService(SignInManager<ApplicationUser> signInManager)
+internal sealed class AccountSignInService(SignInManager<ApplicationUser> signInManager, IAdminPromotionService adminPromotion)
 {
-    public async Task<SignInOutcome> PasswordAsync(string email, string password, bool rememberMe) =>
-        (await signInManager.PasswordSignInAsync(email, password, rememberMe, lockoutOnFailure: false)).ToSignInOutcome();
+    public async Task<SignInOutcome> PasswordAsync(string email, string password, bool rememberMe)
+    {
+        var outcome = (await signInManager.PasswordSignInAsync(email, password, rememberMe, lockoutOnFailure: false)).ToSignInOutcome();
+        await outcome.Match(
+            _ => PromoteConfiguredAdminAsync(email),
+            _ => Task.CompletedTask,
+            _ => Task.CompletedTask,
+            _ => Task.CompletedTask,
+            _ => Task.CompletedTask);
+        return outcome;
+    }
 
     public async Task<SignInOutcome> PasskeyAsync(string credentialJson) =>
         (await signInManager.PasskeySignInAsync(credentialJson)).ToSignInOutcome();
+
+    // Sign-in has already committed the cookie, so the promotion follow-up must not be
+    // abandoned by request cancellation.
+    private async Task PromoteConfiguredAdminAsync(string email)
+    {
+        var user = await signInManager.UserManager.FindByEmailAsync(email);
+        if (user is not null)
+        {
+            await adminPromotion.PromoteIfConfiguredAsync(user, CancellationToken.None);
+        }
+    }
 
     public async Task<SignInOutcome> AuthenticatorAsync(string code, bool rememberMe, bool rememberMachine)
     {

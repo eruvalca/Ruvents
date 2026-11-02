@@ -1,0 +1,97 @@
+@page "/admin"
+@inherits CancellableComponentBase
+@rendermode InteractiveAuto
+
+@using Microsoft.AspNetCore.Authorization
+@using Ruvents.SharedKernel.Security
+@attribute [Authorize(Roles = PlatformRoles.Admin)]
+
+@inject IPlanningApi Api
+@inject NavigationManager Navigation
+
+<PageTitle>Administration</PageTitle>
+
+<h1>Administration</h1>
+
+@if (_message is not null)
+{
+    <Notice Message="@_message" Kind="@_messageKind" />
+}
+
+<section>
+    <h2>Users</h2>
+    <div class="form-field">
+        <label for="search">Search by email or name</label>
+        <input id="search" @bind="_search" maxlength="120" />
+    </div>
+    <button type="button" @onclick="LoadUsersAsync">Search</button>
+
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th scope="col">Email</th>
+                    <th scope="col">Name</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var user in _users)
+                {
+                    <tr>
+                        <td>@user.Email</td>
+                        <td>@user.DisplayName</td>
+                        <td>
+                            <span>@(user.IsSuspended ? "Suspended" : "Active")</span>
+                            @if (user.IsAdmin)
+                            {
+                                <span class="chip">Admin</span>
+                            }
+                        </td>
+                        <td>
+                            <button type="button" @onclick="() => ResetAsync(user.Id)">Reset password</button>
+                            @if (user.IsSuspended)
+                            {
+                                <button type="button" @onclick="() => ReactivateAsync(user.Id)">Reactivate</button>
+                            }
+                            else if (!user.IsAdmin)
+                            {
+                                <button type="button" @onclick="() => SuspendAsync(user.Id)">Suspend</button>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<section>
+    <h2>Family groups</h2>
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th scope="col">Name</th>
+                    <th scope="col">Members</th>
+                    <th scope="col">Events</th>
+                    <th scope="col">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var familyGroup in _groups)
+                {
+                    <tr>
+                        <td>@familyGroup.Name</td>
+                        <td>@familyGroup.MemberCount</td>
+                        <td>@familyGroup.EventCount</td>
+                        <td>
+                            <button type="button" @onclick="() => DeleteGroupAsync(familyGroup.Id)">Remove group</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</section>

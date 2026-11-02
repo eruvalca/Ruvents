@@ -1,8 +1,8 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
-using Ruvents.Testing;
 using Aspire.Hosting.Testing;
 using Microsoft.Playwright;
+using Ruvents.Testing;
 using Shouldly;
 using Xunit;
 
@@ -12,6 +12,8 @@ namespace Ruvents.PlaywrightTests;
 [Collection<BrowserAppHostDefinition>]
 public sealed class PwaTests(ITestOutputHelper output)
 {
+    private const string HomeHeading = "Gather everyone, without the group-chat chaos.";
+
     [Theory]
     [InlineData(1280)]
     [InlineData(390)]
@@ -103,7 +105,7 @@ public sealed class PwaTests(ITestOutputHelper output)
         await VerifyInstallActionAsync(page);
         var origin = await page.EvaluateAsync<double>("performance.timeOrigin");
         await page.Locator(".site-name").ClickAsync();
-        await page.GetByRole(AriaRole.Heading, new() { Name = "Welcome to Ruvents", Exact = true }).WaitForAsync();
+        await page.GetByRole(AriaRole.Heading, new() { Name = HomeHeading, Exact = true }).WaitForAsync();
         (await page.EvaluateAsync<double>("performance.timeOrigin")).ShouldBe(origin);
 
         // Pages are served from the network; the worker must not cache them.
@@ -125,7 +127,7 @@ public sealed class PwaTests(ITestOutputHelper output)
         await context.SetOfflineAsync(false);
         await WaitForNetworkAsync(page);
         await page.GetByRole(AriaRole.Link, new() { Name = "Try again", Exact = true }).ClickAsync();
-        await page.GetByRole(AriaRole.Heading, new() { Name = "Welcome to Ruvents", Exact = true }).WaitForAsync();
+        await page.GetByRole(AriaRole.Heading, new() { Name = HomeHeading, Exact = true }).WaitForAsync();
 
         await page.GotoAsync("/counter");
         await page.GetByRole(AriaRole.Heading, new() { Name = "Counter", Exact = true }).WaitForAsync();

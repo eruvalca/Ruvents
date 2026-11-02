@@ -1,13 +1,13 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Security.Claims;
-using Ruvents.Data;
-using Ruvents.Features.Account.Pages;
-using Ruvents.Features.Account.Services;
 using Bunit;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
+using Ruvents.Data;
+using Ruvents.Features.Account.Pages;
+using Ruvents.Features.Account.Services;
 using Shouldly;
 using Xunit;
 
@@ -21,7 +21,7 @@ public sealed class RegistrationTests
     public async Task RejectedPasswordRegistrationDisplaysIdentityErrorAndSkipsContinuationAsync()
     {
         await using var context = new BunitContext();
-        var account = context.ConfigureAccount();
+        var account = context.ConfigureInteractiveAccount();
         account.Users.SupportsUserEmail.Returns(true);
         account.Users.CreateAsync(Arg.Any<ApplicationUser>(), "password").Returns(IdentityResult.Failed(new IdentityError { Description = "Email already registered" }));
         var component = account.Render<Register>(context);
@@ -32,23 +32,22 @@ public sealed class RegistrationTests
         await component.Find("form").SubmitAsync();
 
         await component.WaitForAssertionAsync(() => component.Find(".notice[data-kind='error']").TextContent.ShouldContain("Email already registered"));
-        await account.Users.DidNotReceiveWithAnyArgs().GenerateEmailConfirmationTokenAsync(default!);
-        await account.Emails.DidNotReceiveWithAnyArgs().SendConfirmationLinkAsync(default!, default!, default!);
+        await account.Photos.DidNotReceiveWithAnyArgs().SaveAsync(default!, default!, default!, Xunit.TestContext.Current.CancellationToken);
         await account.SignIn.DidNotReceiveWithAnyArgs().SignInAsync(default!, default(bool), default);
     }
 
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public async Task SuccessfulPasswordRegistrationConfirmsBeforeFollowingConfiguredSignInPolicyAsync(bool requireConfirmation)
+    public async Task SuccessfulPasswordRegistrationStoresPhotoAndSignsInAsync(bool requireConfirmation)
     {
         await using var context = new BunitContext();
-        var account = context.ConfigureAccount();
+        var account = context.ConfigureInteractiveAccount();
         account.Users.SupportsUserEmail.Returns(true);
         account.Users.Options.SignIn.RequireConfirmedAccount = requireConfirmation;
         account.Users.CreateAsync(Arg.Any<ApplicationUser>(), "password").Returns(IdentityResult.Success);
         account.Users.GetUserIdAsync(Arg.Any<ApplicationUser>()).Returns("member");
-        account.Users.GenerateEmailConfirmationTokenAsync(Arg.Any<ApplicationUser>()).Returns("token");
+        account.Users.GetUserIdAsync(Arg.Any<ApplicationUser>()).Returns("member");
         var navigation = context.Services.GetRequiredService<NavigationManager>();
         navigation.NavigateTo("Account/Register?returnUrl=%2Fevents");
         var component = account.Render<Register>(context);
@@ -58,20 +57,9 @@ public sealed class RegistrationTests
 
         await component.Find("form").SubmitAsync();
 
-        await account.Emails.Received(1).SendConfirmationLinkAsync(Arg.Any<ApplicationUser>(), "member@example.test",
-            Arg.Is<string>(link => link.Contains("Account/ConfirmEmail?userId=member", StringComparison.Ordinal)
-                && link.Contains("code=dG9rZW4", StringComparison.Ordinal)
-                && link.Contains("returnUrl=%2Fevents", StringComparison.Ordinal)));
-        if (requireConfirmation)
-        {
-            navigation.Uri.ShouldBe("http://localhost/Account/RegisterConfirmation?email=member%40example.test&returnUrl=%2Fevents");
-            await account.SignIn.DidNotReceiveWithAnyArgs().SignInAsync(default!, default(bool), default);
-        }
-        else
-        {
-            navigation.Uri.ShouldBe("http://localhost/events");
-            await account.SignIn.Received(1).SignInAsync(Arg.Any<ApplicationUser>(), false, null);
-        }
+        await account.Photos.Received(1).SaveAsync(Arg.Any<string>(), Arg.Any<Stream>(), "image/png", Arg.Any<CancellationToken>());
+        navigation.Uri.ShouldBe("http://localhost/events");
+        await account.SignIn.Received(1).SignInAsync(Arg.Any<ApplicationUser>(), false, null);
     }
 
     [Theory]

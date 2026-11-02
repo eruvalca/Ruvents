@@ -1,0 +1,104 @@
+@page "/groups/{GroupId:guid}"
+@inherits CancellableComponentBase
+@rendermode InteractiveAuto
+
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+
+@inject IPlanningApi Api
+
+<PageTitle>@(_group?.Name ?? "Family group")</PageTitle>
+
+@if (_message is not null)
+{
+    <Notice Message="@_message" Kind="@_messageKind" />
+}
+
+@if (_group is null)
+{
+    <h1>Group not found</h1>
+    <p>This group does not exist, or you are not a member of it.</p>
+    <p><a href="groups">Back to your groups</a></p>
+}
+else
+{
+    <h1>@_group.Name</h1>
+    @if (!string.IsNullOrWhiteSpace(_group.Description))
+    {
+        <p>@_group.Description</p>
+    }
+    <p><a href="@($"events/new?groupId={_group.Id}")">Create an event</a></p>
+
+    <section>
+        <h2>Events</h2>
+        @if (_events.Count == 0)
+        {
+            <p>No events yet.</p>
+        }
+        else
+        {
+            <ul class="card-grid">
+                @foreach (var calendarEvent in _events)
+                {
+                    <li>
+                        <a class="event-title" href="@($"events/{calendarEvent.Id}")">@calendarEvent.Title</a>
+                        <p class="event-when">@EventTiming.FormatDate(calendarEvent.StartUtc, calendarEvent.IsAllDay, calendarEvent.TimeZoneId)</p>
+                        @if (calendarEvent.Status == EventStatus.Cancelled)
+                        {
+                            <span class="chip" data-tone="danger">Cancelled</span>
+                        }
+                    </li>
+                }
+            </ul>
+        }
+    </section>
+
+    <section>
+        <h2>Members</h2>
+        <ul>
+            @foreach (var member in _group.Members)
+            {
+                <li class="member-row">
+                    @if (member.HasPhoto)
+                    {
+                        <img src="@($"account/photo/{member.UserId}")" alt="" width="32" height="32" />
+                    }
+                    else
+                    {
+                        <span class="avatar-initials" aria-hidden="true">@Initial(member.DisplayName)</span>
+                    }
+                    <span>@member.DisplayName</span>
+                    <span class="chip" data-tone="muted">@member.Role</span>
+                </li>
+            }
+        </ul>
+    </section>
+
+    @if (_group.IsOrganizer)
+    {
+        <section>
+            <h2>Pending join requests</h2>
+            @if (_group.PendingRequests.Count == 0)
+            {
+                <p>No pending requests.</p>
+            }
+            else
+            {
+                <ul>
+                    @foreach (var request in _group.PendingRequests)
+                    {
+                        <li>
+                            <span>@request.DisplayName</span>
+                            @if (!string.IsNullOrWhiteSpace(request.Message))
+                            {
+                                <span> — @request.Message</span>
+                            }
+                            <button type="button" @onclick="() => DecideAsync(request.Id, true)">Approve</button>
+                            <button type="button" @onclick="() => DecideAsync(request.Id, false)">Decline</button>
+                        </li>
+                    }
+                </ul>
+            }
+        </section>
+    }
+}

@@ -1,0 +1,883 @@
+/* Ruvents design system — "warm invitation".
+   Paper-warm surfaces, deep aubergine ink, iris and coral accents. Tokens first,
+   then elements, then the few component classes the pages share. Scoped component
+   CSS stays for layout specifics; this file owns the visual identity for the whole
+   application, including Identity pages. */
+
+:root {
+    color-scheme: light;
+
+    --font-display: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, ui-serif, serif;
+    --font-body: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+
+    --bg: #fdf8f4;
+    --surface: #ffffff;
+    --surface-sunken: #f8f1ec;
+    --ink: #241427;
+    --ink-muted: #6a5a6e;
+    --line: #ecdfdc;
+    --primary: #7a3ce0;
+    --primary-strong: #5f24c4;
+    --on-primary: #ffffff;
+    --accent: #f4623a;
+    --accent-soft: #ffe4d9;
+    --mint: #0f9d76;
+    --mint-soft: #d8f5ea;
+    --gold: #b8801f;
+    --danger: #c0392b;
+    --danger-soft: #fde4e0;
+
+    --radius-sm: 0.65rem;
+    --radius-md: 1rem;
+    --radius-lg: 1.5rem;
+    --radius-pill: 999px;
+
+    --shadow-sm: 0 1px 2px rgb(36 20 39 / 6%), 0 4px 12px rgb(36 20 39 / 4%);
+    --shadow-md: 0 2px 6px rgb(36 20 39 / 6%), 0 14px 32px rgb(36 20 39 / 8%);
+    --shadow-lift: 0 4px 10px rgb(36 20 39 / 8%), 0 18px 38px rgb(36 20 39 / 10%);
+
+    --gap-xs: 0.35rem;
+    --gap-sm: 0.6rem;
+    --gap-md: 1rem;
+    --gap-lg: 1.75rem;
+    --gap-xl: 3rem;
+
+    --measure: 76rem;
+}
+
+/* Dark tokens appear twice: once for an explicit choice and once for the system
+   setting when the user has not chosen. Keep both blocks in sync. */
+:root[data-theme="dark"] {
+    color-scheme: dark;
+
+    --bg: #150f1c;
+    --surface: #1f1727;
+    --surface-sunken: #271d31;
+    --ink: #f6eef8;
+    --ink-muted: #b9a9c2;
+    --line: #392c46;
+    --primary: #b394ff;
+    --primary-strong: #9d78ff;
+    --on-primary: #1a1024;
+    --accent: #ff8a63;
+    --accent-soft: #3a2119;
+    --mint: #52d6ac;
+    --mint-soft: #16302a;
+    --gold: #e6b75c;
+    --danger: #ff8577;
+    --danger-soft: #3a1d1a;
+
+    --shadow-sm: 0 1px 2px rgb(0 0 0 / 40%), 0 4px 12px rgb(0 0 0 / 26%);
+    --shadow-md: 0 2px 8px rgb(0 0 0 / 38%), 0 14px 34px rgb(0 0 0 / 30%);
+    --shadow-lift: 0 4px 10px rgb(0 0 0 / 38%), 0 16px 34px rgb(0 0 0 / 30%);
+}
+
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+        color-scheme: dark;
+
+        --bg: #150f1c;
+        --surface: #1f1727;
+        --surface-sunken: #271d31;
+        --ink: #f6eef8;
+        --ink-muted: #b9a9c2;
+        --line: #392c46;
+        --primary: #b394ff;
+        --primary-strong: #9d78ff;
+        --on-primary: #1a1024;
+        --accent: #ff8a63;
+        --accent-soft: #3a2119;
+        --mint: #52d6ac;
+        --mint-soft: #16302a;
+        --gold: #e6b75c;
+        --danger: #ff8577;
+        --danger-soft: #3a1d1a;
+
+        --shadow-sm: 0 1px 2px rgb(0 0 0 / 40%), 0 4px 12px rgb(0 0 0 / 26%);
+        --shadow-md: 0 2px 8px rgb(0 0 0 / 38%), 0 14px 34px rgb(0 0 0 / 30%);
+        --shadow-lift: 0 4px 10px rgb(0 0 0 / 38%), 0 16px 34px rgb(0 0 0 / 30%);
+    }
+}
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+/* Author rules such as `.notice { display: flex; }` otherwise beat the user
+   agent's `[hidden] { display: none }`, which would leak hidden panels. */
+[hidden] {
+    display: none !important;
+}
+
+html {
+    -webkit-text-size-adjust: 100%;
+    scrollbar-gutter: stable;
+}
+
+body {
+    margin: 0;
+    min-height: 100dvh;
+    font-family: var(--font-body);
+    font-size: 1.0625rem;
+    line-height: 1.6;
+    color: var(--ink);
+    background-color: var(--bg);
+    background-image:
+        radial-gradient(60rem 40rem at 8% -10%, color-mix(in oklab, var(--accent) 16%, transparent), transparent 60%),
+        radial-gradient(50rem 36rem at 96% -4%, color-mix(in oklab, var(--primary) 18%, transparent), transparent 62%),
+        radial-gradient(70rem 42rem at 50% 108%, color-mix(in oklab, var(--mint) 12%, transparent), transparent 60%);
+    background-attachment: fixed;
+    overflow-wrap: anywhere;
+}
+
+h1,
+h2,
+h3,
+h4 {
+    font-family: var(--font-display);
+    font-weight: 600;
+    line-height: 1.14;
+    letter-spacing: -0.015em;
+    margin: 0 0 var(--gap-sm);
+    text-wrap: balance;
+}
+
+h1 {
+    font-size: clamp(2.1rem, 1.5rem + 2.4vw, 3.15rem);
+}
+
+h2 {
+    font-size: clamp(1.4rem, 1.15rem + 1vw, 1.85rem);
+}
+
+h3 {
+    font-size: 1.2rem;
+}
+
+p {
+    margin: 0 0 var(--gap-md);
+    text-wrap: pretty;
+}
+
+a {
+    color: var(--primary);
+    text-decoration-thickness: 0.08em;
+    text-underline-offset: 0.18em;
+    transition: color 140ms ease;
+}
+
+a:hover {
+    color: var(--primary-strong);
+}
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+summary:focus-visible {
+    outline: 3px solid color-mix(in oklab, var(--primary) 55%, transparent);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
+}
+
+hr {
+    border: 0;
+    border-top: 1px solid var(--line);
+    margin: var(--gap-md) 0;
+}
+
+/* ---------- Buttons ---------- */
+
+button,
+input[type="submit"],
+input[type="button"] {
+    font: inherit;
+    font-weight: 650;
+    white-space: nowrap;
+    cursor: pointer;
+    padding: 0.6rem 1.15rem;
+    border-radius: var(--radius-pill);
+    border: 1px solid color-mix(in oklab, var(--primary) 60%, transparent);
+    color: var(--on-primary);
+    background-image: linear-gradient(135deg, var(--primary), var(--accent));
+    box-shadow: 0 1px 2px rgb(0 0 0 / 12%);
+    transition: transform 140ms ease, box-shadow 160ms ease;
+}
+
+button:hover,
+input[type="submit"]:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 3px 8px rgb(0 0 0 / 16%);
+}
+
+button:active,
+input[type="submit"]:active {
+    transform: translateY(0) scale(0.99);
+}
+
+/* Secondary actions stay quiet until hovered. */
+li > form > button,
+section > form > button:not(:only-child) {
+    background-image: none;
+    color: var(--primary);
+    background-color: color-mix(in oklab, var(--primary) 8%, transparent);
+    border-color: color-mix(in oklab, var(--primary) 26%, transparent);
+    box-shadow: none;
+}
+
+li > form > button:hover,
+section > form > button:not(:only-child):hover {
+    background-color: color-mix(in oklab, var(--primary) 14%, transparent);
+}
+
+/* ---------- Forms ---------- */
+
+input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+select,
+textarea {
+    font: inherit;
+    font-size: 1rem;
+    width: 100%;
+    color: var(--ink);
+    background-color: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    padding: 0.6rem 0.75rem;
+    transition: border-color 140ms ease, box-shadow 140ms ease;
+}
+
+input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):focus,
+select:focus,
+textarea:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--primary) 16%, transparent);
+    outline: none;
+}
+
+input[type="file"] {
+    font: inherit;
+    font-size: 1rem;
+    width: 100%;
+    max-width: 100%;
+    padding: 0.4rem;
+    color: var(--ink-muted);
+    background-color: var(--surface-sunken);
+    border: 1px dashed color-mix(in oklab, var(--primary) 30%, var(--line));
+    border-radius: var(--radius-md);
+    cursor: pointer;
+}
+
+input[type="file"]::file-selector-button {
+    font: inherit;
+    font-weight: 700;
+    margin-right: 0.75rem;
+    padding: 0.45rem 1rem;
+    color: var(--primary);
+    background-color: var(--surface);
+    border: 1px solid color-mix(in oklab, var(--primary) 30%, transparent);
+    border-radius: var(--radius-pill);
+    cursor: pointer;
+    transition: background-color 140ms ease;
+}
+
+input[type="file"]::file-selector-button:hover {
+    background-color: color-mix(in oklab, var(--primary) 12%, var(--surface));
+}
+
+input[type="checkbox"],
+input[type="radio"] {
+    width: 1.15rem;
+    height: 1.15rem;
+    accent-color: var(--primary);
+}
+
+label {
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+
+fieldset {
+    border: 1px dashed var(--line);
+    border-radius: var(--radius-md);
+    padding: var(--gap-sm) var(--gap-md) var(--gap-md);
+    margin: 0 0 var(--gap-md);
+}
+
+legend {
+    font-weight: 700;
+    padding: 0 0.4rem;
+}
+
+.form-field {
+    display: grid;
+    gap: 0.3rem;
+    margin-bottom: var(--gap-md);
+}
+
+.form-field > p {
+    margin: 0;
+    font-size: 0.875rem;
+    color: var(--ink-muted);
+}
+
+.checkbox-field {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 500;
+    padding: 0.35rem 0;
+}
+
+form {
+    accent-color: var(--primary);
+}
+
+/* ---------- Notices and validation ---------- */
+
+.notice {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    align-items: center;
+    padding: 0.8rem 1rem;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--line);
+    background-color: var(--surface);
+    box-shadow: var(--shadow-sm);
+    margin-bottom: var(--gap-md);
+    font-weight: 500;
+}
+
+.notice::before {
+    content: "";
+    flex: none;
+    width: 0.55rem;
+    align-self: stretch;
+    border-radius: var(--radius-pill);
+    background-color: var(--primary);
+}
+
+.notice[data-kind="success"]::before {
+    background-color: var(--mint);
+}
+
+.notice[data-kind="error"]::before {
+    background-color: var(--danger);
+}
+
+.notice[data-kind="warning"]::before {
+    background-color: var(--gold);
+}
+
+.notice[data-kind="information"]::before {
+    background-color: var(--primary);
+}
+
+/* The application-update notice sits inside the footer and takes its own row. */
+.site-footer > .notice {
+    flex-basis: 100%;
+    margin-bottom: 0;
+}
+
+.error-text,
+.validation-message {
+    color: var(--danger);
+    font-weight: 600;
+    font-size: 0.92rem;
+}
+
+.validation-message:empty {
+    display: none;
+}
+
+/* A field with a visible validation message gets a matching border, so the error
+   is not communicated by colour alone: the message text is always rendered too. */
+.form-field:has(.validation-message:not(:empty)) input,
+.form-field:has(.validation-message:not(:empty)) textarea,
+.form-field:has(.validation-message:not(:empty)) select {
+    border-color: var(--danger);
+}
+
+.validation-summary-valid,
+.validation-summary-errors:empty {
+    display: none;
+}
+
+.validation-summary-errors {
+    padding: 0.75rem 1rem;
+    border-radius: var(--radius-md);
+    border: 1px solid color-mix(in oklab, var(--danger) 40%, var(--line));
+    background-color: var(--danger-soft);
+    margin-bottom: var(--gap-md);
+}
+
+.validation-summary-errors ul {
+    margin: 0;
+    padding-left: 1.1rem;
+}
+
+/* ---------- Cards and lists ---------- */
+
+section {
+    position: relative;
+    background-color: var(--surface);
+    /* Painted as a background so the accent stays inside the rounded corners. */
+    background-image: linear-gradient(90deg, var(--primary), var(--accent) 55%, var(--mint));
+    background-size: 100% 0.22rem;
+    background-position: top left;
+    background-repeat: no-repeat;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    padding: clamp(1.1rem, 0.8rem + 1vw, 1.8rem);
+    margin-bottom: var(--gap-lg);
+}
+
+section > h2,
+section > h3 {
+    padding-bottom: 0.45rem;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: var(--gap-md);
+}
+
+ul,
+ol {
+    padding-left: 1.1rem;
+    margin: 0 0 var(--gap-md);
+}
+
+section ul,
+section ol {
+    list-style: none;
+    padding-left: 0;
+    display: grid;
+    gap: var(--gap-sm);
+}
+
+section li {
+    padding: 0.55rem 0.2rem;
+    border-bottom: 1px dashed color-mix(in oklab, var(--line) 80%, transparent);
+}
+
+section li:last-child {
+    border-bottom: 0;
+}
+
+section li ul {
+    margin: 0.45rem 0 0;
+    padding-left: 0.9rem;
+    border-left: 2px solid color-mix(in oklab, var(--primary) 18%, transparent);
+}
+
+.card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr));
+    gap: var(--gap-md);
+    list-style: none;
+    padding: 0;
+}
+
+.card-grid > li {
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    padding: var(--gap-md);
+    background-image: linear-gradient(160deg, color-mix(in oklab, var(--primary) 7%, transparent), transparent 62%);
+    box-shadow: var(--shadow-sm);
+    transition: transform 160ms ease, box-shadow 200ms ease;
+}
+
+.card-grid > li:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.12rem 0.6rem;
+    border-radius: var(--radius-pill);
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: var(--primary);
+    background-color: color-mix(in oklab, var(--primary) 12%, transparent);
+}
+
+.chip[data-tone="accent"] {
+    color: var(--accent);
+    background-color: var(--accent-soft);
+}
+
+.chip[data-tone="mint"] {
+    color: var(--mint);
+    background-color: var(--mint-soft);
+}
+
+.chip[data-tone="danger"] {
+    color: var(--danger);
+    background-color: var(--danger-soft);
+}
+
+.chip[data-tone="muted"] {
+    color: var(--ink-muted);
+    background-color: var(--surface-sunken);
+}
+
+/* ---------- Event cards ---------- */
+
+.event-cover {
+    display: block;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    border-radius: calc(var(--radius-md) - 0.3rem);
+    margin-bottom: 0.6rem;
+}
+
+.event-title {
+    display: block;
+    font-family: var(--font-display);
+    font-size: 1.2rem;
+    font-weight: 600;
+    text-decoration: none;
+    margin-bottom: 0.2rem;
+}
+
+.event-when,
+.event-where {
+    margin: 0;
+    font-size: 0.92rem;
+    color: var(--ink-muted);
+}
+
+/* ---------- Navigation ---------- */
+
+.nav-shell {
+    display: grid;
+    gap: 1.1rem;
+}
+
+.nav-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+}
+
+.nav-list > li {
+    flex: 0 0 auto;
+    min-width: 0;
+}
+
+.nav-list a {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    padding: 0.5rem 0.8rem;
+    border-radius: var(--radius-pill);
+    color: var(--ink);
+    text-decoration: none;
+    font-weight: 550;
+    white-space: nowrap;
+    transition: background-color 160ms ease, color 160ms ease;
+}
+
+.nav-list a::before {
+    content: "";
+    width: 0.45rem;
+    height: 0.45rem;
+    flex: none;
+    border-radius: 50%;
+    background-color: color-mix(in oklab, var(--primary) 35%, transparent);
+    transition: background-color 160ms ease, transform 160ms ease;
+}
+
+.nav-list a:hover {
+    background-color: color-mix(in oklab, var(--primary) 9%, transparent);
+    color: var(--primary);
+}
+
+.nav-list a.active {
+    color: var(--on-primary);
+    background-image: linear-gradient(135deg, var(--primary), var(--primary-strong));
+    box-shadow: 0 1px 3px rgb(0 0 0 / 14%);
+}
+
+.nav-list a.active::before {
+    background-color: var(--on-primary);
+    transform: scale(1.2);
+}
+
+.nav-account {
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--line);
+    font-size: 0.95rem;
+}
+
+.nav-account a::before {
+    background-color: color-mix(in oklab, var(--ink-muted) 40%, transparent);
+}
+
+/* Registration uses the email address as the user name, so this link can hold one
+   long unbroken token. Let it wrap inside the pill instead of forcing the rail to
+   scroll sideways. */
+.nav-account a {
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+.nav-logout {
+    width: 100%;
+    text-align: left;
+    padding: 0.5rem 0.8rem;
+    border: 0;
+    border-radius: var(--radius-pill);
+    background-image: none;
+    background-color: transparent;
+    color: var(--ink-muted);
+    font-weight: 600;
+    box-shadow: none;
+}
+
+.nav-logout:hover {
+    background-color: color-mix(in oklab, var(--accent) 14%, transparent);
+    color: var(--accent);
+    box-shadow: none;
+}
+
+@media (max-width: 52rem) {
+    .nav-shell {
+        gap: 0.5rem;
+    }
+
+    /* Two even columns instead of a single scrolling row: a scrolling rail hid
+       destinations behind an affordance nobody notices, and ragged wrapped chips
+       waste vertical space. The tiles stay reachable with a thumb and remain
+       visible to search. */
+    .nav-list {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 8.5rem), 1fr));
+        gap: 0.3rem;
+        padding-bottom: 0.3rem;
+    }
+
+    .nav-list > li {
+        min-width: 0;
+    }
+
+    .nav-list a,
+    .nav-logout {
+        padding: 0.42rem 0.75rem;
+        font-size: 0.92rem;
+        /* Tiles are narrower than the label, so let the text wrap inside them. */
+        white-space: normal;
+    }
+
+    .nav-account {
+        padding-top: 0.4rem;
+        /* The user name can be a full email address, so keep these rows full width
+           instead of squeezing them into a tile. */
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+/* ---------- Tables ---------- */
+
+.table-container {
+    max-width: 100%;
+    overflow-x: auto;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    background-color: var(--surface);
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.96rem;
+}
+
+th,
+td {
+    text-align: left;
+    padding: 0.65rem 0.85rem;
+    border-bottom: 1px solid var(--line);
+    vertical-align: top;
+}
+
+thead th {
+    position: sticky;
+    top: 0;
+    background-color: var(--surface-sunken);
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--ink-muted);
+}
+
+tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+tbody tr:hover {
+    background-color: color-mix(in oklab, var(--primary) 5%, transparent);
+}
+
+/* ---------- Media ---------- */
+
+img {
+    max-width: 100%;
+    height: auto;
+}
+
+img[width="32"],
+img[width="160"],
+.avatar,
+.avatar-preview {
+    border-radius: 50%;
+    border: 2px solid var(--surface);
+    box-shadow: var(--shadow-sm);
+    object-fit: cover;
+}
+
+.avatar-initials {
+    display: inline-grid;
+    place-items: center;
+    width: 2rem;
+    height: 2rem;
+    flex: none;
+    border-radius: 50%;
+    font-weight: 700;
+    color: var(--on-primary);
+    background-image: linear-gradient(135deg, var(--primary), var(--accent));
+}
+
+/* ---------- Profile photo cropper ---------- */
+
+/* Cropper.js builds its own DOM, so these rules cannot live in a scoped
+   .razor.css file: the elements it inserts carry no scope attribute. They are
+   scoped to the component's container because the library stylesheet loads after
+   theme.css and would otherwise win on equal specificity. The crop box is framed
+   as a circle so the user sees the avatar they are actually producing. */
+.photo-crop .cropper-view-box {
+    border-radius: 50%;
+    outline: 2px solid color-mix(in oklab, var(--primary) 70%, white);
+    outline-offset: -1px;
+}
+
+.photo-crop .cropper-face {
+    border-radius: 50%;
+}
+
+/* Rule-of-thirds guides and square resize handles make no sense inside a circle,
+   and the avatar crop is a fixed square, so dragging to reposition is the only
+   gesture the user needs. */
+.photo-crop .cropper-dashed,
+.photo-crop .cropper-line,
+.photo-crop .cropper-point {
+    display: none;
+}
+
+.photo-crop {
+    display: grid;
+    gap: 0.6rem;
+    justify-items: start;
+    max-width: 26rem;
+}
+
+.cropper-shell {
+    width: min(100%, 24rem);
+}
+
+.cropper-shell .cropper {
+    position: relative;
+}
+
+.member-row {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+}
+
+.member-row > span:not(.chip):not(.avatar-initials) {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.member-row > .chip {
+    margin-left: auto;
+}
+
+.slot-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.muted {
+    color: var(--ink-muted);
+}
+
+.inline-fields {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: end;
+    gap: 0.6rem;
+    margin: 0.5rem 0;
+}
+
+.inline-fields label {
+    display: grid;
+    gap: 0.2rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.inline-fields input,
+.inline-fields select {
+    width: auto;
+    min-width: 7rem;
+}
+
+/* ---------- Skip link ---------- */
+
+.skip-link {
+    position: absolute;
+    left: -9999px;
+    top: 0;
+    z-index: 2000;
+    padding: 0.6rem 1rem;
+    background-color: var(--primary);
+    color: var(--on-primary);
+    border-radius: 0 0 var(--radius-sm) 0;
+    font-weight: 700;
+}
+
+.skip-link:focus {
+    left: 0;
+}
+
+/* ---------- Motion ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        transition-duration: 0.01ms;
+        animation-duration: 0.01ms;
+        animation-iteration-count: 1;
+    }
+
+    button:hover,
+    .card-grid > li:hover {
+        transform: none;
+    }
+}

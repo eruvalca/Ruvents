@@ -1,5 +1,4 @@
 using System.Diagnostics.CodeAnalysis;
-using Ruvents.ServiceDefaults;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -10,6 +9,7 @@ using Microsoft.Extensions.Options;
 using OpenTelemetry.Instrumentation.AspNetCore;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
+using Ruvents.ServiceDefaults;
 using Shouldly;
 using Xunit;
 using ServiceDefaultsApi = Ruvents.ServiceDefaults.Extensions;

@@ -1,8 +1,5 @@
 using System.Security.Claims;
 using System.Text.Json;
-using Ruvents.Data;
-using Ruvents.Features.Account.Pages;
-using Ruvents.Features.Account.Pages.Manage;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Components.Authorization;
@@ -10,6 +7,9 @@ using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Primitives;
+using Ruvents.Data;
+using Ruvents.Features.Account.Pages;
+using Ruvents.Features.Account.Pages.Manage;
 
 namespace Ruvents.Features.Account.Endpoints;
 

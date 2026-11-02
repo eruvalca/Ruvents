@@ -1,16 +1,18 @@
 using System.ComponentModel.DataAnnotations;
-using System.Text.Encodings.Web;
-using Ruvents.Data;
-using Ruvents.Features.Account.Extensions;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
+using Ruvents.Data;
+using Ruvents.Features.Account.Extensions;
+using Ruvents.Features.Account.Services;
 
 namespace Ruvents.Features.Account.Pages;
 
 public sealed partial class Register
 {
     private IEnumerable<IdentityError>? _identityErrors;
+    private string? _photoError;
 
     [SupplyParameterFromForm]
     private InputModel Input { get; set; } = default!;
@@ -18,12 +20,22 @@ public sealed partial class Register
     [SupplyParameterFromQuery]
     private string? ReturnUrl { get; set; }
 
+    [CascadingParameter]
+    private HttpContext HttpContext { get; set; } = default!;
+
     private string? Message => _identityErrors is null ? null : $"Error: {_identityErrors.FormatDescriptions(", ")}";
 
     protected override void OnInitialized() => Input ??= new();
 
     public async Task RegisterUserAsync(EditContext editContext)
     {
+        _photoError = null;
+
+        if (!await TryReadPhotoAsync())
+        {
+            return;
+        }
+
         var result = await AccountRegistration.PasswordAsync(Input.Email, Input.Password);
         await result.Match(
             created => CompleteRegistrationAsync(created.User),
@@ -34,30 +46,72 @@ public sealed partial class Register
             });
     }
 
+    private async Task<bool> TryReadPhotoAsync()
+    {
+        // Only read the form when the request actually carries one; the account flows
+        // are also reachable from component tests and non-form requests.
+        var cropped = HttpContext.Request.HasFormContentType
+            ? HttpContext.Request.Form["PhotoData"].ToString()
+            : string.Empty;
+        if (!string.IsNullOrEmpty(cropped))
+        {
+            if (!ProfilePhotoService.TryDecodeDataUrl(cropped, out var bytes, out var contentType, out var dataError))
+            {
+                _photoError = dataError;
+                return false;
+            }
+
+            if (!ProfilePhotos.TryValidate(contentType, bytes.Length, out var sizeError))
+            {
+                _photoError = sizeError;
+                return false;
+            }
+
+            _photoBytes = bytes;
+            _photoContentType = contentType;
+            return true;
+        }
+
+        // No JavaScript: the plain file input in the form supplies the photo instead.
+        var upload = PhotoUploads.Read(HttpContext);
+        if (upload is null)
+        {
+            _photoError = "Choose a profile photo, position it, and select “Use this crop”.";
+            return false;
+        }
+
+        if (!ProfilePhotos.TryValidate(upload.ContentType, upload.Length, out var photoError))
+        {
+            _photoError = photoError;
+            return false;
+        }
+
+        using var buffer = new MemoryStream();
+        await using var stream = upload.OpenReadStream();
+        await stream.CopyToAsync(buffer, HttpContext.RequestAborted);
+        _photoBytes = buffer.ToArray();
+        _photoContentType = upload.ContentType;
+        return true;
+    }
+
+    private byte[]? _photoBytes;
+    private string? _photoContentType;
+
     private async Task CompleteRegistrationAsync(ApplicationUser user)
     {
         LogUserCreatedWithPassword(Logger);
 
         var userId = await UserManager.GetUserIdAsync(user);
-        var code = await UserManager.GenerateEmailConfirmationTokenAsync(user);
-        code = code.EncodeIdentityToken();
-        var callbackUrl = NavigationManager.GetUriWithQueryParameters(
-            NavigationManager.ToAbsoluteUri("Account/ConfirmEmail").AbsoluteUri,
-            new Dictionary<string, object?>(StringComparer.Ordinal) { ["userId"] = userId, ["code"] = code, ["returnUrl"] = ReturnUrl });
+        // The account write already committed; the required photo must not be abandoned
+        // by request cancellation.
+        await using var content = new MemoryStream(_photoBytes!);
+        var blobName = await ProfilePhotos.SaveAsync(userId, content, _photoContentType!, CancellationToken.None);
+        user.ProfilePhotoBlobName = blobName;
+        user.ProfilePhotoContentType = _photoContentType;
+        await UserManager.UpdateAsync(user);
 
-        await EmailSender.SendConfirmationLinkAsync(user, Input.Email, HtmlEncoder.Default.Encode(callbackUrl));
-
-        if (UserManager.Options.SignIn.RequireConfirmedAccount)
-        {
-            RedirectManager.RedirectTo(
-                "Account/RegisterConfirmation",
-                new(StringComparer.Ordinal) { ["email"] = Input.Email, ["returnUrl"] = ReturnUrl });
-        }
-        else
-        {
-            await SignInManager.SignInAsync(user, isPersistent: false);
-            RedirectManager.RedirectTo(ReturnUrl);
-        }
+        await SignInManager.SignInAsync(user, isPersistent: false);
+        RedirectManager.RedirectTo(ReturnUrl);
     }
 
     [LoggerMessage(EventId = 1011, Level = LogLevel.Information, Message = "User created a new account with password.")]

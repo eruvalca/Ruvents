@@ -1,6 +1,6 @@
-using Ruvents.Features.Account.Models;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Components;
+using Ruvents.Features.Account.Models;
 
 namespace Ruvents.Features.Account.Components;
 

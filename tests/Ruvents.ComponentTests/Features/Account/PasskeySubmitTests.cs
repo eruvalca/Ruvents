@@ -1,11 +1,11 @@
 using System.Diagnostics.CodeAnalysis;
-using Ruvents.Features.Account.Components;
-using Ruvents.Features.Account.Models;
 using Bunit;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
+using Ruvents.Features.Account.Components;
+using Ruvents.Features.Account.Models;
 using Shouldly;
 using Xunit;
 

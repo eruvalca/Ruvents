@@ -1,0 +1,46 @@
+@page "/household"
+@inherits CancellableComponentBase
+@rendermode InteractiveAuto
+
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+
+@inject IPlanningApi Api
+
+<PageTitle>Household members</PageTitle>
+
+<h1>Household members</h1>
+
+@if (_message is not null)
+{
+    <Notice Message="@_message" Kind="@_messageKind" />
+}
+
+<p>Add the people in your household who do not have their own account, such as children. You can mark them as attending when you RSVP.</p>
+
+@if (_members.Count == 0)
+{
+    <p>No household members yet.</p>
+}
+else
+{
+    <ul>
+        @foreach (var member in _members)
+        {
+            <li>
+                <label for="@($"name-{member.Id}")">Name</label>
+                <input id="@($"name-{member.Id}")" value="@member.Name" maxlength="100" @onchange="e => RenameAsync(member.Id, e.Value?.ToString())" />
+                <button type="button" @onclick="() => RemoveAsync(member.Id)">Remove</button>
+            </li>
+        }
+    </ul>
+}
+
+<section>
+    <h2>Add a household member</h2>
+    <div class="form-field">
+        <label for="new-name">Name</label>
+        <input id="new-name" @bind="_newName" maxlength="100" />
+    </div>
+    <button type="button" @onclick="AddAsync">Add</button>
+</section>

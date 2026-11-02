@@ -1,0 +1,34 @@
+@page "/Account/Manage/Photo"
+
+@using Microsoft.AspNetCore.Identity
+@using Ruvents.Data
+
+@inject UserManager<ApplicationUser> UserManager
+@inject IdentityRedirectManager RedirectManager
+
+<PageTitle>Profile photo</PageTitle>
+
+<h3>Profile photo</h3>
+<StatusMessage Message="@_error" />
+
+<p>This is the photo your family sees beside your name. Choose a new image to replace it.</p>
+
+@if (HasPhoto)
+{
+    <p class="photo-manage-preview">
+        <img class="avatar-preview" src="@PhotoUrl" alt="Your current profile photo" width="128" height="128" />
+    </p>
+}
+
+<form @formname="manage-profile-photo" method="post" enctype="multipart/form-data">
+    <AntiforgeryToken />
+    <PhotoCropField @rendermode="InteractiveServer" />
+    <noscript>
+        <div class="form-field">
+            <label for="Photo">Choose a photo</label>
+            <input type="file" id="Photo" name="Photo" accept="image/jpeg,image/png,image/webp" aria-required="true" />
+            <p>Positioning the photo needs JavaScript.</p>
+        </div>
+        <button type="submit">Save photo</button>
+    </noscript>
+</form>
