@@ -2,6 +2,7 @@ using Azure.Storage.Blobs.Models;
 using Microsoft.EntityFrameworkCore;
 using Ruvents.Data;
 using Ruvents.Features.Events.Contracts;
+using Ruvents.Features.Families.Contracts;
 using Ruvents.Storage;
 
 namespace Ruvents.Features.Events.Services;
@@ -10,6 +11,7 @@ internal sealed class CoverImageService(
     BlobStorage blobStorage,
     IDbContextFactory<ApplicationDbContext> dbContextFactory,
     EventService events,
+    IFamilyAccess familyAccess,
     TimeProvider timeProvider) : IEventCovers
 {
     internal const string ContainerName = "event-covers";
@@ -43,6 +45,13 @@ internal sealed class CoverImageService(
 
     public async Task<bool> SaveAsync(Guid eventId, string userId, Stream content, string contentType, CancellationToken cancellationToken)
     {
+        // The stored content type is served back from the application's origin, so the
+        // write path refuses anything but an image even if a caller skips TryValidate.
+        if (!_allowedContentTypes.Contains(contentType, StringComparer.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
         await using var db = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         var calendarEvent = await db.Events.SingleOrDefaultAsync(item => item.Id == eventId, cancellationToken);
         if (calendarEvent is null
@@ -86,14 +95,29 @@ internal sealed class CoverImageService(
         return true;
     }
 
-    public async Task<(Stream Content, string ContentType)?> OpenAsync(Guid eventId, CancellationToken cancellationToken)
+    public async Task<(Stream Content, string ContentType)?> OpenAsync(Guid eventId, string userId, CancellationToken cancellationToken)
     {
         await using var db = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         var reference = await db.Events
             .Where(item => item.Id == eventId)
-            .Select(item => new { item.CoverImageBlobName, item.CoverImageContentType })
+            .Select(item => new { item.FamilyGroupId, item.CoverImageBlobName, item.CoverImageContentType })
             .SingleOrDefaultAsync(cancellationToken);
         if (reference?.CoverImageBlobName is null)
+        {
+            return null;
+        }
+
+        // Covers belong to a family's events, so serving one requires the same
+        // membership the event detail page requires.
+        if (!await familyAccess.IsMemberAsync(reference.FamilyGroupId, userId, cancellationToken))
+        {
+            return null;
+        }
+
+        // Only ever hand back an image type. A blob stored with a script-capable
+        // content type must not run from the application's own origin.
+        var contentType = reference.CoverImageContentType;
+        if (contentType is null || !_allowedContentTypes.Contains(contentType, StringComparer.OrdinalIgnoreCase))
         {
             return null;
         }
@@ -106,6 +130,6 @@ internal sealed class CoverImageService(
         }
 
         var download = await blob.DownloadStreamingAsync(cancellationToken: cancellationToken);
-        return (download.Value.Content, reference.CoverImageContentType ?? "application/octet-stream");
+        return (download.Value.Content, contentType);
     }
 }

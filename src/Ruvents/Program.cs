@@ -130,8 +130,11 @@ builder.Services.Configure<PlatformAdminOptions>(builder.Configuration.GetSectio
 builder.Services.AddIdentityCore<ApplicationUser>(options =>
     {
         // Accounts activate immediately: the deployment does not send email, and password
-        // resets are an administrator action.
-        options.SignIn.RequireConfirmedAccount = false;
+        // resets are an administrator action. The confirmation hook is still enabled
+        // because SignInManager consults it on every sign-in path (password, passkey,
+        // external, two-factor); SuspensionAwareUserConfirmation treats every
+        // unsuspended account as confirmed and is what makes a suspension block sign-in.
+        options.SignIn.RequireConfirmedAccount = true;
         options.Stores.SchemaVersion = IdentitySchemaVersions.Version3;
     })
     .AddRoles<IdentityRole>()

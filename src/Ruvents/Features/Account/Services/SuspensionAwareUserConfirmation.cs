@@ -4,18 +4,13 @@ using Ruvents.Data;
 namespace Ruvents.Features.Account.Services;
 
 /// <summary>
-/// Treats suspended accounts as not confirmed so the shared sign-in gate rejects
-/// password, passkey, two-factor, and external sign-ins with the same result.
+/// Rejects suspended accounts on every sign-in path. SignInManager consults
+/// IUserConfirmation only while SignIn.RequireConfirmedAccount is enabled, which this
+/// application keeps on for exactly that reason, so every unsuspended account counts
+/// as confirmed and accounts still activate without email confirmation.
 /// </summary>
 internal sealed class SuspensionAwareUserConfirmation : IUserConfirmation<ApplicationUser>
 {
-    public async Task<bool> IsConfirmedAsync(UserManager<ApplicationUser> manager, ApplicationUser user)
-    {
-        if (user.IsSuspended)
-        {
-            return false;
-        }
-
-        return !manager.Options.SignIn.RequireConfirmedAccount || await manager.IsEmailConfirmedAsync(user);
-    }
+    public Task<bool> IsConfirmedAsync(UserManager<ApplicationUser> manager, ApplicationUser user) =>
+        Task.FromResult(!user.IsSuspended);
 }

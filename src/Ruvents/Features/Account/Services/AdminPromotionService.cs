@@ -24,6 +24,15 @@ internal sealed class AdminPromotionService(
             return false;
         }
 
+        // Registration never verifies that the person owns the address, so a matching
+        // email alone would let whoever registers it first take the platform Admin
+        // role. Promotion therefore also requires the operator to have confirmed the
+        // account's email out of band.
+        if (!await userManager.IsEmailConfirmedAsync(user))
+        {
+            return false;
+        }
+
         cancellationToken.ThrowIfCancellationRequested();
         if (await userManager.IsInRoleAsync(user, PlatformRoles.Admin))
         {

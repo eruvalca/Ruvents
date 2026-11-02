@@ -6,5 +6,5 @@ internal interface IEventCovers
 
     Task<bool> SaveAsync(Guid eventId, string userId, Stream content, string contentType, CancellationToken cancellationToken);
 
-    Task<(Stream Content, string ContentType)?> OpenAsync(Guid eventId, CancellationToken cancellationToken);
+    Task<(Stream Content, string ContentType)?> OpenAsync(Guid eventId, string userId, CancellationToken cancellationToken);
 }

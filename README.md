@@ -145,7 +145,9 @@ The application plans family gatherings:
 - **Household members** belong to the person's account, so children and other people
   without an account can be marked attending on an RSVP without invented logins.
 - **Events** carry a title, description, structured location, map link, start/end,
-  all-day flag, time zone, optional RSVP deadline, and an optional cover image. Any
+  all-day flag, time zone, optional RSVP deadline, and an optional cover image. Cover
+  images are only served to members of the event's family group, and only an accepted
+  image type is ever returned. Any
   group member may create an event; the creator or any organizer can edit, cancel, or
   restore it. The end time defaults to 30 minutes after the start and must stay after
   it. Creating an event marks the creator as attending, and they can still adjust that
@@ -164,8 +166,13 @@ The application plans family gatherings:
 - **In-app notifications** cover join requests, event changes, announcements, and
   potluck changes, with unread state.
 - **Administration** gives a platform `Admin` role password resets, account suspension,
-  and family-group removal. The account matching the configured `Platform:AdminEmail`
-  is promoted automatically at registration or sign-in.
+  and family-group removal. A suspended account cannot sign in on any path, because the
+  suspension check rides the confirmation hook that `SignInManager` consults for
+  password, passkey, external, and two-factor sign-in.
+  The account matching the configured `Platform:AdminEmail` is promoted automatically at
+  registration or sign-in, but only after the operator has confirmed that account's email:
+  registration cannot prove ownership of an address, so a matching address alone must not
+  grant administrator privileges.
 
 ## Layout, styling, and interaction
 
@@ -355,7 +362,9 @@ See [Aspire's EF migration integration](https://aspire.dev/integrations/database
 
 The application references `Ruvents.ServiceDefaults`. In Development, `/health`
 checks readiness including PostgreSQL connectivity; `/alive` checks process liveness
-independently of PostgreSQL. Aspire monitors `/health`. The database readiness check
+independently of PostgreSQL. Hosted environments opt in with
+`HealthChecks__ExposeEndpoints=true`, which the deployment sets so the container app
+probes reach those paths. Aspire monitors `/health`. The database readiness check
 has a five-second timeout so EF's transient retries do not hold an unhealthy response
 open for minutes. Cancellation is cooperative: an in-flight Npgsql connection attempt
 can delay the response (about 15 seconds in local outage validation). Normal

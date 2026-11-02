@@ -1,3 +1,5 @@
+using System.Security.Claims;
+using Microsoft.AspNetCore.Http;
 using Ruvents.Features.Events.Services;
 
 namespace Ruvents.Features.Events.Endpoints;
@@ -12,9 +14,9 @@ internal static class EventCoverEndpoints
 
     internal static IEndpointRouteBuilder MapEventCoverEndpoints(this IEndpointRouteBuilder endpoints)
     {
-        endpoints.MapGet("/events/{eventId:guid}/cover", async (Guid eventId, CoverImageService covers, CancellationToken cancellationToken) =>
+        endpoints.MapGet("/events/{eventId:guid}/cover", async (Guid eventId, ClaimsPrincipal user, CoverImageService covers, CancellationToken cancellationToken) =>
         {
-            var content = await covers.OpenAsync(eventId, cancellationToken);
+            var content = await covers.OpenAsync(eventId, UserId(user), cancellationToken);
             return content is null
                 ? Results.Text(PlaceholderSvg, "image/svg+xml", statusCode: StatusCodes.Status200OK)
                 : Results.File(content.Value.Content, content.Value.ContentType, enableRangeProcessing: true);
@@ -22,4 +24,6 @@ internal static class EventCoverEndpoints
 
         return endpoints;
     }
+
+    private static string UserId(ClaimsPrincipal user) => user.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
 }

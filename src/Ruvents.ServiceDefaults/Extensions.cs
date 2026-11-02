@@ -97,7 +97,12 @@ public static class Extensions
 
             // Adding health checks endpoints to applications in non-development environments has security implications.
             // See https://aka.ms/aspire/healthchecks for details before enabling these endpoints in non-development environments.
-            if (app.Environment.IsDevelopment())
+            // Hosted environments opt in because the container app probes target these paths; without it the
+            // readiness and liveness probes (and the deployment verification) get a 404 and never succeed.
+            var exposeEndpoints = app.Environment.IsDevelopment()
+                || (bool.TryParse(app.Configuration["HealthChecks:ExposeEndpoints"], out var configured) && configured);
+
+            if (exposeEndpoints)
             {
                 // All health checks must pass for app to be considered ready to accept traffic after starting
                 app.MapHealthChecks(HealthEndpointPath);

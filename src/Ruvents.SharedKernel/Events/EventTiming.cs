@@ -10,22 +10,25 @@ public static class EventTiming
 {
     public static string FormatRange(DateTimeOffset startUtc, DateTimeOffset? endUtc, bool isAllDay, string timeZoneId)
     {
-        var zone = ResolveTimeZone(timeZoneId);
-        var start = TimeZoneInfo.ConvertTime(startUtc, zone);
         if (isAllDay)
         {
-            var startText = start.ToString("ddd, MMM d, yyyy", CultureInfo.CurrentCulture);
+            // All-day ranges are stored at UTC midnight, so their calendar date must
+            // stay in UTC. Converting to the event zone would shift the date backwards
+            // for zones west of UTC and disagree with FormatDate.
+            var startText = startUtc.UtcDateTime.ToString("ddd, MMM d, yyyy", CultureInfo.CurrentCulture);
             if (endUtc is null)
             {
                 return startText;
             }
 
-            var end = TimeZoneInfo.ConvertTime(endUtc.Value, zone);
-            return string.Equals(start.Date, end.Date)
+            var endDate = endUtc.Value.UtcDateTime;
+            return string.Equals(startUtc.UtcDateTime.Date, endDate.Date)
                 ? startText
-                : $"{startText} – {end.ToString("ddd, MMM d, yyyy", CultureInfo.CurrentCulture)}";
+                : $"{startText} – {endDate.ToString("ddd, MMM d, yyyy", CultureInfo.CurrentCulture)}";
         }
 
+        var zone = ResolveTimeZone(timeZoneId);
+        var start = TimeZoneInfo.ConvertTime(startUtc, zone);
         var result = start.ToString("ddd, MMM d, yyyy h:mm tt", CultureInfo.CurrentCulture);
         return endUtc is null
             ? result

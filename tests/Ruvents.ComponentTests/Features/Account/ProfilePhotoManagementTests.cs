@@ -1,8 +1,10 @@
 using System.Diagnostics.CodeAnalysis;
 using Bunit;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Primitives;
 using NSubstitute;
+using Ruvents.Data;
 using Ruvents.Features.Account.Pages.Manage;
 using Shouldly;
 using Xunit;
@@ -97,6 +99,31 @@ public sealed class ProfilePhotoManagementTests
         await account.Photos.DidNotReceiveWithAnyArgs().SaveAsync(default!, default!, default!, Xunit.TestContext.Current.CancellationToken);
         await account.Users.DidNotReceiveWithAnyArgs().UpdateAsync(default!);
         await account.SignIn.DidNotReceiveWithAnyArgs().RefreshSignInAsync(default!);
+    }
+
+    [Fact]
+    public async Task FailedAccountUpdateKeepsThePreviousPhotoAndReportsTheFailureAsync()
+    {
+        await using var context = new BunitContext();
+        var account = context.ConfigureInteractiveAccount();
+        var user = account.Authenticate();
+        user.Id = "member-42";
+        user.ProfilePhotoBlobName = "member-42/old.png";
+        account.Http.Request.Method = HttpMethods.Post;
+        account.Http.Request.ContentType = "application/x-www-form-urlencoded";
+        account.Http.Request.Form = new FormCollection(new Dictionary<string, StringValues>(StringComparer.Ordinal)
+        {
+            ["PhotoData"] = "data:image/jpeg;base64,AQID",
+        });
+        account.Users.UpdateAsync(Arg.Any<ApplicationUser>()).Returns(IdentityResult.Failed());
+
+        var component = account.Render<Photo>(context);
+
+        component.Find(".notice[data-kind='error']").TextContent.ShouldContain("could not be saved");
+        // The database still references the old blob, so it must not be deleted.
+        await account.Photos.DidNotReceiveWithAnyArgs().DeleteAsync(default!, Xunit.TestContext.Current.CancellationToken);
+        await account.SignIn.DidNotReceiveWithAnyArgs().RefreshSignInAsync(default!);
+        account.StatusCookie.ShouldNotContain("updated");
     }
 
     [Fact]

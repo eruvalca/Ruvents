@@ -14,7 +14,8 @@ internal sealed class ProfilePhotoWriter(
     IProfilePhotoStore photos,
     IProfilePhotoUploadReader uploads,
     UserManager<ApplicationUser> userManager,
-    SignInManager<ApplicationUser> signInManager)
+    SignInManager<ApplicationUser> signInManager,
+    IdentityCancellation cancellation)
 {
     // StatusMessage renders error styling for messages that start with "Error", which
     // is the Identity convention these pages already use.
@@ -46,8 +47,19 @@ internal sealed class ProfilePhotoWriter(
             user.ProfilePhotoBlobName = await photos.SaveAsync(user.Id, content, upload.ContentType, CancellationToken.None);
         }
 
+        // The blob is committed, so the account update and cookie refresh that make it
+        // visible must run to completion even if the request disconnects.
+        cancellation.CompleteWrite();
+
         user.ProfilePhotoContentType = upload.ContentType;
-        await userManager.UpdateAsync(user);
+        var update = await userManager.UpdateAsync(user);
+        if (!update.Succeeded)
+        {
+            // The account still references the previous blob, so keep it and report the
+            // failure instead of deleting a photo the database still uses.
+            return "Error: Your profile photo could not be saved. Try again.";
+        }
+
         if (!string.IsNullOrEmpty(previous))
         {
             await photos.DeleteAsync(previous, CancellationToken.None);

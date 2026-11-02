@@ -31,6 +31,7 @@ internal sealed class AccountTestContext(
         var user = new ApplicationUser { Email = "member@example.test" };
         Users.GetUserAsync(Http.User).Returns(user);
         Users.GetUserIdAsync(user).Returns(user.Id);
+        Users.UpdateAsync(Arg.Any<ApplicationUser>()).Returns(IdentityResult.Success);
         return user;
     }
 

@@ -130,6 +130,13 @@ internal static class PlanningEndpoints
                 return Results.BadRequest();
             }
 
+            // The stored content type is served back from this origin, so reject
+            // anything but an accepted image type or size before it is stored.
+            if (!covers.TryValidate(file.ContentType, file.Length, out var coverError))
+            {
+                return Results.BadRequest(coverError);
+            }
+
             await using var stream = file.OpenReadStream();
             return await covers.SaveAsync(id, UserId(user), stream, file.ContentType ?? "application/octet-stream", cancellationToken)
                 ? Results.NoContent()

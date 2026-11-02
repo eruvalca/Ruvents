@@ -10,28 +10,24 @@ internal sealed class AccountSignInService(SignInManager<ApplicationUser> signIn
     public async Task<SignInOutcome> PasswordAsync(string email, string password, bool rememberMe)
     {
         var outcome = (await signInManager.PasswordSignInAsync(email, password, rememberMe, lockoutOnFailure: false)).ToSignInOutcome();
-        await outcome.Match(
-            _ => PromoteConfiguredAdminAsync(email),
-            _ => Task.CompletedTask,
-            _ => Task.CompletedTask,
-            _ => Task.CompletedTask,
-            _ => Task.CompletedTask);
+        if (outcome.IsT0)
+        {
+            // Sign-in has already committed the cookie, so these follow-ups must not be
+            // abandoned by request cancellation.
+            var user = await signInManager.UserManager.FindByEmailAsync(email);
+            if (user is not null && await adminPromotion.PromoteIfConfiguredAsync(user, CancellationToken.None))
+            {
+                // The cookie was issued before the role existed, so reissue it or the
+                // Administration area stays closed until the next sign-in.
+                await signInManager.RefreshSignInAsync(user);
+            }
+        }
+
         return outcome;
     }
 
     public async Task<SignInOutcome> PasskeyAsync(string credentialJson) =>
         (await signInManager.PasskeySignInAsync(credentialJson)).ToSignInOutcome();
-
-    // Sign-in has already committed the cookie, so the promotion follow-up must not be
-    // abandoned by request cancellation.
-    private async Task PromoteConfiguredAdminAsync(string email)
-    {
-        var user = await signInManager.UserManager.FindByEmailAsync(email);
-        if (user is not null)
-        {
-            await adminPromotion.PromoteIfConfiguredAsync(user, CancellationToken.None);
-        }
-    }
 
     public async Task<SignInOutcome> AuthenticatorAsync(string code, bool rememberMe, bool rememberMachine)
     {

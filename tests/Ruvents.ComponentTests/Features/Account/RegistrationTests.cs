@@ -110,7 +110,7 @@ public sealed class RegistrationTests
         await using var context = new BunitContext();
         var account = context.ConfigureAccount();
         account.Users.SupportsUserEmail.Returns(true);
-        account.Users.Options.SignIn.RequireConfirmedAccount = requireConfirmation;
+        account.Users.Options.SignIn.RequireConfirmedEmail = requireConfirmation;
         var login = new ExternalLoginInfo(new ClaimsPrincipal(new ClaimsIdentity()), "Provider", "key", "Provider");
         account.SignIn.GetExternalLoginInfoAsync().Returns(login);
         account.Users.CreateAsync(Arg.Any<ApplicationUser>()).Returns(IdentityResult.Success);
