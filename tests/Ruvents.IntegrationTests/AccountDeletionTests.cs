@@ -11,6 +11,7 @@ using Ruvents.Features.Families.Contracts;
 using Ruvents.Features.Notifications.Contracts;
 using Ruvents.Features.Potluck.Contracts;
 using Ruvents.IntegrationTests.Support;
+using Ruvents.SharedKernel.Families;
 using Ruvents.SharedKernel.Notifications;
 using Ruvents.SharedKernel.Planning;
 using Shouldly;
@@ -82,8 +83,10 @@ public sealed class AccountDeletionTests(PostgresAppFixture fixture)
         (await database.EventRsvpHouseholdMembers.CountAsync(row => row.HouseholdMemberId == household.Id, Token))
             .ShouldBe(1);
 
-        await deletion.DeleteOwnedDataAsync(member.Id, Token);
+        (await deletion.DeleteAccountAsync(member, Token)).ShouldBeTrue();
+        database.ChangeTracker.Clear();
 
+        (await database.Users.CountAsync(item => item.Id == member.Id, Token)).ShouldBe(0);
         (await database.FamilyMemberships.CountAsync(item => item.UserId == member.Id, Token)).ShouldBe(0);
         (await database.HouseholdMembers.CountAsync(item => item.UserId == member.Id, Token)).ShouldBe(0);
         (await database.EventRsvps.CountAsync(item => item.UserId == member.Id, Token)).ShouldBe(0);
@@ -99,6 +102,37 @@ public sealed class AccountDeletionTests(PostgresAppFixture fixture)
         (await potluck.GetAsync(eventId, owner.Id, Token)).ShouldNotBeNull()
             .Slots.Single().Claims.ShouldBeEmpty();
         (await potluck.ClaimAsync(slotId, owner.Id, 1, "Now mine", Token)).ShouldBe(PotluckResult.Ok);
+    }
+
+    [Fact]
+    public async Task DeletingTheLastOrganizerTransfersOwnershipToASurvivingMember()
+    {
+        await using var scope = fixture.CreateScope();
+        var services = scope.ServiceProvider;
+        var users = services.GetRequiredService<UserManager<ApplicationUser>>();
+        var families = services.GetRequiredService<IFamilyGroups>();
+        var deletion = services.GetRequiredService<AccountDeletionService>();
+        var database = services.GetRequiredService<ApplicationDbContext>();
+
+        var owner = await CreateUserAsync(users, "Only organizer");
+        var successor = await CreateUserAsync(users, "Longest member");
+        var groupId = await families.CreateAsync(owner.Id, $"Transfer {Guid.NewGuid():N}", null, Token);
+        database.FamilyMemberships.Add(new FamilyMembership
+        {
+            FamilyGroupId = groupId,
+            UserId = successor.Id,
+            JoinedAtUtc = DateTimeOffset.UnixEpoch,
+        });
+        await database.SaveChangesAsync(Token);
+
+        (await deletion.DeleteAccountAsync(owner, Token)).ShouldBeTrue();
+        database.ChangeTracker.Clear();
+
+        // The surviving family keeps an organizer, so it can still approve join requests.
+        var promoted = await database.FamilyMemberships
+            .SingleAsync(item => item.FamilyGroupId == groupId && item.UserId == successor.Id, Token);
+        promoted.Role.ShouldBe(FamilyRole.Owner);
+        (await database.FamilyMemberships.CountAsync(item => item.UserId == owner.Id, Token)).ShouldBe(0);
     }
 
     private static async Task<ApplicationUser> CreateUserAsync(UserManager<ApplicationUser> users, string displayName)

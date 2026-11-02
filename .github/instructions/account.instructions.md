@@ -51,3 +51,7 @@ Account tests also follow the [test guide](tests.instructions.md).
   any required follow-up, so the first committed write cannot be abandoned partway
   through by request cancellation. `CancellableUserManager` forwards the scoped
   token to Identity stores; do not read `HttpContext` from an interactive circuit.
+  Account deletion is one such workflow: `AccountDeletionService` deletes the
+  planning data and calls `UserManager.DeleteAsync` inside a single execution-strategy
+  transaction, so a rejected deletion rolls the cleanup back. Keep them together
+  rather than committing the cleanup first.

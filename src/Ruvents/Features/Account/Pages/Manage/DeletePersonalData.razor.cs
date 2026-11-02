@@ -50,14 +50,12 @@ public sealed partial class DeletePersonalData
         }
 
         // Everything from here is irreversible, starting with the account's planning
-        // data, so it must not be abandoned partway by request cancellation.
+        // data, so it must not be abandoned partway by request cancellation. The service
+        // deletes the data and the account in one transaction.
         Cancellation.CompleteWrite();
 
         var userId = _user.Id;
-        await AccountData.DeleteOwnedDataAsync(userId, Cancellation.Token);
-
-        var result = await UserManager.DeleteAsync(_user);
-        if (!result.Succeeded)
+        if (!await AccountData.DeleteAccountAsync(_user, Cancellation.Token))
         {
             throw new InvalidOperationException("Unexpected error occurred deleting user.");
         }

@@ -25,7 +25,7 @@ public sealed class DeletePersonalDataTests
         var logger = context.CaptureLogs<DeletePersonalData>();
         account.Users.HasPasswordAsync(user).Returns(hasPassword);
         account.Users.CheckPasswordAsync(user, "current-password").Returns(true);
-        account.Users.DeleteAsync(user).Returns(IdentityResult.Success);
+        account.AccountData.DeleteAccountAsync(user, Arg.Any<CancellationToken>()).Returns(true);
         var navigation = context.Services.GetRequiredService<NavigationManager>();
         navigation.NavigateTo("Account/Manage/DeletePersonalData?confirm=true");
         var component = account.Render<DeletePersonalData>(context);
@@ -48,14 +48,12 @@ public sealed class DeletePersonalDataTests
         {
             await account.Users.DidNotReceiveWithAnyArgs().CheckPasswordAsync(default!, default!);
         }
-        await account.Users.Received(1).DeleteAsync(user);
+        // The service removes the planning data and the account in one transaction.
+        await account.AccountData.Received(1).DeleteAccountAsync(user, Arg.Any<CancellationToken>());
         await account.SignIn.Received(1).SignOutAsync();
-        // The account's planning data is cleared first, while the account still exists.
-        await account.AccountData.Received(1).DeleteOwnedDataAsync(user.Id, Arg.Any<CancellationToken>());
         Received.InOrder(() =>
         {
-            _ = account.AccountData.DeleteOwnedDataAsync(user.Id, Arg.Any<CancellationToken>());
-            _ = account.Users.DeleteAsync(user);
+            _ = account.AccountData.DeleteAccountAsync(user, Arg.Any<CancellationToken>());
             _ = account.SignIn.SignOutAsync();
         });
         logger.GetLoggedEventIds().ShouldContain(1013);
@@ -80,9 +78,8 @@ public sealed class DeletePersonalDataTests
 
         component.Find(".notice[data-kind='error']").TextContent.ShouldContain("Incorrect password.");
         await account.Users.Received(1).CheckPasswordAsync(user, password);
-        await account.Users.DidNotReceiveWithAnyArgs().DeleteAsync(default!);
         await account.SignIn.DidNotReceive().SignOutAsync();
-        await account.AccountData.DidNotReceiveWithAnyArgs().DeleteOwnedDataAsync(default!, Xunit.TestContext.Current.CancellationToken);
+        await account.AccountData.DidNotReceiveWithAnyArgs().DeleteAccountAsync(default!, Xunit.TestContext.Current.CancellationToken);
         logger.GetLoggedEventIds().ShouldNotContain(1013);
     }
 
@@ -93,13 +90,13 @@ public sealed class DeletePersonalDataTests
         var account = context.ConfigureAccount();
         var user = account.Authenticate();
         var logger = context.CaptureLogs<DeletePersonalData>();
-        account.Users.DeleteAsync(user).Returns(IdentityResult.Failed());
+        account.AccountData.DeleteAccountAsync(user, Arg.Any<CancellationToken>()).Returns(false);
         var component = account.Render<DeletePersonalData>(context);
 
         var exception = await Should.ThrowAsync<InvalidOperationException>(() => component.Find("form").SubmitAsync());
 
         exception.Message.ShouldBe("Unexpected error occurred deleting user.");
-        await account.Users.Received(1).DeleteAsync(user);
+        await account.AccountData.Received(1).DeleteAccountAsync(user, Arg.Any<CancellationToken>());
         await account.SignIn.DidNotReceive().SignOutAsync();
         logger.GetLoggedEventIds().ShouldNotContain(1013);
     }
@@ -120,7 +117,7 @@ public sealed class DeletePersonalDataTests
         account.StatusCookie.ShouldContain("Unable to load user");
         await account.Users.DidNotReceiveWithAnyArgs().HasPasswordAsync(default!);
         await account.Users.DidNotReceiveWithAnyArgs().CheckPasswordAsync(default!, default!);
-        await account.Users.DidNotReceiveWithAnyArgs().DeleteAsync(default!);
         await account.SignIn.DidNotReceive().SignOutAsync();
+        await account.AccountData.DidNotReceiveWithAnyArgs().DeleteAccountAsync(default!, Xunit.TestContext.Current.CancellationToken);
     }
 }

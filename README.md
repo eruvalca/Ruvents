@@ -169,8 +169,10 @@ The application plans family gatherings:
   and family-group removal. Deleting your own account clears the planning data it owns
   (memberships, household members, RSVPs with their guests, potluck claims, and
   notifications) while the groups and events it contributed to stay with the family, so
-  a deleted account cannot leave claims blocking a potluck slot. A suspended account
-  cannot sign in on any path, because the
+  a deleted account cannot leave claims blocking a potluck slot. The cleanup and the
+  account deletion commit together, and a group whose last organizer leaves promotes its
+  longest-standing member, so the family can still approve join requests. A suspended
+  account cannot sign in on any path, because the
   suspension check rides the confirmation hook that `SignInManager` consults for
   password, passkey, external, and two-factor sign-in.
   The account matching the configured `Platform:AdminEmail` is promoted automatically at
