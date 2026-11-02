@@ -2,9 +2,11 @@ using System.Text.Encodings.Web;
 using Bunit;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -43,6 +45,9 @@ internal static class BunitAccountExtensions
             context.Services.AddSingleton(emails);
             context.Services.AddScoped<IdentityCancellation>();
             context.Services.AddScoped(_ => Substitute.For<IAdminPromotionService>());
+            var environment = Substitute.For<IWebHostEnvironment>();
+            environment.EnvironmentName.Returns(Environments.Development);
+            context.Services.AddSingleton(environment);
             var photos = Substitute.For<IProfilePhotoStore>();
             photos.TryValidate(Arg.Any<string>(), Arg.Any<long>(), out Arg.Any<string>()).Returns(true);
             photos.SaveAsync(Arg.Any<string>(), Arg.Any<Stream>(), Arg.Any<string>(), Arg.Any<CancellationToken>())

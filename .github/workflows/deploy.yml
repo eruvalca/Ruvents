@@ -14,7 +14,10 @@ permissions:
   contents: read
 
 concurrency:
-  group: ruvents-deploy-${{ github.ref }}
+  # Every dispatch deploys to the same production resource group, so serialize by the
+  # deployment target. Keying this on github.ref would let runs from different branches
+  # overlap and overwrite each other's migration job or web deployment.
+  group: ruvents-deploy-production
   cancel-in-progress: false
 
 env:

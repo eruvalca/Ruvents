@@ -313,9 +313,11 @@ required to upload a profile photo during registration before the rest of the
 application becomes available. Password resets are an administrator action rather than a
 self-service email flow. This setup does not configure a production email service.
 
-Before production, replace `IdentityNoOpEmailSender` and remove or deliberately
-gate the scaffold confirmation link. The current shortcut checks the sender type,
-not the hosting environment; it is not restricted to Development. External-login
+Before production, replace `IdentityNoOpEmailSender` and remove the scaffold
+confirmation link. That shortcut now requires both the no-op sender and the
+Development environment, so a hosted deployment never renders a confirmation token:
+only an operator can confirm an address there, which is what keeps administrator
+promotion out of reach of whoever registers the configured address first. External-login
 provider credentials, production secrets, HTTPS/domain configuration, deployment,
 and the desired exposure of health endpoints also require application-specific work.
 

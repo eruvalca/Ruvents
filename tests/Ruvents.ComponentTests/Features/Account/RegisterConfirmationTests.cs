@@ -1,9 +1,11 @@
 using System.Diagnostics.CodeAnalysis;
 using Bunit;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using NSubstitute;
 using Ruvents.Data;
 using Ruvents.Features.Account.Pages;
@@ -62,6 +64,28 @@ public sealed class RegisterConfirmationTests
         component.FindAll("a").ShouldBeEmpty();
         await account.Users.DidNotReceiveWithAnyArgs().GenerateEmailConfirmationTokenAsync(default!);
         await account.Emails.DidNotReceiveWithAnyArgs().SendConfirmationLinkAsync(default!, default!, default!);
+    }
+
+    [Fact]
+    public async Task HostedEnvironmentWithNoOpSenderNeverExposesAConfirmationTokenAsync()
+    {
+        await using var context = new BunitContext();
+        var account = context.ConfigureAccount();
+        context.Services.AddSingleton<IEmailSender<ApplicationUser>>(new IdentityNoOpEmailSender());
+        // The no-op sender is registered in every environment, so the environment is the
+        // only thing that keeps the token out of a hosted deployment.
+        var environment = Substitute.For<IWebHostEnvironment>();
+        environment.EnvironmentName.Returns(Environments.Production);
+        context.Services.AddSingleton(environment);
+        account.Users.FindByEmailAsync("admin@example.test").Returns(new ApplicationUser());
+        context.Services.GetRequiredService<NavigationManager>()
+            .NavigateTo("Account/RegisterConfirmation?email=admin%40example.test");
+
+        var component = account.Render<RegisterConfirmation>(context);
+
+        component.FindAll("a").ShouldBeEmpty();
+        component.Markup.ShouldNotContain("ConfirmEmail");
+        await account.Users.DidNotReceiveWithAnyArgs().GenerateEmailConfirmationTokenAsync(default!);
     }
 
     [Theory]
