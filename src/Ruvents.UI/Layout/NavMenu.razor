@@ -2,16 +2,38 @@
 
 @inject NavigationManager NavigationManager
 
-<div>
+<div class="nav-shell">
     <nav aria-label="Main navigation">
-        <ul>
+        <ul class="nav-list">
             <li><NavLink href="/" Match="NavLinkMatch.All">Home</NavLink></li>
-            <li><NavLink href="counter">Counter</NavLink></li>
-            <li><NavLink href="auth">Auth Required</NavLink></li>
-            <li>Account</li>
+            <AuthorizeView>
+                <Authorized>
+                    <li><NavLink href="dashboard">Dashboard</NavLink></li>
+                    <li><NavLink href="groups">Family groups</NavLink></li>
+                    <li><NavLink href="household">Household</NavLink></li>
+                    <li><NavLink href="notifications">Notifications</NavLink></li>
+                    <AuthorizeView Roles="Admin">
+                        <Authorized Context="adminContext">
+                            <li><NavLink href="admin">Administration</NavLink></li>
+                        </Authorized>
+                    </AuthorizeView>
+                </Authorized>
+            </AuthorizeView>
+        </ul>
+    </nav>
+
+    <nav aria-label="Account">
+        <ul class="nav-list nav-account">
             <AuthorizeView>
                 <Authorized>
                     <li><NavLink href="Account/Manage">@context.User.Identity?.Name</NavLink></li>
+                    <li>
+                        <form action="Account/Logout" method="post">
+                            <AntiforgeryToken />
+                            <input type="hidden" name="ReturnUrl" value="@_currentUrl" />
+                            <button type="submit" class="nav-logout">Log out</button>
+                        </form>
+                    </li>
                 </Authorized>
                 <NotAuthorized>
                     <li><NavLink href="Account/Register">Register</NavLink></li>
@@ -20,13 +42,4 @@
             </AuthorizeView>
         </ul>
     </nav>
-    <AuthorizeView>
-        <Authorized>
-            <form action="Account/Logout" method="post">
-                <AntiforgeryToken />
-                <input type="hidden" name="ReturnUrl" value="@_currentUrl" />
-                <button type="submit">Logout</button>
-            </form>
-        </Authorized>
-    </AuthorizeView>
 </div>

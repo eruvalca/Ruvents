@@ -4,12 +4,28 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#0f6cbd" />
+    <meta name="theme-color" content="#fdf8f4" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#150f1c" media="(prefers-color-scheme: dark)" />
     <meta name="application-name" content="Ruvents" />
     <base href="/" />
     <ResourcePreloader />
+    <script>
+        // Applied before first paint so an explicit choice never flashes the system theme.
+        (function () {
+            try {
+                var theme = localStorage.getItem('ruvents-theme');
+                if (theme === 'light' || theme === 'dark') {
+                    document.documentElement.dataset.theme = theme;
+                }
+            } catch (error) {
+                // Fall back to the system setting when storage is unavailable.
+            }
+        })();
+    </script>
     <link rel="stylesheet" href="@Assets["Ruvents.styles.css"]" />
+    <link rel="stylesheet" href="@Assets["_content/Ruvents.UI/theme.css"]" />
     <link rel="stylesheet" href="@Assets["app.css"]" />
+    <link rel="stylesheet" href="_content/Cropper.Blazor/cropper.min.css" />
     <ImportMap />
     <link rel="icon" type="image/png" href="favicon.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="@Assets["icons/apple-touch-icon.png"]" />
@@ -22,6 +38,7 @@
         <Routes />
     </CascadingValue>
     <ReconnectModal />
+    <script src="_content/Cropper.Blazor/cropper.min.js"></script>
     <script src="@Assets["_framework/blazor.web.js"]"></script>
     <script src="@Assets["Features/Account/Components/PasskeySubmit.razor.js"]" type="module"></script>
 </body>

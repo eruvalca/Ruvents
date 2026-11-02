@@ -1,11 +1,11 @@
 using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
+using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Identity;
 using Ruvents.Data;
 using Ruvents.Features.Account.Extensions;
 using Ruvents.Features.Account.Models;
-using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Identity;
 
 namespace Ruvents.Features.Account.Pages;
 
@@ -128,7 +128,9 @@ public sealed partial class ExternalLogin
             new Dictionary<string, object?>(StringComparer.Ordinal) { ["userId"] = userId, ["code"] = code });
         await EmailSender.SendConfirmationLinkAsync(user, Input.Email, HtmlEncoder.Default.Encode(callbackUrl));
 
-        if (UserManager.Options.SignIn.RequireConfirmedAccount)
+        // Email confirmation, not the suspension-aware account gate, decides whether a new
+        // external registration signs in immediately.
+        if (UserManager.Options.SignIn.RequireConfirmedEmail)
         {
             RedirectManager.RedirectTo("Account/RegisterConfirmation", new(StringComparer.Ordinal) { ["email"] = Input.Email });
         }

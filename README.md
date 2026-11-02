@@ -136,12 +136,85 @@ Test Explorer without Aspire.
 
 See the [Aspire VS Code extension guide](https://aspire.dev/get-started/aspire-vscode-extension/).
 
-## Layout and styling
+## Planning features
 
-The UI is deliberately bare bones: plain HTML, a CSS Grid for layout, and stock
-Blazor components. There is no component library and no design system. Do not add
-a component framework, a CSS framework, or a CSS preprocessor. The shared kernel
-has no UI dependency.
+The application plans family gatherings:
+
+- **Family groups** are discoverable by name. A public directory lets anyone find a
+  group, and an owner or organizer approves each join request before it grants access.
+- **Household members** belong to the person's account, so children and other people
+  without an account can be marked attending on an RSVP without invented logins.
+- **Events** carry a title, description, structured location, map link, start/end,
+  all-day flag, time zone, optional RSVP deadline, and an optional cover image. Cover
+  images are only served to members of the event's family group, and only an accepted
+  image type is ever returned. Any
+  group member may create an event; the creator or any organizer can edit, cancel, or
+  restore it. The end time defaults to 30 minutes after the start and must stay after
+  it. Creating an event marks the creator as attending, and they can still adjust that
+  RSVP, including which of their household members attend. A member of exactly one
+  family group gets that group selected automatically when creating an event.
+- **RSVPs** are per person: the account holder, their household members, and named
+  additional guests each count separately. A soft deadline closes responses, and the
+  creator or an organizer can reopen it.
+- **Potluck sign-up** is hybrid: organizers pre-fill slots with a needed quantity, and
+  members can also add their own item. Claims record a quantity and an optional
+  description, and organizers can rename or resize a slot, assign one to a member, or
+  remove any claim. A slot is locked for the duration of each change, so simultaneous
+  claims queue instead of over-claiming or failing.
+- **Announcements and comments** form a two-level thread — top-level posts (comments or
+  organizer announcements) plus one level of replies.
+- **In-app notifications** cover join requests, event changes, announcements, and
+  potluck changes, with unread state.
+- **Administration** gives a platform `Admin` role password resets, account suspension,
+  and family-group removal. Deleting your own account clears the planning data it owns
+  (memberships, household members, RSVPs with their guests, potluck claims, and
+  notifications) while the groups and events it contributed to stay with the family, so
+  a deleted account cannot leave claims blocking a potluck slot. The cleanup and the
+  account deletion commit together, and a group whose last organizer leaves promotes its
+  longest-standing member, so the family can still approve join requests. A suspended
+  account cannot sign in on any path, because the
+  suspension check rides the confirmation hook that `SignInManager` consults for
+  password, passkey, external, and two-factor sign-in.
+  The account matching the configured `Platform:AdminEmail` is promoted automatically at
+  registration or sign-in, but only after the operator has confirmed that account's email:
+  registration cannot prove ownership of an address, so a matching address alone must not
+  grant administrator privileges.
+
+## Layout, styling, and interaction
+
+`src/Ruvents.UI/wwwroot/theme.css` owns the visual identity: design tokens for colour,
+type, spacing, elevation, and radius, plus the shared element and card styling. It
+supports light and dark schemes through `prefers-color-scheme`, respects
+`prefers-reduced-motion`, and keeps focus outlines visible. Pages compose design-system
+classes (`notice`, `chip`, `card-grid`, `event-title`, `event-when`, `event-where`)
+with a scoped `.razor.css` file for local layout. There is still no component library,
+CSS framework, or CSS preprocessor.
+
+The shell offers an explicit colour-mode control — auto (follows the system), light,
+or dark. The choice is stored in `localStorage` and applied by `theme.js`; a small
+inline script applies it before first paint so the wrong scheme never flashes.
+`theme.css` defines its dark tokens twice, once for `[data-theme="dark"]` and once for
+the system setting, so keep the two blocks in sync. Its base block forces
+`[hidden] { display: none !important; }` because an author `display` rule on a class
+such as `.notice` would otherwise beat the user agent's `[hidden]` styling.
+
+Profile photos are cropped before upload. `PhotoCropField` wraps Cropper.Blazor and
+frames the crop box as a circle, so the user sees the avatar they are producing
+rather than a square. The cropped image travels
+to the server in a hidden `PhotoData` field, so registration keeps its normal static
+form post; without JavaScript the `<noscript>` file input still supplies the photo.
+`ProfilePhotoWriter` owns the shared replace path, which the required-photo gate at
+`/Account/Photo` and `Account/Manage/Photo` both use; account management also shows
+the current photo on the profile page. The picker stays disabled until the circuit
+connects, because a selection made during prerendering is dropped without notice.
+The component renders the form's submit button only once a crop exists, because a
+static page cannot observe state inside an interactive child.
+
+Planning pages live in `Ruvents.UI` so they can run under either renderer. They depend
+on `IPlanningApi`: the server host implements it with the application services and the
+WebAssembly host calls the `/api/planning` JSON endpoints. Account and Identity pages
+stay in the server project because they need static form posts, cookies, and
+`HttpContext`. The shared kernel holds the DTOs both hosts serialize.
 
 Markup uses native elements — `<button>`, `<a>`, `<ul>`, `<section>` — and Blazor's
 own components: `NavLink`, `AuthorizeView`, `PageTitle`, `AntiforgeryToken`,
@@ -150,25 +223,25 @@ own components: `NavLink`, `AuthorizeView`, `PageTitle`, `AntiforgeryToken`,
 custom component that only forwards attributes. A `<button type="button">` with
 `@onclick` is the stock way to handle a click; Blazor ships no button component.
 
-Two CSS grids carry the structure:
+CSS grids carry the structure:
 
 - `src/Ruvents.UI/Layout/MainLayout.razor.css` defines one grid with named `header`,
-  `navigation`, `content`, and `footer` areas. At 48rem and wider the navigation is
-  a 15rem column beside the content; below that the same grid collapses to a single
-  column with the navigation above the content. The navigation is always rendered,
-  so no toggle, overlay, focus trap, or JavaScript is involved and the shell works
-  under static SSR.
+  `navigation`, `content`, and `footer` areas. At 52rem and wider the navigation is a
+  sticky column beside the content; below that the same grid collapses to a single
+  column with a horizontally scrolling navigation above the content. The navigation is
+  always rendered, so no toggle, overlay, focus trap, or JavaScript is involved and the
+  shell works under static SSR.
 - `src/Ruvents/Features/Account/Components/ManageLayout.razor.css` places the account
   menu beside the page content once there is room, and stacks them below that.
-- `src/Ruvents.UI/Features/Home/Pages/Home.razor.css` uses an `auto-fit` grid so the
-  two home sections sit side by side when space allows. Its track minimum is clamped
-  with `min(100%, 16rem)` so enlarged browser text cannot force overflow.
+- `src/Ruvents.UI/Features/Home/Pages/Home.razor.css` builds the aurora hero and an
+  `auto-fit` feature grid. Track minimums are clamped with `min(100%, 16rem)` so
+  enlarged browser text cannot force overflow.
 
 `src/Ruvents/wwwroot/app.css` holds functional rules only: form controls stay at
 16px so mobile browsers do not zoom on focus, and `.table-container` keeps wide
-account tables inside the content column instead of widening the page. It is not a
-place for colours, typography, or component styling. Anything presentational should
-be added deliberately as a scoped `.razor.css` file for the component that needs it.
+tables inside the content column instead of widening the page. Presentational rules
+belong in `theme.css` or in a scoped `.razor.css` file for the component that needs
+them.
 
 Navigation uses ordinary `NavLink` anchors inside `<ul>` lists. Native anchors
 preserve accessible names and keyboard order before JavaScript initializes, and
@@ -241,13 +314,16 @@ supports a context per Blazor operation; Identity can still resolve the scoped
 context. Dispose factory-created contexts with `await using`.
 
 Identity schema version 3 is retained, including the `AspNetUserPasskeys` table.
-Development registration uses the existing no-op email sender: follow the confirmation
-link on the registration confirmation page before logging in. This setup does not
-configure a production email service or deployment infrastructure.
+Registration does not send email: accounts activate immediately, and every account is
+required to upload a profile photo during registration before the rest of the
+application becomes available. Password resets are an administrator action rather than a
+self-service email flow. This setup does not configure a production email service.
 
-Before production, replace `IdentityNoOpEmailSender` and remove or deliberately
-gate the scaffold confirmation link. The current shortcut checks the sender type,
-not the hosting environment; it is not restricted to Development. External-login
+Before production, replace `IdentityNoOpEmailSender` and remove the scaffold
+confirmation link. That shortcut now requires both the no-op sender and the
+Development environment, so a hosted deployment never renders a confirmation token:
+only an operator can confirm an address there, which is what keeps administrator
+promotion out of reach of whoever registers the configured address first. External-login
 provider credentials, production secrets, HTTPS/domain configuration, deployment,
 and the desired exposure of health endpoints also require application-specific work.
 
@@ -294,7 +370,9 @@ See [Aspire's EF migration integration](https://aspire.dev/integrations/database
 
 The application references `Ruvents.ServiceDefaults`. In Development, `/health`
 checks readiness including PostgreSQL connectivity; `/alive` checks process liveness
-independently of PostgreSQL. Aspire monitors `/health`. The database readiness check
+independently of PostgreSQL. Hosted environments opt in with
+`HealthChecks__ExposeEndpoints=true`, which the deployment sets so the container app
+probes reach those paths. Aspire monitors `/health`. The database readiness check
 has a five-second timeout so EF's transient retries do not hold an unhealthy response
 open for minutes. Cancellation is cooperative: an in-flight Npgsql connection attempt
 can delay the response (about 15 seconds in local outage validation). Normal
@@ -363,9 +441,12 @@ page load or an enhanced-navigation GET fails, the app serves the offline screen
 with a `503` so an interrupted load cannot be mistaken for a successful
 operation. Signing in and saving data always need the server.
 
-When a new version is ready the shell shows an update notice. Nothing reloads
-until you choose **Reload to update**, and only the tab that asked reloads; other
-tabs keep their state and prompt separately. See
+The update notice appears only when a newer worker is waiting while an older worker
+still controls the page, so a first visit — installed or not — never reports a "new
+version". Choosing **Later** keeps it hidden for the rest of the browser session, and
+a subsequently published version offers it again. Nothing reloads until you choose
+**Reload to update**, and only the tab that asked reloads; other tabs keep their
+state and prompt separately. See
 [build/README.md](build/README.md#pwa-build-assets) for generation rules and the
 [UI instructions](.github/instructions/ui.instructions.md) for the constraints.
 
@@ -422,6 +503,27 @@ References: [Aspire MCP](https://aspire.dev/reference/cli/commands/aspire-agent-
 [Copilot CLI skills](https://docs.github.com/en/copilot/how-tos/copilot-cli/customize-copilot/add-skills),
 [Copilot custom instructions](https://docs.github.com/en/copilot/how-tos/copilot-cli/customize-copilot/add-custom-instructions),
 [Copilot desktop](https://docs.github.com/en/copilot/how-tos/github-copilot-app/customize-github-copilot-app).
+
+## Deployment
+
+`.github/workflows/deploy.yml` is manual only (`workflow_dispatch`) and is gated on the
+repository variable `DEPLOY_ENABLED`. Until that variable is set to `true`, only the
+artifact-validation job runs and nothing reaches Azure. The deploy job uses OIDC
+(`azure/login`) with `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`,
+`AZURE_RESOURCE_GROUP`, and `AZURE_LOCATION`, then runs `aspire deploy` for the
+`Production` environment and verifies `/alive`, `/health`, and `/Account/Login`.
+
+`aspire publish` produces the deployment artifacts without touching Azure, and
+`ci.yml` validates them on every relevant pull request. The published model provisions
+Azure Database for PostgreSQL, a storage account for profile photos and event covers, a
+Log Analytics workspace with Application Insights, a Container Apps environment, and a
+managed identity shared by the web app and the migration job. The migration bundle runs
+as a Container App Job that must succeed before the web revision is provisioned.
+
+Bundle generation runs before Azure resolves the database connection string, so the
+AppHost sets `Ruvents__DesignTime=true` on the migration tool only. With that flag the
+application builds its model against a provider-only placeholder instead of failing;
+a running application never sets it, so a missing connection string still fails fast.
 
 ## Validation
 

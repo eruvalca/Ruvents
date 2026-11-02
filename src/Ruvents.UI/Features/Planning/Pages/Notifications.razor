@@ -1,0 +1,47 @@
+@page "/notifications"
+@inherits CancellableComponentBase
+@rendermode InteractiveAuto
+
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+
+@inject IPlanningApi Api
+
+<PageTitle>Notifications</PageTitle>
+
+<h1>Notifications</h1>
+
+@if (_message is not null)
+{
+    <Notice Message="@_message" Kind="@_messageKind" />
+}
+
+@if (_items.Count == 0)
+{
+    <p>You have no notifications.</p>
+}
+else
+{
+    <button type="button" @onclick="MarkAllAsync">Mark all as read</button>
+    <ul>
+        @foreach (var item in _items)
+        {
+            <li>
+                <strong>@item.Title</strong>
+                @if (!item.IsRead)
+                {
+                    <span class="chip" data-tone="accent">New</span>
+                }
+                <span> — @item.Body</span>
+                @if (item.Link is not null)
+                {
+                    <a href="@item.Link">Open</a>
+                }
+                @if (!item.IsRead)
+                {
+                    <button type="button" @onclick="() => MarkReadAsync(item.Id)">Mark read</button>
+                }
+            </li>
+        }
+    </ul>
+}

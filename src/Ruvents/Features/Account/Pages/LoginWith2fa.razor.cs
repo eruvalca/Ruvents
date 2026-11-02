@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
-using Ruvents.Data;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Identity;
+using Ruvents.Data;
 
 namespace Ruvents.Features.Account.Pages;
 

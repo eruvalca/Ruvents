@@ -1,8 +1,8 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
-using Ruvents.Testing;
 using Aspire.Hosting.ApplicationModel;
 using Aspire.Hosting.Testing;
+using Ruvents.Testing;
 using Shouldly;
 using Xunit;
 
@@ -32,7 +32,8 @@ public sealed class ApplicationStartupTests
         }
 
         var home = await client.GetStringAsync(new Uri("/", UriKind.Relative), timeout.Token);
-        home.ShouldContain("Welcome to Ruvents");
+        home.ShouldContain("Gather everyone");
+        home.ShouldContain("Family moments, organized");
         home.ShouldContain("site-navigation");
 
         using var openApi = await client.GetAsync(new Uri("/openapi/v1.json", UriKind.Relative), timeout.Token);

@@ -1,10 +1,10 @@
 using System.Diagnostics.CodeAnalysis;
-using Ruvents.Features.Account.Components;
 using Bunit;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
+using Ruvents.Features.Account.Components;
 using Shouldly;
 using Xunit;
 

@@ -1,7 +1,4 @@
 using System.Diagnostics.CodeAnalysis;
-using Ruvents.Data;
-using Ruvents.Features.Account.Models;
-using Ruvents.Features.Account.Pages;
 using Bunit;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Http;
@@ -9,6 +6,9 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
+using Ruvents.Data;
+using Ruvents.Features.Account.Models;
+using Ruvents.Features.Account.Pages;
 using Shouldly;
 using Xunit;
 

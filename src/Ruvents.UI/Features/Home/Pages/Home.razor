@@ -1,33 +1,56 @@
 @page "/"
 
-<PageTitle>Home</PageTitle>
+<PageTitle>Ruvents</PageTitle>
 
-<h1>Welcome to Ruvents</h1>
-<p>Make yourself at home. Try the counter or sign in to manage your account.</p>
-
-<div class="home-content">
-    <section>
-        <h2>Try the counter</h2>
-        <p>A simple place to try an interactive page.</p>
-        <ul>
-            <li><a href="counter">Open counter</a></li>
-        </ul>
-    </section>
-    <section>
-        <h2>Your account</h2>
-        <p>Manage your profile, password, and sign-in options.</p>
+<section class="hero">
+    <p class="hero-eyebrow">Family events · potlucks · RSVPs</p>
+    <h1>Gather everyone, without the group-chat chaos.</h1>
+    <p class="hero-lede">
+        Create an event once, tell your whole family, and watch the RSVPs and
+        potluck sign-ups fill in. No screenshots, no “who is bringing what?”
+        threads, no lost details.
+    </p>
+    <div class="hero-actions">
         <AuthorizeView>
             <Authorized>
-                <ul>
-                    <li><a href="Account/Manage">Manage account</a></li>
-                </ul>
+                <a class="button-primary" href="dashboard">Open your dashboard</a>
+                <a class="button-secondary" href="groups">Your family groups</a>
             </Authorized>
             <NotAuthorized>
-                <ul>
-                    <li><a href="Account/Login">Log in</a></li>
-                    <li><a href="Account/Register">Create an account</a></li>
-                </ul>
+                <a class="button-primary" href="Account/Register">Create your account</a>
+                <a class="button-secondary" href="Account/Login">I already have an account</a>
             </NotAuthorized>
         </AuthorizeView>
+    </div>
+</section>
+
+<div class="feature-grid">
+    <section>
+        <h2>One shared calendar</h2>
+        <p>
+            Every event carries the details that matter: when, where, a map link,
+            an RSVP deadline, and a cover image so it is instantly recognizable.
+        </p>
+    </section>
+    <section>
+        <h2>Everyone accounted for</h2>
+        <p>
+            Household members without accounts — like the kids — are marked
+            attending right alongside you, and additional guests get their own names.
+        </p>
+    </section>
+    <section>
+        <h2>Potluck, sorted</h2>
+        <p>
+            Open sign-up on an event, pre-fill the slots you need, and let everyone
+            claim a dish or add their own. You always see what is still missing.
+        </p>
+    </section>
+    <section>
+        <h2>Announcements with replies</h2>
+        <p>
+            Organizers post announcements; members comment and reply in a single
+            tidy thread, so nothing important scrolls away.
+        </p>
     </section>
 </div>

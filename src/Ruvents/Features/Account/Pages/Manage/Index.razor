@@ -13,6 +13,16 @@
 <h3>Profile</h3>
 <StatusMessage />
 
+@if (_user is not null)
+{
+    <div class="account-photo">
+        <img class="avatar-preview" src="@PhotoUrl" alt="Your profile photo" width="96" height="96" />
+        <p>
+            <a href="Account/Manage/Photo">Change your profile photo</a>
+        </p>
+    </div>
+}
+
 <EditForm class="account-form" Model="Input" FormName="profile" OnValidSubmit="OnValidSubmitAsync" method="post">
     <DataAnnotationsValidator />
     <ValidationSummary class="error-text" role="alert" />

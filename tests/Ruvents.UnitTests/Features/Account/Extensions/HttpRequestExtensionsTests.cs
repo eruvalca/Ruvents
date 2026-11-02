@@ -1,6 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
-using Ruvents.Features.Account.Extensions;
 using Microsoft.AspNetCore.Http;
+using Ruvents.Features.Account.Extensions;
 using Shouldly;
 using Xunit;
 

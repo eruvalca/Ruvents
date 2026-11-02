@@ -1,5 +1,5 @@
-using Ruvents.Features.Account.Services;
 using Microsoft.AspNetCore.Components;
+using Ruvents.Features.Account.Services;
 
 namespace Ruvents.Features.Account.Components;
 
@@ -14,6 +14,8 @@ public sealed partial class StatusMessage
     private HttpContext HttpContext { get; set; } = default!;
 
     private string? DisplayMessage => Message ?? _messageFromCookie;
+
+    private string Kind => DisplayMessage?.StartsWith("Error", StringComparison.Ordinal) == true ? "error" : "success";
 
     protected override void OnInitialized()
     {

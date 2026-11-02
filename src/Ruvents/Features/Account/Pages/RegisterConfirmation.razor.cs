@@ -1,8 +1,8 @@
+using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Identity;
 using Ruvents.Data;
 using Ruvents.Features.Account.Extensions;
 using Ruvents.Features.Account.Services;
-using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Identity;
 
 namespace Ruvents.Features.Account.Pages;
 
@@ -34,9 +34,12 @@ public sealed partial class RegisterConfirmation
             HttpContext.Response.StatusCode = StatusCodes.Status404NotFound;
             _statusMessage = "Error finding user for unspecified email";
         }
-        else if (EmailSender is IdentityNoOpEmailSender)
+        else if (EmailSender is IdentityNoOpEmailSender && Environment.IsDevelopment())
         {
-            // Once you add a real email sender, you should remove this code that lets you confirm the account
+            // Development convenience only. In a hosted environment the no-op sender is
+            // still registered, but rendering the link there would let anyone confirm
+            // any address they can register, which is what gates administrator
+            // promotion. Production confirmation is an operator action.
             var userId = await UserManager.GetUserIdAsync(user);
             var code = await UserManager.GenerateEmailConfirmationTokenAsync(user);
             code = code.EncodeIdentityToken();

@@ -1,9 +1,9 @@
-using Ruvents.Data;
-using Ruvents.Features.Account.Extensions;
-using Ruvents.Features.Account.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Identity;
+using Ruvents.Data;
+using Ruvents.Features.Account.Extensions;
+using Ruvents.Features.Account.Services;
 
 namespace Ruvents.Features.Account.Pages.Manage;
 

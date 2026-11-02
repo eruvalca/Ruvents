@@ -1,7 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
+using Microsoft.AspNetCore.Identity;
 using Ruvents.Features.Account.Extensions;
 using Ruvents.Features.Account.Models;
-using Microsoft.AspNetCore.Identity;
 using Shouldly;
 using Xunit;
 

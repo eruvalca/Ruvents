@@ -1,14 +1,16 @@
 using System.ComponentModel.DataAnnotations;
-using Ruvents.Data;
-using Ruvents.Features.Account.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Identity;
+using Ruvents.Data;
+using Ruvents.Features.Account.Services;
 
 namespace Ruvents.Features.Account.Pages.Manage;
 
 public sealed partial class DeletePersonalData
 {
     [Inject] private IdentityCancellation Cancellation { get; set; } = default!;
+
+    [Inject] private IAccountDeletionData AccountData { get; set; } = default!;
 
     private string? _message;
     private ApplicationUser? _user;
@@ -47,17 +49,19 @@ public sealed partial class DeletePersonalData
             return;
         }
 
-        var result = await UserManager.DeleteAsync(_user);
-        if (!result.Succeeded)
+        // Everything from here is irreversible, starting with the account's planning
+        // data, so it must not be abandoned partway by request cancellation. The service
+        // deletes the data and the account in one transaction.
+        Cancellation.CompleteWrite();
+
+        var userId = _user.Id;
+        if (!await AccountData.DeleteAccountAsync(_user, Cancellation.Token))
         {
             throw new InvalidOperationException("Unexpected error occurred deleting user.");
         }
 
-        Cancellation.CompleteWrite();
-
         await SignInManager.SignOutAsync();
 
-        var userId = await UserManager.GetUserIdAsync(_user);
         LogUserDeleted(Logger, userId);
 
         RedirectManager.RedirectToCurrentPage();

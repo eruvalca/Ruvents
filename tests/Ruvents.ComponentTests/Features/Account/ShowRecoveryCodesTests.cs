@@ -1,8 +1,8 @@
 using System.Diagnostics.CodeAnalysis;
-using Ruvents.Features.Account.Components;
 using Bogus;
 using Bunit;
 using Microsoft.AspNetCore.Http;
+using Ruvents.Features.Account.Components;
 using Shouldly;
 using Xunit;
 

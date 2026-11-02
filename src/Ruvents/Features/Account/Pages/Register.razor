@@ -6,11 +6,13 @@
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.AspNetCore.WebUtilities
 @using Ruvents.Data
+@using Ruvents.UI.Components
 
 @inject UserManager<ApplicationUser> UserManager
 @inject AccountRegistrationService AccountRegistration
 @inject SignInManager<ApplicationUser> SignInManager
-@inject IEmailSender<ApplicationUser> EmailSender
+@inject IProfilePhotoStore ProfilePhotos
+@inject IProfilePhotoUploadReader PhotoUploads
 @inject ILogger<Register> Logger
 @inject NavigationManager NavigationManager
 @inject IdentityRedirectManager RedirectManager
@@ -21,7 +23,11 @@
 
 <div class="account-sections">
     <StatusMessage Message="@Message" />
-    <EditForm class="account-form" Model="Input" method="post" OnValidSubmit="RegisterUserAsync" FormName="register">
+    @if (_photoError is not null)
+    {
+        <Notice Message="@_photoError" Kind="error" />
+    }
+    <EditForm class="account-form" Model="Input" method="post" enctype="multipart/form-data" OnValidSubmit="RegisterUserAsync" FormName="register">
         <DataAnnotationsValidator />
         <h2>Create a new account.</h2>
         <hr />
@@ -41,6 +47,14 @@
             <InputText type="password" @bind-Value="Input.ConfirmPassword" id="Input.ConfirmPassword" autocomplete="new-password" aria-required="true" placeholder="password" />
             <ValidationMessage For="() => Input.ConfirmPassword" class="error-text" />
         </div>
+        <PhotoCropField @rendermode="InteractiveServer" />
+        <noscript>
+            <div class="form-field">
+                <label for="Photo">Profile photo</label>
+                <input type="file" id="Photo" name="Photo" accept="image/jpeg,image/png,image/webp" aria-required="true" />
+                <p>A photo is required to use the application. Positioning the photo needs JavaScript.</p>
+            </div>
+        </noscript>
         <button type="submit">Register</button>
     </EditForm>
     <section>

@@ -1,9 +1,9 @@
 using System.Diagnostics.CodeAnalysis;
-using Ruvents.Features.Account.Pages.Manage;
 using Bunit;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
+using Ruvents.Features.Account.Pages.Manage;
 using Shouldly;
 using Xunit;
 

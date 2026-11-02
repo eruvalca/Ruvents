@@ -1,10 +1,10 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Security.Claims;
+using Microsoft.AspNetCore.Identity;
+using NSubstitute;
 using Ruvents.Data;
 using Ruvents.Features.Account.Models;
 using Ruvents.Features.Account.Services;
-using Microsoft.AspNetCore.Identity;
-using NSubstitute;
 using Shouldly;
 using Xunit;
 
@@ -30,7 +30,7 @@ public sealed class AccountRegistrationServiceTests
             createdUser = call.Arg<ApplicationUser>();
             return IdentityResult.Success;
         });
-        var service = new AccountRegistrationService(identity.Users, identity.Store, identity.Cancellation);
+        var service = new AccountRegistrationService(identity.Users, identity.Store, identity.Cancellation, Substitute.For<IAdminPromotionService>());
 
         var result = await service.PasswordAsync("member@example.test", "secret");
 
@@ -49,7 +49,7 @@ public sealed class AccountRegistrationServiceTests
         using var identity = IdentityTestContext.Create();
         _ = ConfigureUserInitialization(identity);
         identity.Users.CreateAsync(Arg.Any<ApplicationUser>(), "secret").Returns(RejectedCreation());
-        var service = new AccountRegistrationService(identity.Users, identity.Store, identity.Cancellation);
+        var service = new AccountRegistrationService(identity.Users, identity.Store, identity.Cancellation, Substitute.For<IAdminPromotionService>());
 
         var result = await service.PasswordAsync("member@example.test", "secret");
 
@@ -77,7 +77,7 @@ public sealed class AccountRegistrationServiceTests
             call.Arg<ApplicationUser>().ShouldBeSameAs(createdUser);
             return IdentityResult.Success;
         });
-        var service = new AccountRegistrationService(identity.Users, identity.Store, identity.Cancellation);
+        var service = new AccountRegistrationService(identity.Users, identity.Store, identity.Cancellation, Substitute.For<IAdminPromotionService>());
 
         var result = await service.ExternalAsync("member@example.test", login);
 
@@ -95,7 +95,7 @@ public sealed class AccountRegistrationServiceTests
         using var identity = IdentityTestContext.Create();
         _ = ConfigureUserInitialization(identity);
         identity.Users.CreateAsync(Arg.Any<ApplicationUser>()).Returns(RejectedCreation());
-        var service = new AccountRegistrationService(identity.Users, identity.Store, identity.Cancellation);
+        var service = new AccountRegistrationService(identity.Users, identity.Store, identity.Cancellation, Substitute.For<IAdminPromotionService>());
 
         var result = await service.ExternalAsync("member@example.test", CreateExternalLogin());
 
@@ -118,7 +118,7 @@ public sealed class AccountRegistrationServiceTests
         });
         identity.Users.AddLoginAsync(Arg.Any<ApplicationUser>(), Arg.Any<UserLoginInfo>())
             .Returns(IdentityResult.Failed(new IdentityError { Code = "ProviderConflict", Description = "Provider is already linked" }));
-        var service = new AccountRegistrationService(identity.Users, identity.Store, identity.Cancellation);
+        var service = new AccountRegistrationService(identity.Users, identity.Store, identity.Cancellation, Substitute.For<IAdminPromotionService>());
 
         var result = await service.ExternalAsync("member@example.test", CreateExternalLogin());
 
@@ -138,7 +138,7 @@ public sealed class AccountRegistrationServiceTests
     {
         using var identity = IdentityTestContext.Create();
         identity.Users.SupportsUserEmail.Returns(false);
-        var service = new AccountRegistrationService(identity.Users, identity.Store, identity.Cancellation);
+        var service = new AccountRegistrationService(identity.Users, identity.Store, identity.Cancellation, Substitute.For<IAdminPromotionService>());
 
         await Should.ThrowAsync<NotSupportedException>(() => service.PasswordAsync("member@example.test", "secret"));
 
@@ -153,7 +153,7 @@ public sealed class AccountRegistrationServiceTests
         using var cancelled = new CancellationTokenSource();
         await cancelled.CancelAsync();
         identity.Cancellation.Token = cancelled.Token;
-        var service = new AccountRegistrationService(identity.Users, identity.Store, identity.Cancellation);
+        var service = new AccountRegistrationService(identity.Users, identity.Store, identity.Cancellation, Substitute.For<IAdminPromotionService>());
 
         await Should.ThrowAsync<OperationCanceledException>(
             () => service.PasswordAsync("member@example.test", "secret"));

@@ -1,0 +1,85 @@
+@page "/dashboard"
+@inherits CancellableComponentBase
+
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+
+@inject IPlanningApi Api
+
+<PageTitle>Dashboard</PageTitle>
+
+<div class="dashboard-head">
+    <div>
+        <p class="dashboard-eyebrow">Your week</p>
+        <h1>Welcome back</h1>
+    </div>
+    <a class="dashboard-cta" href="/events/new">+ New event</a>
+</div>
+
+@if (_loading)
+{
+    <p>Gathering your plans…</p>
+}
+else
+{
+    <ul class="stat-row">
+        <li>
+            <span class="stat-value">@_upcoming.Count</span>
+            <span class="stat-label">Upcoming events</span>
+        </li>
+        <li>
+            <span class="stat-value">@_groups.Count</span>
+            <span class="stat-label">Family groups</span>
+        </li>
+        <li>
+            <span class="stat-value">@_unread</span>
+            <span class="stat-label">Unread notifications</span>
+        </li>
+    </ul>
+
+    <section>
+        <h2>Coming up</h2>
+        @if (_upcoming.Count == 0)
+        {
+            <p>Nothing on the calendar yet. Create an event, or open a family group to see everything planned.</p>
+        }
+        else
+        {
+            <ul class="card-grid">
+                @foreach (var calendarEvent in _upcoming)
+                {
+                    <li>
+                        @if (calendarEvent.HasCoverImage)
+                        {
+                            <img class="event-cover" src="@($"events/{calendarEvent.Id}/cover")" alt="" />
+                        }
+                        <a class="event-title" href="@($"events/{calendarEvent.Id}")">@calendarEvent.Title</a>
+                        <p class="event-when">@EventTiming.FormatDate(calendarEvent.StartUtc, calendarEvent.IsAllDay, calendarEvent.TimeZoneId)</p>
+                        <p class="event-where">@calendarEvent.LocationName</p>
+                    </li>
+                }
+            </ul>
+        }
+    </section>
+
+    <section>
+        <h2>Your family groups</h2>
+        @if (_groups.Count == 0)
+        {
+            <p><a href="groups">Find or create a family group</a> to start planning.</p>
+        }
+        else
+        {
+            <ul class="card-grid">
+                @foreach (var familyGroup in _groups)
+                {
+                    <li>
+                        <a class="event-title" href="@($"groups/{familyGroup.Id}")">@familyGroup.Name</a>
+                        <p class="event-where">@familyGroup.MemberCount members</p>
+                        <span class="chip">@familyGroup.Role</span>
+                    </li>
+                }
+            </ul>
+        }
+    </section>
+}

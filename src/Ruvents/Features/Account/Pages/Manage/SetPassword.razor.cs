@@ -1,9 +1,9 @@
 using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Identity;
 using Ruvents.Data;
 using Ruvents.Features.Account.Extensions;
 using Ruvents.Features.Account.Services;
-using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Identity;
 
 namespace Ruvents.Features.Account.Pages.Manage;
 

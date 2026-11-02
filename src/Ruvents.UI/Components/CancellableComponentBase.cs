@@ -20,6 +20,49 @@ public abstract class CancellableComponentBase : ComponentBase, IAsyncDisposable
     protected CancellationTokenSource CreateOperation()
         => CancellationTokenSource.CreateLinkedTokenSource(LifetimeToken, RequestAborted);
 
+    private CancellationTokenSource? _latestOperation;
+    private int _latestVersion;
+
+    /// <summary>
+    /// Runs a read so a newer call supersedes it: the earlier operation is cancelled and its
+    /// late result is discarded instead of overwriting newer state.
+    /// </summary>
+    protected async Task LoadLatestAsync<T>(Func<CancellationToken, Task<T>> load, Action<T> apply)
+    {
+        ArgumentNullException.ThrowIfNull(load);
+        ArgumentNullException.ThrowIfNull(apply);
+
+        // The previous operation disposes its own source when its work unwinds; cancelling
+        // is enough here and avoids pulling a source out from under a live await.
+        if (_latestOperation is not null)
+        {
+            await _latestOperation.CancelAsync();
+        }
+
+        using var operation = CreateOperation();
+        _latestOperation = operation;
+        var version = ++_latestVersion;
+        try
+        {
+            var result = await load(operation.Token);
+            if (version == _latestVersion)
+            {
+                apply(result);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // A newer load superseded this one, or the component is going away.
+        }
+        finally
+        {
+            if (ReferenceEquals(_latestOperation, operation))
+            {
+                _latestOperation = null;
+            }
+        }
+    }
+
     public async ValueTask DisposeAsync()
     {
         _disposal ??= DisposeComponentAsync();
@@ -45,6 +88,8 @@ public abstract class CancellableComponentBase : ComponentBase, IAsyncDisposable
         }
         finally
         {
+            _latestOperation?.Dispose();
+            _latestOperation = null;
             _lifetime.Dispose();
         }
     }

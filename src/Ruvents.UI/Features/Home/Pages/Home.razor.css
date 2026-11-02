@@ -1,8 +1,90 @@
-/* Bare-bones responsive grid: two columns when space allows, one otherwise. The
-   minimum clamps to the available width so enlarged browser text cannot force
-   horizontal scrolling on narrow screens. */
-.home-content {
+/* The landing hero is the one deliberate showpiece: a deep aurora panel, large
+   display type, and two strong calls to action. */
+.hero {
+    overflow: hidden;
+    position: relative;
+    padding: clamp(1.6rem, 1rem + 4vw, 3.4rem);
+    border-radius: calc(var(--radius-lg, 1.5rem) + 0.4rem);
+    border: 1px solid color-mix(in oklab, var(--primary, #7a3ce0) 26%, transparent);
+    color: #fff8f3;
+    background-color: #241230;
+    background-image:
+        radial-gradient(38rem 24rem at 12% 8%, rgb(244 98 58 / 55%), transparent 62%),
+        radial-gradient(34rem 22rem at 92% 0%, rgb(122 60 224 / 68%), transparent 60%),
+        radial-gradient(40rem 26rem at 70% 110%, rgb(15 157 118 / 42%), transparent 62%),
+        linear-gradient(160deg, #2b1533, #1b0f24);
+    box-shadow: var(--shadow-md);
+    margin-bottom: var(--gap-lg, 1.75rem);
+}
+
+
+.hero h1 {
+    max-width: 20ch;
+    color: #fffaf6;
+    font-size: clamp(2.3rem, 1.4rem + 4vw, 4rem);
+    letter-spacing: -0.025em;
+}
+
+.hero-eyebrow {
+    margin: 0 0 0.8rem;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: rgb(255 226 210 / 78%);
+}
+
+.hero-lede {
+    max-width: 46ch;
+    margin-bottom: 1.6rem;
+    font-size: 1.08rem;
+    color: rgb(255 245 238 / 88%);
+}
+
+.hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.7rem;
+}
+
+.hero-actions a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 2.9rem;
+    padding: 0.6rem 1.35rem;
+    border-radius: var(--radius-pill, 999px);
+    font-weight: 700;
+    text-decoration: none;
+    transition: transform 150ms ease, box-shadow 180ms ease, background-color 150ms ease;
+}
+
+.button-primary {
+    color: #1d1026;
+    background-image: linear-gradient(120deg, #ffd9c7, #ffb59a);
+    box-shadow: 0 1px 2px rgb(0 0 0 / 20%);
+}
+
+.button-primary:hover {
+    color: #1d1026;
+    transform: translateY(-1px);
+    box-shadow: 0 3px 9px rgb(0 0 0 / 24%);
+}
+
+.button-secondary {
+    color: #fff6ef;
+    background-color: rgb(255 255 255 / 12%);
+    border: 1px solid rgb(255 255 255 / 34%);
+}
+
+.button-secondary:hover {
+    color: #fffdfa;
+    background-color: rgb(255 255 255 / 20%);
+    transform: translateY(-1px);
+}
+
+.feature-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
-    gap: 1rem;
+    gap: var(--gap-md, 1rem);
 }

@@ -1,0 +1,40 @@
+@page "/Account/Photo"
+
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.AspNetCore.Identity
+@using Ruvents.Data
+@using Ruvents.Features.Account.Services
+
+@attribute [Authorize]
+
+@inject UserManager<ApplicationUser> UserManager
+@inject IdentityRedirectManager RedirectManager
+
+<PageTitle>Profile photo</PageTitle>
+
+<h1>Profile photo</h1>
+
+<StatusMessage Message="@_error" />
+
+<p>Every account needs a profile photo before you can use the application.</p>
+
+@if (HasPhoto)
+{
+    <p>
+        <img class="avatar-preview" src="@PhotoUrl" alt="Your current profile photo" width="160" height="160" />
+    </p>
+}
+
+<form @formname="profile-photo" method="post" enctype="multipart/form-data">
+    <AntiforgeryToken />
+    <PhotoCropField @rendermode="InteractiveServer" />
+    <noscript>
+        <div class="form-field">
+            <label for="Photo">Choose a photo</label>
+            <input type="file" id="Photo" name="Photo" accept="image/jpeg,image/png,image/webp" aria-required="true" />
+            <p>Positioning the photo needs JavaScript.</p>
+        </div>
+        <button type="submit">Save photo</button>
+    </noscript>
+</form>

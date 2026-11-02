@@ -1,0 +1,67 @@
+using System.Globalization;
+
+namespace Ruvents.SharedKernel.Events;
+
+/// <summary>
+/// Formats event instants for display. All-day events keep their calendar date in UTC;
+/// timed events are shown in the event's own time zone.
+/// </summary>
+public static class EventTiming
+{
+    public static string FormatRange(DateTimeOffset startUtc, DateTimeOffset? endUtc, bool isAllDay, string timeZoneId)
+    {
+        if (isAllDay)
+        {
+            // All-day ranges are stored at UTC midnight, so their calendar date must
+            // stay in UTC. Converting to the event zone would shift the date backwards
+            // for zones west of UTC and disagree with FormatDate.
+            var startText = startUtc.UtcDateTime.ToString("ddd, MMM d, yyyy", CultureInfo.CurrentCulture);
+            if (endUtc is null)
+            {
+                return startText;
+            }
+
+            var endDate = endUtc.Value.UtcDateTime;
+            return string.Equals(startUtc.UtcDateTime.Date, endDate.Date)
+                ? startText
+                : $"{startText} – {endDate.ToString("ddd, MMM d, yyyy", CultureInfo.CurrentCulture)}";
+        }
+
+        var zone = ResolveTimeZone(timeZoneId);
+        var start = TimeZoneInfo.ConvertTime(startUtc, zone);
+        var result = start.ToString("ddd, MMM d, yyyy h:mm tt", CultureInfo.CurrentCulture);
+        if (endUtc is null)
+        {
+            return result;
+        }
+
+        // A multi-day timed event must show its end date; otherwise a June 1 to June 3
+        // range reads as ending at 7 PM on June 1.
+        var end = TimeZoneInfo.ConvertTime(endUtc.Value, zone);
+        var endText = end.Date == start.Date
+            ? end.ToString("h:mm tt", CultureInfo.CurrentCulture)
+            : end.ToString("ddd, MMM d, yyyy h:mm tt", CultureInfo.CurrentCulture);
+        return $"{result} – {endText}";
+    }
+
+    public static string FormatDate(DateTimeOffset instant, bool isAllDay, string timeZoneId) =>
+        isAllDay
+            ? instant.UtcDateTime.ToString("ddd, MMM d", CultureInfo.CurrentCulture)
+            : TimeZoneInfo.ConvertTime(instant, ResolveTimeZone(timeZoneId)).ToString("ddd, MMM d h:mm tt", CultureInfo.CurrentCulture);
+
+    private static TimeZoneInfo ResolveTimeZone(string timeZoneId)
+    {
+        try
+        {
+            return TimeZoneInfo.FindSystemTimeZoneById(timeZoneId);
+        }
+        catch (TimeZoneNotFoundException)
+        {
+            return TimeZoneInfo.Utc;
+        }
+        catch (InvalidTimeZoneException)
+        {
+            return TimeZoneInfo.Utc;
+        }
+    }
+}

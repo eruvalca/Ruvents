@@ -1,8 +1,8 @@
 using System.ComponentModel.DataAnnotations;
-using Ruvents.Data;
-using Ruvents.Features.Account.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Identity;
+using Ruvents.Data;
+using Ruvents.Features.Account.Services;
 
 namespace Ruvents.Features.Account.Pages.Manage;
 
@@ -19,6 +19,8 @@ public sealed partial class Index
 
     [SupplyParameterFromForm]
     private InputModel Input { get; set; } = default!;
+
+    private string PhotoUrl => ProfilePhotoService.UrlFor(_user?.Id);
 
     protected override async Task OnInitializedAsync()
     {

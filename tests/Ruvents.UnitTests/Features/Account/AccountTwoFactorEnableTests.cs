@@ -1,9 +1,9 @@
 using System.Diagnostics.CodeAnalysis;
+using Microsoft.AspNetCore.Identity;
+using NSubstitute;
 using Ruvents.Data;
 using Ruvents.Features.Account.Models;
 using Ruvents.Features.Account.Services;
-using Microsoft.AspNetCore.Identity;
-using NSubstitute;
 using Shouldly;
 using Xunit;
 

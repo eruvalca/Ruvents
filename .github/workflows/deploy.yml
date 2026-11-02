@@ -1,0 +1,77 @@
+name: Deploy
+
+# Deployments are manual only. Validation continues to live in ci.yml; this
+# workflow exists so a release can be promoted deliberately and audited.
+on:
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: Why this deployment is running
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  # Every dispatch deploys to the same production resource group, so serialize by the
+  # deployment target. Keying this on github.ref would let runs from different branches
+  # overlap and overwrite each other's migration job or web deployment.
+  group: ruvents-deploy-production
+  cancel-in-progress: false
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  ASPIRE_VERSION: 13.6.4
+
+jobs:
+  publish:
+    name: Validate deployment artifacts
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: ./.github/actions/setup-dotnet
+      - name: Validate deployment artifacts and migration bundle
+        run: aspire publish --environment Production --output-path "$RUNNER_TEMP/ruvents-preview" --non-interactive
+
+  deploy:
+    name: Deploy to Azure
+    needs: publish
+    # Nothing deploys until the repository variable DEPLOY_ENABLED is set to true.
+    # Creating the Azure resources, the OIDC federated credential, and that variable
+    # are deliberate operator steps, not part of this workflow.
+    if: vars.DEPLOY_ENABLED == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    environment: production
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      Azure__SubscriptionId: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      Azure__TenantId: ${{ vars.AZURE_TENANT_ID }}
+      Azure__ResourceGroup: ${{ vars.AZURE_RESOURCE_GROUP }}
+      Azure__Location: ${{ vars.AZURE_LOCATION }}
+      Azure__CredentialSource: AzureCli
+      Azure__AllowResourceGroupCreation: false
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: ./.github/actions/setup-dotnet
+      - uses: azure/login@a641126d1b8aa4d1fa005f4f92df94a3a4c4c906 # v3.1.0
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      - name: Deploy infrastructure, apply migrations, then deploy web
+        run: aspire deploy --environment Production --non-interactive
+      - name: Verify deployed application
+        shell: bash
+        run: |
+          host=$(az containerapp show --resource-group "$Azure__ResourceGroup" --name ruvents-web --query properties.configuration.ingress.fqdn --output tsv)
+          test -n "$host"
+          for path in /alive /health /Account/Login; do
+            curl --fail --silent --show-error --retry 12 --retry-all-errors --retry-delay 5 --max-time 15 "https://$host$path" --output /dev/null
+          done
+          echo "Application: https://$host" >> "$GITHUB_STEP_SUMMARY"
