@@ -1,0 +1,33 @@
+@page "/"
+
+<PageTitle>Home</PageTitle>
+
+<h1>Welcome to Ruvents</h1>
+<p>Make yourself at home. Try the counter or sign in to manage your account.</p>
+
+<div class="home-content">
+    <section>
+        <h2>Try the counter</h2>
+        <p>A simple place to try an interactive page.</p>
+        <ul>
+            <li><a href="counter">Open counter</a></li>
+        </ul>
+    </section>
+    <section>
+        <h2>Your account</h2>
+        <p>Manage your profile, password, and sign-in options.</p>
+        <AuthorizeView>
+            <Authorized>
+                <ul>
+                    <li><a href="Account/Manage">Manage account</a></li>
+                </ul>
+            </Authorized>
+            <NotAuthorized>
+                <ul>
+                    <li><a href="Account/Login">Log in</a></li>
+                    <li><a href="Account/Register">Create an account</a></li>
+                </ul>
+            </NotAuthorized>
+        </AuthorizeView>
+    </section>
+</div>

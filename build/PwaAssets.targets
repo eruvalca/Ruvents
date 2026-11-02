@@ -1,0 +1,60 @@
+<Project>
+  <!-- Hash maintained application inputs, not timestamps. Always enumerate so
+       additions/deletions are detected; unchanged outputs keep their timestamps. -->
+  <Target Name="GeneratePwaWorker" BeforeTargets="AssignTargetPaths"
+          Condition="'$(DesignTimeBuild)' != 'true'">
+    <PropertyGroup>
+      <_PwaRoot>$([System.IO.Path]::GetFullPath('$(IntermediateOutputPath)pwa/'))</_PwaRoot>
+    </PropertyGroup>
+    <ItemGroup>
+      <_PwaInput Include="../**/*.cs;../**/*.razor;../**/*.js;../**/*.css;../**/*.html;../**/*.json;../**/*.webmanifest;../**/*.png;../**/*.csproj"
+                     Exclude="../**/bin/**;../**/obj/**" />
+      <_PwaInput Include="../../Directory.Build.props;../../Directory.Build.targets;../../Directory.Packages.props;../../global.json;../../build/*.targets;../../build/*.js" />
+    </ItemGroup>
+    <MakeDir Directories="$(_PwaRoot)" />
+    <GetFileHash Files="@(_PwaInput)" Algorithm="SHA256">
+      <Output TaskParameter="Items" ItemName="_PwaHashed" />
+    </GetFileHash>
+    <WriteLinesToFile File="$(_PwaRoot)inputs.txt" Lines="@(_PwaHashed->'%(Identity)|%(FileHash)')"
+                      Overwrite="true" WriteOnlyWhenDifferent="true" Encoding="UTF-8" />
+    <GetFileHash Files="$(_PwaRoot)inputs.txt" Algorithm="SHA256">
+      <Output TaskParameter="Hash" PropertyName="_PwaVersion" />
+    </GetFileHash>
+    <ReadLinesFromFile File="../../build/PwaWorker.js">
+      <Output TaskParameter="Lines" ItemName="_PwaWorkerLines" />
+    </ReadLinesFromFile>
+    <WriteLinesToFile File="$(_PwaRoot)service-worker.js" Lines="self.ruventsVersion = '$(_PwaVersion)'%3B;@(_PwaWorkerLines)"
+                      Overwrite="true" WriteOnlyWhenDifferent="true" Encoding="UTF-8" />
+    <ItemGroup>
+      <Content Include="$(_PwaRoot)service-worker.js" Link="wwwroot/service-worker.js" CopyToPublishDirectory="PreserveNewest" />
+      <FileWrites Include="$(_PwaRoot)inputs.txt;$(_PwaRoot)service-worker.js" />
+    </ItemGroup>
+  </Target>
+
+  <!-- Linked Content is discovered against wwwroot by default. Point the runtime
+       file provider at the generated file, as well as including it in publish. -->
+  <Target Name="RegisterPwaWorker" AfterTargets="ResolveCoreStaticWebAssets"
+          DependsOnTargets="GeneratePwaWorker" Condition="'$(DesignTimeBuild)' != 'true'">
+    <ItemGroup>
+      <_PwaOriginal Include="@(StaticWebAsset)"
+                        Condition="'%(StaticWebAsset.Identity)' == '$(_PwaRoot)service-worker.js'" />
+    </ItemGroup>
+    <Error Condition="'@(_PwaOriginal->Count())' != '1'" Text="Expected exactly one generated PWA worker asset." />
+    <ItemGroup>
+      <_PwaCandidate Include="@(_PwaOriginal)">
+        <ContentRoot>$(_PwaRoot)</ContentRoot>
+      </_PwaCandidate>
+      <StaticWebAsset Remove="@(_PwaOriginal)" />
+      <StaticWebAssetEndpoint Remove="@(StaticWebAssetEndpoint)" Condition="'%(StaticWebAssetEndpoint.AssetFile)' == '@(_PwaOriginal)'" />
+    </ItemGroup>
+    <DefineStaticWebAssets CandidateAssets="@(_PwaCandidate)">
+      <Output TaskParameter="Assets" ItemName="_PwaAsset" />
+    </DefineStaticWebAssets>
+    <DefineStaticWebAssetEndpoints CandidateAssets="@(_PwaAsset)" ContentTypeMappings="@(StaticWebAssetContentTypeMapping)">
+      <Output TaskParameter="Endpoints" ItemName="StaticWebAssetEndpoint" />
+    </DefineStaticWebAssetEndpoints>
+    <ItemGroup>
+      <StaticWebAsset Include="@(_PwaAsset)" />
+    </ItemGroup>
+  </Target>
+</Project>

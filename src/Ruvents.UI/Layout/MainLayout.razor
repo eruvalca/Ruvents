@@ -1,0 +1,26 @@
+@inherits LayoutComponentBase
+
+<a class="skip-link" href="#main-content" data-enhance-nav="false">Skip to content</a>
+
+<div class="page">
+    <header class="site-header">
+        <a class="site-name" href="/">Ruvents</a>
+    </header>
+    <div class="site-navigation">
+        <NavMenu />
+    </div>
+    <main id="main-content" class="content-container" tabindex="-1">
+        @Body
+    </main>
+    <footer class="site-footer">
+        <PwaUpdateNotice />
+        <PwaControls />
+        <span>Ruvents</span>
+    </footer>
+</div>
+
+<div id="blazor-error-ui" data-nosnippet>
+    <span>An unhandled error has occurred.</span>
+    <a href="." class="reload">Reload</a>
+    <button type="button" class="dismiss">Dismiss</button>
+</div>

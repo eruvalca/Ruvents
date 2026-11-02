@@ -1,0 +1,12 @@
+/* Bare-bones grid: navigation beside content when space allows. */
+.account-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1rem;
+}
+
+@media (min-width: 62rem) {
+    .account-layout {
+        grid-template-columns: 14rem minmax(0, 1fr);
+    }
+}

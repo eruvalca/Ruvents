@@ -1,0 +1,99 @@
+name: Nightly browser and performance validation
+
+on:
+  schedule:
+    # Daily at 06:17 UTC, avoiding the busiest start-of-hour scheduling window.
+    - cron: '17 6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ruvents-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  ASPIRE_VERSION: 13.6.4
+
+jobs:
+  browser-full:
+    name: Browser full suite
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: ./.github/actions/run-full-browser
+
+  performance:
+    name: Performance validation
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: ./.github/actions/setup-dotnet
+      - uses: ./.github/actions/trust-test-cert
+      - name: Build Playwright test project
+        shell: pwsh
+        run: |
+          dotnet build "tests/Ruvents.PlaywrightTests/Ruvents.PlaywrightTests.csproj" --configuration Release
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+      - name: Install test browser
+        uses: ./.github/actions/install-playwright-browser
+      - name: Run performance cases
+        shell: pwsh
+        run: |
+          # This template ships no Category=Performance cases yet, so a filtered run
+          # reports "Zero tests ran" (exit 8). Ignore only that code: a real failing
+          # case still fails the job, and new performance cases are picked up here.
+          dotnet test --project "tests/Ruvents.PlaywrightTests/Ruvents.PlaywrightTests.csproj" --configuration Release --no-build --max-parallel-test-modules 1 --output Detailed --filter-trait Category=Performance --ignore-exit-code 8 --report-trx --results-directory "$env:RUNNER_TEMP/ruvents-test-results"
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+      - name: Retain test results
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: test-results-performance
+          path: ${{ runner.temp }}/ruvents-test-results/*.trx
+          retention-days: 7
+          if-no-files-found: warn
+      - name: Retain browser failure diagnostics
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: browser-diagnostics-performance
+          path: |
+            tests/Ruvents.PlaywrightTests/bin/Release/net10.0/TestResults/**/trace.zip
+            tests/Ruvents.PlaywrightTests/bin/Release/net10.0/TestResults/**/*.png
+          retention-days: 7
+          if-no-files-found: warn
+
+  report-failures:
+    name: Report nightly failures
+    needs: [browser-full, performance]
+    if: >-
+      ${{
+        !cancelled() &&
+        github.ref == 'refs/heads/main' &&
+        (needs.browser-full.result == 'failure' || needs.performance.result == 'failure')
+      }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      issues: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      COMMIT: ${{ github.sha }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - name: Report full browser failure
+        if: needs.browser-full.result == 'failure'
+        shell: pwsh
+        run: ./scripts/Publish-NightlyValidationIssue.ps1 -Suite Browser -RunUrl $env:RUN_URL -Commit $env:COMMIT
+      - name: Report performance failure or regression
+        if: needs.performance.result == 'failure'
+        shell: pwsh
+        run: ./scripts/Publish-NightlyValidationIssue.ps1 -Suite Performance -RunUrl $env:RUN_URL -Commit $env:COMMIT

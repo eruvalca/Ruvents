@@ -1,0 +1,4 @@
+/* Bare bones: the offline fallback renders without Blazor or application styles. */
+body {
+    margin: 1rem;
+}

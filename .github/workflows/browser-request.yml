@@ -1,0 +1,30 @@
+name: Request browser validation
+
+on:
+  pull_request:
+    types: [labeled, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  ASPIRE_VERSION: 13.6.4
+
+jobs:
+  browser-full:
+    name: Browser full suite
+    # This is the only automatic browser run on pull requests. It is never required.
+    if: |
+      contains(github.event.pull_request.labels.*.name, 'run-full-browser') &&
+      github.event.pull_request.draft == false &&
+      (github.event.action != 'labeled' || github.event.label.name == 'run-full-browser')
+    concurrency:
+      group: ruvents-browser-request-${{ github.ref }}
+      cancel-in-progress: true
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: ./.github/actions/run-full-browser

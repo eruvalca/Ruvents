@@ -1,0 +1,14 @@
+/* Intentionally minimal: this file holds functional rules only, not a design
+   system. Form controls stay at 16px so mobile browsers do not zoom on focus. */
+input,
+select,
+textarea {
+    font-size: 1rem;
+}
+
+/* Passkey and external-login names can be long and unbroken. Keep those tables
+   inside the content column and scroll the container instead of the page. */
+.table-container {
+    max-width: 100%;
+    overflow-x: auto;
+}

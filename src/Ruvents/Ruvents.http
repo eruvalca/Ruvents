@@ -1,0 +1,23 @@
+# Use the HTTPS endpoint reported by `aspire describe` for the web resource.
+# Health endpoints are exposed in Development only. This starter ships no JSON
+# API yet; add requests here as endpoints are added. Signing in and POSTs need
+# the Identity and antiforgery cookies from the same client - never commit them.
+@baseUrl = https://localhost:REPLACE_WITH_ASPIRE_PORT
+
+### Liveness
+GET {{baseUrl}}/alive
+
+### Readiness, including the database check
+GET {{baseUrl}}/health
+
+### Home
+GET {{baseUrl}}/
+
+### Sign in
+GET {{baseUrl}}/Account/Login
+
+### Register
+GET {{baseUrl}}/Account/Register
+
+### OpenAPI document (Development only)
+GET {{baseUrl}}/openapi/v1.json

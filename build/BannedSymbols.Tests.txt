@@ -1,0 +1,4 @@
+// Applied only to IsTestProject projects by Directory.Build.props.
+// Shouldly is the only general assertion library; bUnit markup checks use CompareTo.
+T:Xunit.Assert;Use Shouldly for general assertions. For semantic markup, assert that CompareTo differences ShouldBeEmpty().
+N:FluentAssertions;Use Shouldly for general assertions. For semantic markup, assert that CompareTo differences ShouldBeEmpty().

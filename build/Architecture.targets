@@ -1,0 +1,29 @@
+<Project>
+  <PropertyGroup>
+    <_RuventsArchitectureKernel>$([MSBuild]::NormalizePath('$(MSBuildThisFileDirectory)', '..', 'src', 'Ruvents.SharedKernel', 'Ruvents.SharedKernel.csproj'))</_RuventsArchitectureKernel>
+    <_RuventsArchitectureUi>$([MSBuild]::NormalizePath('$(MSBuildThisFileDirectory)', '..', 'src', 'Ruvents.UI', 'Ruvents.UI.csproj'))</_RuventsArchitectureUi>
+    <_RuventsArchitectureClient>$([MSBuild]::NormalizePath('$(MSBuildThisFileDirectory)', '..', 'src', 'Ruvents.Client', 'Ruvents.Client.csproj'))</_RuventsArchitectureClient>
+    <_RuventsArchitectureBuildTool>$([MSBuild]::NormalizePath('$(MSBuildThisFileDirectory)', 'Ruvents.Build', 'Ruvents.Build.csproj'))</_RuventsArchitectureBuildTool>
+  </PropertyGroup>
+
+  <!-- Validate evaluated items before the build prepares or resolves project references. -->
+  <Target Name="ValidateArchitectureProjectReferences"
+          BeforeTargets="PrepareForBuild;AssignProjectConfiguration"
+          Condition="'$(MSBuildProjectFullPath)' == '$(_RuventsArchitectureKernel)' Or '$(MSBuildProjectFullPath)' == '$(_RuventsArchitectureUi)' Or '$(MSBuildProjectFullPath)' == '$(_RuventsArchitectureClient)'">
+    <ItemGroup>
+      <_RuventsArchitectureAllowed Include="$(_RuventsArchitectureKernel)"
+                                Condition="'$(MSBuildProjectFullPath)' == '$(_RuventsArchitectureUi)' Or '$(MSBuildProjectFullPath)' == '$(_RuventsArchitectureClient)'" />
+      <_RuventsArchitectureAllowed Include="$(_RuventsArchitectureUi)"
+                                Condition="'$(MSBuildProjectFullPath)' == '$(_RuventsArchitectureClient)'" />
+      <!-- The existing Razor validator is a build tool, never an application assembly. -->
+      <_RuventsArchitectureChecked Include="@(ProjectReference)"
+                                Condition="!('$(UsingMicrosoftNETSdkRazor)' == 'true' And '%(ProjectReference.FullPath)' == '$(_RuventsArchitectureBuildTool)' And '%(ProjectReference.ReferenceOutputAssembly)' == 'false')" />
+      <_RuventsArchitectureForbidden Include="@(_RuventsArchitectureChecked->'%(FullPath)')" />
+      <_RuventsArchitectureForbidden Remove="@(_RuventsArchitectureAllowed)" />
+    </ItemGroup>
+    <Error Code="RUVENTSARCH001"
+           File="$(MSBuildProjectFullPath)"
+           Condition="'@(_RuventsArchitectureForbidden)' != ''"
+           Text="Forbidden ProjectReference '%(_RuventsArchitectureForbidden.Identity)'. SharedKernel allows no project references; UI allows only SharedKernel; Client allows only UI and SharedKernel. The Razor validator has a build-only exception. See tests/README.md#architecture-boundaries." />
+  </Target>
+</Project>

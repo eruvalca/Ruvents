@@ -1,0 +1,7 @@
+// Applied to Ruvents, Ruvents.Client, Ruvents.UI, and Ruvents.SharedKernel by Directory.Build.props.
+// Resolve the clock at the application boundary; pass dates and instants into pure calculations.
+P:System.DateTime.Now;Use an injected TimeProvider for the current instant, or resolve the local date at the application boundary.
+P:System.DateTime.UtcNow;Use an injected TimeProvider for the current instant, or pass an explicit instant into pure calculations.
+P:System.DateTime.Today;Resolve the local date at the application boundary, or pass an explicit date into pure calculations.
+P:System.DateTimeOffset.Now;Use an injected TimeProvider for the current instant, or resolve the local date at the application boundary.
+P:System.DateTimeOffset.UtcNow;Use an injected TimeProvider for the current instant, or pass an explicit instant into pure calculations.

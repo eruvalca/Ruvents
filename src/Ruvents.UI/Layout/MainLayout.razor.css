@@ -1,0 +1,60 @@
+/* Bare-bones layout only: one CSS Grid with named areas, collapsing to a single
+   column on narrow screens. No colours, typography, or component styling. */
+.page {
+    display: grid;
+    grid-template-columns: 15rem minmax(0, 1fr);
+    grid-template-areas:
+        "header header"
+        "navigation content"
+        "footer footer";
+    gap: 1rem;
+}
+
+.site-header {
+    grid-area: header;
+}
+
+.site-navigation {
+    grid-area: navigation;
+    min-width: 0;
+    /* Registration uses the email address as the user name, so navigation text
+       can be one long unbroken string. min-width alone does not wrap it. */
+    overflow-wrap: anywhere;
+}
+
+.content-container {
+    grid-area: content;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.site-footer {
+    grid-area: footer;
+}
+
+@media (max-width: 47.99rem) {
+    .page {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-areas:
+            "header"
+            "navigation"
+            "content"
+            "footer";
+    }
+}
+
+/* Blazor reveals this panel by setting its display when an error occurs. Anchor
+   it to the viewport so the message and recovery controls stay reachable at any
+   scroll position, and bound its height so a large message cannot fill the page.
+   System colours keep the overlay legible without introducing a design system. */
+#blazor-error-ui {
+    display: none;
+    position: fixed;
+    inset: auto 0 0;
+    z-index: 1000;
+    max-height: 100dvh;
+    overflow: auto;
+    padding: 0.5rem;
+    background: Canvas;
+    color: CanvasText;
+}

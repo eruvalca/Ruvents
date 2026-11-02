@@ -1,0 +1,8 @@
+/* Bare-bones responsive grid: two columns when space allows, one otherwise. The
+   minimum clamps to the available width so enlarged browser text cannot force
+   horizontal scrolling on narrow screens. */
+.home-content {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+    gap: 1rem;
+}

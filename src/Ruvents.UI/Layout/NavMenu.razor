@@ -1,0 +1,32 @@
+@implements IDisposable
+
+@inject NavigationManager NavigationManager
+
+<div>
+    <nav aria-label="Main navigation">
+        <ul>
+            <li><NavLink href="/" Match="NavLinkMatch.All">Home</NavLink></li>
+            <li><NavLink href="counter">Counter</NavLink></li>
+            <li><NavLink href="auth">Auth Required</NavLink></li>
+            <li>Account</li>
+            <AuthorizeView>
+                <Authorized>
+                    <li><NavLink href="Account/Manage">@context.User.Identity?.Name</NavLink></li>
+                </Authorized>
+                <NotAuthorized>
+                    <li><NavLink href="Account/Register">Register</NavLink></li>
+                    <li><NavLink href="Account/Login">Login</NavLink></li>
+                </NotAuthorized>
+            </AuthorizeView>
+        </ul>
+    </nav>
+    <AuthorizeView>
+        <Authorized>
+            <form action="Account/Logout" method="post">
+                <AntiforgeryToken />
+                <input type="hidden" name="ReturnUrl" value="@_currentUrl" />
+                <button type="submit">Logout</button>
+            </form>
+        </Authorized>
+    </AuthorizeView>
+</div>

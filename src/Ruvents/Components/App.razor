@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0f6cbd" />
+    <meta name="application-name" content="Ruvents" />
+    <base href="/" />
+    <ResourcePreloader />
+    <link rel="stylesheet" href="@Assets["Ruvents.styles.css"]" />
+    <link rel="stylesheet" href="@Assets["app.css"]" />
+    <ImportMap />
+    <link rel="icon" type="image/png" href="favicon.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="@Assets["icons/apple-touch-icon.png"]" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <HeadOutlet />
+</head>
+
+<body>
+    <CascadingValue Name="RequestAborted" Value="HttpContext.RequestAborted" IsFixed="true">
+        <Routes />
+    </CascadingValue>
+    <ReconnectModal />
+    <script src="@Assets["_framework/blazor.web.js"]"></script>
+    <script src="@Assets["Features/Account/Components/PasskeySubmit.razor.js"]" type="module"></script>
+</body>
+
+</html>

@@ -1,0 +1,19 @@
+@using Microsoft.AspNetCore.Identity
+@using Ruvents.Data
+
+@inject SignInManager<ApplicationUser> SignInManager
+
+<nav aria-label="Account settings">
+    <ul>
+        <li><NavLink href="Account/Manage" Match="NavLinkMatch.All">Profile</NavLink></li>
+        <li><NavLink href="Account/Manage/Email">Email</NavLink></li>
+        <li><NavLink href="Account/Manage/ChangePassword">Password</NavLink></li>
+        @if (_hasExternalLogins)
+        {
+            <li><NavLink href="Account/Manage/ExternalLogins">External logins</NavLink></li>
+        }
+        <li><NavLink href="Account/Manage/TwoFactorAuthentication">Two-factor authentication</NavLink></li>
+        <li><NavLink href="Account/Manage/Passkeys">Passkeys</NavLink></li>
+        <li><NavLink href="Account/Manage/PersonalData">Personal data</NavLink></li>
+    </ul>
+</nav>
