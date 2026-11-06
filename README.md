@@ -308,8 +308,10 @@ session lifetime. Data uses an Aspire-managed named volume rather than a reposit
 file. This is a fresh PostgreSQL schema; the original SQLite scaffold is removed.
 
 Aspire supplies `ConnectionStrings:ruventsdb` to both the application and migration
-tool. The application uses Npgsql EF Core 10.0.3, EF Core 10.0.14, and Aspire's
-Npgsql EF integration 13.6.4. Its non-pooled `IDbContextFactory<ApplicationDbContext>`
+tool. The application uses Npgsql EF Core 10.0.3, EF Core 10.0.14, and Aspire's Azure
+Npgsql EF integration 13.6.4. That enrichment adds the managed identity token and TLS
+for Azure's credential-free connection string, while local runs keep using the
+container's username and password. Its non-pooled `IDbContextFactory<ApplicationDbContext>`
 supports a context per Blazor operation; Identity can still resolve the scoped
 context. Dispose factory-created contexts with `await using`.
 

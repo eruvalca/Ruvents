@@ -115,7 +115,10 @@ if (string.IsNullOrEmpty(connectionString))
 }
 // The factory supports one context per Blazor operation and also registers the scoped context used by Identity.
 builder.Services.AddDbContextFactory<ApplicationDbContext>(options => options.UseNpgsql(connectionString));
-builder.EnrichNpgsqlDbContext<ApplicationDbContext>();
+// Azure deployments inject a connection string without credentials; the Azure
+// enrichment supplies the managed identity token and TLS. Local Aspire runs keep
+// using the container's username and password.
+builder.EnrichAzureNpgsqlDbContext<ApplicationDbContext>();
 // Bound readiness independently of EF's transient retries for normal application operations.
 builder.Services.PostConfigure<HealthCheckServiceOptions>(options =>
 {
