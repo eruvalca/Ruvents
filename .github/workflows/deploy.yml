@@ -171,8 +171,11 @@ jobs:
     timeout-minutes: 60
     environment: production
     concurrency:
-      # Serialize deployments to the single production resource group.
+      # Serialize deployments to the single production resource group. Keep every
+      # pending run so an older superseded run cannot replace a newer pending one;
+      # the in-lock tip check still skips work for commits that are no longer the tip.
       group: ruvents-deploy-production
+      queue: max
       cancel-in-progress: false
     permissions:
       contents: read

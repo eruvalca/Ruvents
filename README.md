@@ -512,9 +512,10 @@ Deployment targets **Azure Container Apps** in `Production`. `.github/workflows/
 ("Validate and deploy") runs the full validation on pull requests and on every push to
 `main`. Pull requests and merge groups validate without deploying; every successful
 `main` push deploys, including documentation-only merges. The `deploy` job waits for the
-`fast`, `tests`, and `publish` jobs, only runs for a `push` to `main`, and skips itself
-when a newer `main` push has superseded the commit. Re-run the latest successful `main`
-run to redeploy the current tip without a new commit.
+`fast`, `tests`, and `publish` jobs, only runs for a `push` to `main`, and queues pending
+runs instead of replacing them. Inside the deployment lock it skips itself when a newer
+`main` push has superseded the commit. Re-run the latest successful `main` run to redeploy
+the current tip without a new commit.
 
 ### One-time Azure and GitHub setup
 

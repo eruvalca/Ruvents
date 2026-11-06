@@ -16,6 +16,7 @@ Assert-True ($main -match '(?m)^    needs: \[fast, tests, publish\]$') 'Deployme
 Assert-True ($main -match '(?m)^    environment: production$') 'Deployment must use the production environment.'
 Assert-True ($main -match '(?m)^      - name: Verify this commit is still the tip of main$') 'Deployment must check whether this commit is superseded.'
 Assert-True ($main -match "steps\.tip\.outputs\.superseded != 'true'") 'Deployment steps must be gated on the tip check.'
+Assert-True ($main -match '(?m)^      queue: max$') 'Deployment concurrency must keep pending runs instead of replacing them.'
 Assert-True ($main -notmatch 'DEPLOY_ENABLED|workflow_dispatch') 'Main pushes deploy without a manual enable flag or separate trigger.'
 
 Assert-True ($request -match 'types: \[labeled, synchronize, reopened, ready_for_review\]') 'Opt-in browser runs must support labels and subsequent commits.'
