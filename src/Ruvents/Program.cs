@@ -151,6 +151,26 @@ builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSe
 
 var app = builder.Build();
 
+// The deployment runs this image as a one-shot Container App Job to confirm the
+// configured platform administrator. The flag is never set on the web application,
+// and the job exits without starting the server.
+if (builder.Configuration.GetValue<bool>(PlatformAdminBootstrap.ConfirmConfigurationKey))
+{
+    using var timeout = new CancellationTokenSource(TimeSpan.FromMinutes(5));
+    try
+    {
+        Environment.ExitCode = await PlatformAdminBootstrap.RunAsync(app.Services, builder.Configuration, app.Logger, timeout.Token)
+            ? 0
+            : 1;
+    }
+    finally
+    {
+        // The job never calls RunAsync, so dispose the host explicitly to flush logs.
+        await app.DisposeAsync();
+    }
+    return;
+}
+
 // Request scopes and interactive circuit scopes are distinct. Background revalidation
 // supplies its own token in its fresh scope instead of capturing a request here.
 app.Use(async (context, next) =>

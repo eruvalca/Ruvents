@@ -1,6 +1,6 @@
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
-$main = Get-Content -Raw -Path "$root/.github/workflows/ci.yml"
+$main = Get-Content -Raw -Path "$root/.github/workflows/deploy.yml"
 $request = Get-Content -Raw -Path "$root/.github/workflows/browser-request.yml"
 $nightly = Get-Content -Raw -Path "$root/.github/workflows/nightly-browser.yml"
 
@@ -10,7 +10,14 @@ function Assert-True([bool] $Condition, [string] $Message) {
 
 Assert-True ($main -notmatch '(?m)^  browser-(smoke|full|requested|gate):') 'The main workflow must not define browser jobs.'
 Assert-True ($main -notmatch 'Browser validation gate|Browser smoke|Category=BrowserSmoke|run-full-browser|run-full-browser/action') 'The main workflow must not select or require browser validation.'
-Assert-True ($main -notmatch '(?m)^  deploy:$') 'The main workflow must validate and publish only; there is no deployment job.'
+Assert-True ($main -match '(?m)^  deploy:$') 'The main workflow must define the deployment job.'
+Assert-True ($main -match "github\.event_name == 'push' && github\.ref == 'refs/heads/main'") 'Deployment must run only for main pushes.'
+Assert-True ($main -match '(?m)^    needs: \[fast, tests, publish\]$') 'Deployment must wait for all validation jobs.'
+Assert-True ($main -match '(?m)^    environment: production$') 'Deployment must use the production environment.'
+Assert-True ($main -match '(?m)^      - name: Verify this commit is still the tip of main$') 'Deployment must check whether this commit is superseded.'
+Assert-True ($main -match "steps\.tip\.outputs\.superseded != 'true'") 'Deployment steps must be gated on the tip check.'
+Assert-True ($main -match '(?m)^      queue: max$') 'Deployment concurrency must keep pending runs instead of replacing them.'
+Assert-True ($main -notmatch 'DEPLOY_ENABLED|workflow_dispatch') 'Main pushes deploy without a manual enable flag or separate trigger.'
 
 Assert-True ($request -match 'types: \[labeled, synchronize, reopened, ready_for_review\]') 'Opt-in browser runs must support labels and subsequent commits.'
 Assert-True ($request -match "contains\(github\.event\.pull_request\.labels\.\*\.name, 'run-full-browser'\)") 'The PR browser job must require the explicit opt-in label.'
@@ -27,4 +34,4 @@ Assert-True ($nightly -match 'issues: write') 'Nightly reporting must be able to
 Assert-True ($nightly -match 'Publish-NightlyValidationIssue\.ps1 -Suite Browser') 'Browser failures must be reported.'
 Assert-True ($nightly -match 'Publish-NightlyValidationIssue\.ps1 -Suite Performance') 'Performance failures and regressions must be reported.'
 
-Write-Host 'PASS: PR browser runs are opt-in and both nightly suites report failures.'
+Write-Host 'PASS: PR browser runs are opt-in; deployment is validated, tip-checked, and limited to main pushes.'

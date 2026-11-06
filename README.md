@@ -319,13 +319,15 @@ required to upload a profile photo during registration before the rest of the
 application becomes available. Password resets are an administrator action rather than a
 self-service email flow. This setup does not configure a production email service.
 
-Before production, replace `IdentityNoOpEmailSender` and remove the scaffold
-confirmation link. That shortcut now requires both the no-op sender and the
-Development environment, so a hosted deployment never renders a confirmation token:
-only an operator can confirm an address there, which is what keeps administrator
-promotion out of reach of whoever registers the configured address first. External-login
-provider credentials, production secrets, HTTPS/domain configuration, deployment,
-and the desired exposure of health endpoints also require application-specific work.
+A hosted deployment keeps the no-op sender. It defines `Platform:AdminEmail` and ships
+the manual `ruvents-admin-bootstrap` job, which confirms and promotes that account
+after the operator registers it (see [Deployment](#deployment)). The Development-only
+confirmation link is never rendered in a hosted environment, so registration alone
+cannot promote an administrator. Replacing `IdentityNoOpEmailSender` with a real email
+service remains a separate decision for self-service confirmation and password reset;
+keep the identity contract if that is introduced. External-login provider credentials,
+a stable custom domain, and any further health-endpoint exposure remain
+application-specific decisions.
 
 ## EF migrations
 
@@ -506,24 +508,116 @@ References: [Aspire MCP](https://aspire.dev/reference/cli/commands/aspire-agent-
 
 ## Deployment
 
-`.github/workflows/deploy.yml` is manual only (`workflow_dispatch`) and is gated on the
-repository variable `DEPLOY_ENABLED`. Until that variable is set to `true`, only the
-artifact-validation job runs and nothing reaches Azure. The deploy job uses OIDC
-(`azure/login`) with `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`,
-`AZURE_RESOURCE_GROUP`, and `AZURE_LOCATION`, then runs `aspire deploy` for the
-`Production` environment and verifies `/alive`, `/health`, and `/Account/Login`.
+Deployment targets **Azure Container Apps** in `Production`. `.github/workflows/deploy.yml`
+("Validate and deploy") runs the full validation on pull requests and on every push to
+`main`. Pull requests and merge groups validate without deploying; every successful
+`main` push deploys, including documentation-only merges. The `deploy` job waits for the
+`fast`, `tests`, and `publish` jobs, only runs for a `push` to `main`, and queues pending
+runs instead of replacing them. Inside the deployment lock it skips itself when a newer
+`main` push has superseded the commit. Re-run the latest successful `main` run to redeploy
+the current tip without a new commit.
 
-`aspire publish` produces the deployment artifacts without touching Azure, and
-`ci.yml` validates them on every relevant pull request. The published model provisions
-Azure Database for PostgreSQL, a storage account for profile photos and event covers, a
-Log Analytics workspace with Application Insights, a Container Apps environment, and a
-managed identity shared by the web app and the migration job. The migration bundle runs
-as a Container App Job that must succeed before the web revision is provisioned.
+### One-time Azure and GitHub setup
+
+Sign in with `az login` and `gh auth login`, then run from the repository root:
+
+```powershell
+pwsh ./scripts/Initialize-AzureDeployment.ps1 `
+  -SubscriptionId '<azure-subscription-id>' -Location '<azure-region>' `
+  -AdminEmail '<administrator@example.com>'
+```
+
+The script creates `rg-ruvents-production` and `id-ruvents-github`, registers the
+required Azure providers (including `Microsoft.Storage`), and grants the deployment
+identity **Contributor** and **Role Based Access Control Administrator** within that
+resource group only. It reads GitHub's effective OIDC subject prefix and appends
+`:environment:production` for Azure trust, including immutable owner/repository IDs
+when enabled.
+
+It creates the GitHub `production` environment with a `main`-only policy and writes
+these environment variables: `AZURE_SUBSCRIPTION_ID`, `AZURE_TENANT_ID`,
+`AZURE_CLIENT_ID`, `AZURE_RESOURCE_GROUP`, `AZURE_LOCATION`, and
+`PLATFORM_ADMIN_EMAIL`. No client secret or publish profile is needed.
+
+Protect `main` with the required checks, and consider required reviewers on the
+`production` environment: the deployment identity can change every resource in the
+resource group.
+
+### What gets provisioned
+
+- PostgreSQL Flexible Server 18 (Burstable B1ms, 32 GiB, seven-day backups,
+  Entra-only authentication, no high availability). Its firewall permits Azure
+  services; managed identity controls database access.
+- A storage account for profile photos and event covers, with shared-key access
+  disabled and Blob/Table/Queue Data Contributor granted to the application identity.
+- Log Analytics and Application Insights. `ServiceDefaults` exports to Application
+  Insights when `APPLICATIONINSIGHTS_CONNECTION_STRING` is present; local runs keep
+  using OTLP.
+- A Container Apps environment with ACR Basic and the managed Aspire dashboard.
+- `ruvents-web` with external HTTPS ingress, one replica, and `/alive` and `/health`
+  probes. Container Apps configures Data Protection storage automatically, so keep it
+  stable across revisions.
+- `ruvents-migrations`, a manual job that runs the EF bundle. The deployment pipeline
+  waits for that execution before provisioning the new web revision.
+- `ruvents-admin-bootstrap`, a manual job that confirms and promotes the configured
+  platform administrator.
+
+These are small initial production settings, not a high-availability configuration.
+
+### First administrator
+
+Production keeps the no-op email sender, so account confirmation is an operator
+action. After the first deployment:
+
+1. Register an account with the `PLATFORM_ADMIN_EMAIL` address.
+2. Start the job: `az containerapp job start --name ruvents-admin-bootstrap --resource-group rg-ruvents-production`.
+3. Sign in. The job sets `EmailConfirmed` and grants the platform `Admin` role. It is
+   idempotent and exits without serving HTTP.
+
+Anyone can register that address, so register it immediately after the first
+deployment and run the job before inviting other users. Replacing the no-op sender
+with a real email service remains a separate product decision.
+
+### Deployment sequence and caveats
+
+After `fast`, `tests`, and `publish` succeed on a `main` push, the `deploy` job first
+verifies that its commit is still the tip of `main`; a superseded run stops before
+signing in. It then signs in with OIDC and runs
+`aspire deploy --environment Production --non-interactive`, verifies `/alive`,
+`/health`, and `/Account/Login`, and writes the application URL to the run summary.
+The migration job must succeed before the new web revision is provisioned, so schema
+changes must remain compatible with the revision that is still serving.
+
+Deployment failure does not roll back database changes; restore and destructive
+migrations require a deliberate operator decision. A canceled run can leave a job
+running in Azure. Attach a stable custom domain before registering production
+passkeys, because passkeys are bound to the site origin.
+
+For a local operator deployment after bootstrap, sign in to Azure and set:
+
+```powershell
+$env:Azure__SubscriptionId = '<azure-subscription-id>'
+$env:Azure__ResourceGroup = 'rg-ruvents-production'
+$env:Azure__Location = '<azure-region>'
+$env:Azure__CredentialSource = 'AzureCli'
+$env:Azure__AllowResourceGroupCreation = 'false'
+$env:Platform__AdminEmail = '<administrator@example.com>'
+aspire publish --environment Production --output-path "$env:TEMP/ruvents-preview" --non-interactive
+aspire deploy --environment Production --non-interactive
+```
+
+Keep generated artifacts, deployment state, and telemetry out of Git and public
+workflow artifacts. Local deploys must not overlap a GitHub deploy.
 
 Bundle generation runs before Azure resolves the database connection string, so the
 AppHost sets `Ruvents__DesignTime=true` on the migration tool only. With that flag the
 application builds its model against a provider-only placeholder instead of failing;
 a running application never sets it, so a missing connection string still fails fast.
+
+References: [Aspire Container Apps](https://aspire.dev/deployment/azure/container-apps/),
+[Aspire CI/CD](https://aspire.dev/deployment/ci-cd/),
+[EF bundles](https://aspire.dev/integrations/databases/efcore/migrations/),
+[GitHub OIDC with Azure](https://docs.github.com/en/actions/how-tos/secure-your-work/security-harden-deployments/oidc-in-azure).
 
 ## Validation
 

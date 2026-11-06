@@ -1,8 +1,9 @@
 # Service defaults options
 
 These optional examples were originally commented out in
-`src/Ruvents.ServiceDefaults/Extensions.cs`. They are not active configuration.
-Add the relevant code and dependencies only when adopting an option.
+`src/Ruvents.ServiceDefaults/Extensions.cs`. Add the relevant code and dependencies
+only when adopting an option. The Azure Monitor exporter is already active; it is
+described at the end.
 
 ## Restrict service discovery to HTTPS
 
@@ -29,17 +30,8 @@ Core and HTTP client instrumentation:
 
 ## Export to Azure Monitor
 
-Add the `Azure.Monitor.OpenTelemetry.AspNetCore` package to the service defaults
-project and import its extension methods. The template's optional registration
-belongs in `AddOpenTelemetryExporters`:
-
-```csharp
-if (!string.IsNullOrEmpty(builder.Configuration["APPLICATIONINSIGHTS_CONNECTION_STRING"]))
-{
-    builder.Services.AddOpenTelemetry()
-        .UseAzureMonitor();
-}
-```
-
-The current implementation retains its existing OTLP exporter configuration.
-Choose the intended exporter setup when adopting Azure Monitor.
+The `Azure.Monitor.OpenTelemetry.AspNetCore` package and its `UseAzureMonitor()`
+registration are active in `AddOpenTelemetryExporters`. The deployment injects
+`APPLICATIONINSIGHTS_CONNECTION_STRING`; local runs have none and continue to export
+over OTLP only. Do not add a second exporter registration or read the connection
+string anywhere else.
