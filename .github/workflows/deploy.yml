@@ -1,24 +1,21 @@
-name: Deploy
+name: Validate and deploy
 
-# Deployments are manual only. Validation continues to live in ci.yml; this
-# workflow exists so a release can be promoted deliberately and audited.
 on:
-  workflow_dispatch:
-    inputs:
-      reason:
-        description: Why this deployment is running
-        required: false
-        type: string
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review, edited]
+  push:
+    branches: [main]
+  # Browser validation is opt-in and runs only in the request workflow.
+  merge_group:
 
 permissions:
   contents: read
 
 concurrency:
-  # Every dispatch deploys to the same production resource group, so serialize by the
-  # deployment target. Keying this on github.ref would let runs from different branches
-  # overlap and overwrite each other's migration job or web deployment.
-  group: ruvents-deploy-production
-  cancel-in-progress: false
+  # PR updates share the PR-ref group so a new push cancels the stale run.
+  # Main pushes and merge groups stay independent; the deploy job serializes itself.
+  group: ruvents-${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   DOTNET_NOLOGO: true
@@ -26,8 +23,137 @@ env:
   ASPIRE_VERSION: 13.6.4
 
 jobs:
+  changes:
+    name: Select validation scope
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      pull-requests: read
+    timeout-minutes: 5
+    outputs:
+      application: ${{ steps.scope.outputs.application }}
+      deploy: ${{ steps.scope.outputs.deploy }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - name: Classify changed paths
+        id: scope
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          EVENT_NAME: ${{ github.event_name }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          if ($env:EVENT_NAME -ne 'pull_request') {
+            $scope = ./scripts/Get-ValidationScope.ps1 -Full
+          }
+          else {
+            $encodedFiles = @(gh api --paginate "repos/$env:GH_REPO/pulls/$env:PR_NUMBER/files?per_page=100" --jq '.[] | { filename, previous_filename } | @json')
+            if ($LASTEXITCODE) { exit $LASTEXITCODE }
+            if ($encodedFiles.Count -ge 3000) {
+              $scope = ./scripts/Get-ValidationScope.ps1 -Full
+            }
+            else {
+              $files = @($encodedFiles | ForEach-Object { $_ | ConvertFrom-Json })
+              $paths = @($files | ForEach-Object { $_.filename; $_.previous_filename } | Where-Object { $null -ne $_ })
+              $scope = ./scripts/Get-ValidationScope.ps1 -Paths $paths
+            }
+          }
+          "application=$($scope.application.ToString().ToLowerInvariant())" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          "deploy=$($scope.deploy.ToString().ToLowerInvariant())" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+
+  fast:
+    needs: changes
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: ./.github/actions/setup-dotnet
+      - name: Check formatting
+        run: dotnet format Ruvents.slnx --severity warn --verify-no-changes
+      - name: Check workflow selection and documentation hooks
+        shell: pwsh
+        run: |
+          ./scripts/Test-ValidationScope.ps1
+          ./scripts/Test-BrowserWorkflowPolicy.ps1
+          ./scripts/Test-NightlyValidationIssue.ps1
+          ./scripts/Test-DocumentationReviewHook.ps1
+          ./scripts/Test-AgentValidationHook.ps1
+      - name: Check project-reference policy
+        shell: pwsh
+        run: ./scripts/Test-ArchitectureProjectReferences.ps1
+      - name: Check architecture before optimization
+        if: needs.changes.outputs.application == 'true'
+        run: dotnet test --project tests/Ruvents.UnitTests/Ruvents.UnitTests.csproj --configuration Debug --filter-class "Ruvents.UnitTests.Architecture.*" --report-trx --report-trx-filename architecture-debug.trx --results-directory "${{ runner.temp }}/ruvents-test-results"
+      - name: Build
+        if: needs.changes.outputs.application == 'true'
+        run: dotnet build Ruvents.slnx --configuration Release
+      - name: Test unit and component layers
+        if: needs.changes.outputs.application == 'true'
+        shell: pwsh
+        run: |
+          foreach ($project in @('Ruvents.UnitTests', 'Ruvents.ComponentTests')) {
+            dotnet test --project "tests/$project/$project.csproj" --configuration Release --no-build --report-trx --results-directory "$env:RUNNER_TEMP/ruvents-test-results"
+            if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          }
+      - name: Retain test results
+        if: needs.changes.outputs.application == 'true' && !cancelled()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: test-results-fast
+          path: ${{ runner.temp }}/ruvents-test-results/*.trx
+          retention-days: 7
+          if-no-files-found: warn
+
+  tests:
+    name: Test ${{ matrix.project }}
+    needs: changes
+    strategy:
+      fail-fast: false
+      matrix:
+        project: [Ruvents.IntegrationTests, Ruvents.AspireIntegrationTests]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - if: needs.changes.outputs.application == 'true'
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - if: needs.changes.outputs.application == 'true'
+        uses: ./.github/actions/setup-dotnet
+      - name: Create and trust test HTTPS certificate
+        if: needs.changes.outputs.application == 'true' && matrix.project == 'Ruvents.AspireIntegrationTests'
+        uses: ./.github/actions/trust-test-cert
+      - name: Build test project
+        if: needs.changes.outputs.application == 'true'
+        shell: pwsh
+        env:
+          PROJECT: ${{ matrix.project }}
+        run: |
+          dotnet build "tests/$env:PROJECT/$env:PROJECT.csproj" --configuration Release
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+      - name: Run tests
+        if: needs.changes.outputs.application == 'true'
+        shell: pwsh
+        env:
+          PROJECT: ${{ matrix.project }}
+        run: |
+          dotnet test --project "tests/$env:PROJECT/$env:PROJECT.csproj" --configuration Release --no-build --max-parallel-test-modules 1 --output Detailed --report-trx --results-directory "$env:RUNNER_TEMP/ruvents-test-results"
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+      - name: Retain test results
+        if: needs.changes.outputs.application == 'true' && !cancelled()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: test-results-${{ matrix.project }}
+          path: ${{ runner.temp }}/ruvents-test-results/*.trx
+          retention-days: 7
+          if-no-files-found: warn
+
   publish:
     name: Validate deployment artifacts
+    needs: changes
+    # 'deploy' is the scope flag for publish-relevant inputs (anything outside tests/).
+    # The AppHost targets Azure Container Apps, so this validates the generated
+    # artifacts and the EF migration bundle without touching Azure.
+    if: needs.changes.outputs.deploy == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -38,14 +164,16 @@ jobs:
 
   deploy:
     name: Deploy to Azure
-    needs: publish
-    # Nothing deploys until the repository variable DEPLOY_ENABLED is set to true.
-    # Creating the Azure resources, the OIDC federated credential, and that variable
-    # are deliberate operator steps, not part of this workflow.
-    if: vars.DEPLOY_ENABLED == 'true'
+    needs: [fast, tests, publish]
+    # Every successful main push deploys; pull requests and merge groups validate only.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     environment: production
+    concurrency:
+      # Serialize deployments to the single production resource group.
+      group: ruvents-deploy-production
+      cancel-in-progress: false
     permissions:
       contents: read
       id-token: write

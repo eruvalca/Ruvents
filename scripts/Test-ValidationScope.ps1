@@ -17,7 +17,7 @@ $cases = @(
     @{ Paths = @('src/Ruvents.SharedKernel/Money.cs'); Application = $true; Deploy = $true },
     @{ Paths = @('tests/Ruvents.UnitTests/Example.cs'); Application = $true; Deploy = $false },
     @{ Paths = @('README.md', 'Directory.Packages.props'); Application = $true; Deploy = $true },
-    @{ Paths = @('.github/workflows/ci.yml'); Application = $true; Deploy = $true },
+    @{ Paths = @('.github/workflows/deploy.yml'); Application = $true; Deploy = $true },
     @{ Paths = @('docs/possible-test-input.md'); Application = $true; Deploy = $true },
     @{ Paths = @('new-build-input'); Application = $true; Deploy = $true },
     @{ Paths = @('README.md', 'deleted.cs'); Application = $true; Deploy = $true },

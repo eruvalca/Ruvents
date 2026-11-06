@@ -508,12 +508,12 @@ References: [Aspire MCP](https://aspire.dev/reference/cli/commands/aspire-agent-
 
 ## Deployment
 
-Deployment targets **Azure Container Apps** in `Production`. `aspire publish` produces
-the artifacts without touching Azure, and `ci.yml` validates them on pull requests that
-change publish-relevant inputs. `.github/workflows/deploy.yml` is manual only
-(`workflow_dispatch`), serializes by deployment target, and is gated on the repository
-variable `DEPLOY_ENABLED`; until that variable is `true`, only the artifact-validation
-job runs.
+Deployment targets **Azure Container Apps** in `Production`. `.github/workflows/deploy.yml`
+("Validate and deploy") runs the full validation on pull requests and on every push to
+`main`. Pull requests and merge groups validate without deploying; every successful
+`main` push deploys, including documentation-only merges. The `deploy` job waits for the
+`fast`, `tests`, and `publish` jobs and only runs for a `push` to `main`. Re-run a
+successful `main` run to redeploy without a new commit.
 
 ### One-time Azure and GitHub setup
 
@@ -535,9 +535,7 @@ when enabled.
 It creates the GitHub `production` environment with a `main`-only policy and writes
 these environment variables: `AZURE_SUBSCRIPTION_ID`, `AZURE_TENANT_ID`,
 `AZURE_CLIENT_ID`, `AZURE_RESOURCE_GROUP`, `AZURE_LOCATION`, and
-`PLATFORM_ADMIN_EMAIL`. It also sets the repository variable `DEPLOY_ENABLED=true`,
-because the workflow reads that at job level before the environment is applied. No
-client secret or publish profile is needed.
+`PLATFORM_ADMIN_EMAIL`. No client secret or publish profile is needed.
 
 Protect `main` with the required checks, and consider required reviewers on the
 `production` environment: the deployment identity can change every resource in the
@@ -580,11 +578,11 @@ with a real email service remains a separate product decision.
 
 ### Deployment sequence and caveats
 
-The deploy job signs in with OIDC and runs
-`aspire deploy --environment Production --non-interactive`, then verifies `/alive`,
-`/health`, and `/Account/Login` and writes the application URL to the run summary.
-The migration job must succeed before the new web revision is provisioned, so schema
-changes must remain compatible with the revision that is still serving.
+After `fast`, `tests`, and `publish` succeed on a `main` push, the `deploy` job signs in
+with OIDC and runs `aspire deploy --environment Production --non-interactive`, then
+verifies `/alive`, `/health`, and `/Account/Login` and writes the application URL to the
+run summary. The migration job must succeed before the new web revision is provisioned,
+so schema changes must remain compatible with the revision that is still serving.
 
 Deployment failure does not roll back database changes; restore and destructive
 migrations require a deliberate operator decision. A canceled run can leave a job

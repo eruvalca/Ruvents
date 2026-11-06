@@ -92,9 +92,5 @@ foreach ($entry in $variables.GetEnumerator()) {
     gh variable set $entry.Key --repo $Repository --env production --body $entry.Value
 }
 
-# The deploy workflow reads DEPLOY_ENABLED at job level, before the environment is
-# applied, so it must be a repository variable rather than an environment variable.
-gh variable set DEPLOY_ENABLED --repo $Repository --body true
-
 Write-Output "Prepared $ResourceGroup in $Location and GitHub's production environment for $Repository."
-Write-Output 'The application is provisioned by the deploy workflow; dispatch it when ready.'
+Write-Output 'The Validate and deploy workflow provisions the application on the next push to main.'
