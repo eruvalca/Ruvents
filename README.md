@@ -512,8 +512,9 @@ Deployment targets **Azure Container Apps** in `Production`. `.github/workflows/
 ("Validate and deploy") runs the full validation on pull requests and on every push to
 `main`. Pull requests and merge groups validate without deploying; every successful
 `main` push deploys, including documentation-only merges. The `deploy` job waits for the
-`fast`, `tests`, and `publish` jobs and only runs for a `push` to `main`. Re-run a
-successful `main` run to redeploy without a new commit.
+`fast`, `tests`, and `publish` jobs, only runs for a `push` to `main`, and skips itself
+when a newer `main` push has superseded the commit. Re-run the latest successful `main`
+run to redeploy the current tip without a new commit.
 
 ### One-time Azure and GitHub setup
 
@@ -578,11 +579,13 @@ with a real email service remains a separate product decision.
 
 ### Deployment sequence and caveats
 
-After `fast`, `tests`, and `publish` succeed on a `main` push, the `deploy` job signs in
-with OIDC and runs `aspire deploy --environment Production --non-interactive`, then
-verifies `/alive`, `/health`, and `/Account/Login` and writes the application URL to the
-run summary. The migration job must succeed before the new web revision is provisioned,
-so schema changes must remain compatible with the revision that is still serving.
+After `fast`, `tests`, and `publish` succeed on a `main` push, the `deploy` job first
+verifies that its commit is still the tip of `main`; a superseded run stops before
+signing in. It then signs in with OIDC and runs
+`aspire deploy --environment Production --non-interactive`, verifies `/alive`,
+`/health`, and `/Account/Login`, and writes the application URL to the run summary.
+The migration job must succeed before the new web revision is provisioned, so schema
+changes must remain compatible with the revision that is still serving.
 
 Deployment failure does not roll back database changes; restore and destructive
 migrations require a deliberate operator decision. A canceled run can leave a job

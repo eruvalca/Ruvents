@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Ruvents.Data;
+using Ruvents.SharedKernel.Security;
 
 namespace Ruvents.Features.Account.Services;
 
@@ -27,9 +28,12 @@ internal static partial class PlatformAdminBootstrap
         CancellationToken cancellationToken)
     {
         await using var scope = services.CreateAsyncScope();
+        var cancellation = scope.ServiceProvider.GetRequiredService<IdentityCancellation>();
+        cancellation.Token = cancellationToken;
         return await ConfirmAsync(
             scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>(),
             scope.ServiceProvider.GetRequiredService<IAdminPromotionService>(),
+            cancellation,
             configuration["Platform:AdminEmail"],
             logger,
             cancellationToken);
@@ -38,6 +42,7 @@ internal static partial class PlatformAdminBootstrap
     internal static async Task<bool> ConfirmAsync(
         UserManager<ApplicationUser> userManager,
         IAdminPromotionService adminPromotion,
+        IdentityCancellation cancellation,
         string? adminEmail,
         ILogger logger,
         CancellationToken cancellationToken)
@@ -70,7 +75,16 @@ internal static partial class PlatformAdminBootstrap
             }
         }
 
-        var promoted = await adminPromotion.PromoteIfConfiguredAsync(user, cancellationToken);
+        // The confirmation write (if any) has committed. Complete the promotion even if
+        // the job's timeout fires now, matching the registration flow.
+        cancellation.CompleteWrite();
+        var promoted = await adminPromotion.PromoteIfConfiguredAsync(user, cancellation.Token);
+        if (!promoted && !await userManager.IsInRoleAsync(user, PlatformRoles.Admin))
+        {
+            LogPromotionFailed(logger, adminEmail);
+            return false;
+        }
+
         LogCompleted(logger, adminEmail, promoted);
         return true;
     }
@@ -86,4 +100,7 @@ internal static partial class PlatformAdminBootstrap
 
     [LoggerMessage(EventId = 2004, Level = LogLevel.Information, Message = "Platform administrator '{Email}' is confirmed. Promotion changed the role: {Promoted}.")]
     private static partial void LogCompleted(ILogger logger, string email, bool promoted);
+
+    [LoggerMessage(EventId = 2005, Level = LogLevel.Error, Message = "Platform administrator '{Email}' was confirmed but the Admin role was not granted.")]
+    private static partial void LogPromotionFailed(ILogger logger, string email);
 }

@@ -29,9 +29,10 @@ public sealed class PlatformAdminBootstrapTests(PostgresAppFixture fixture)
         (await users.IsEmailConfirmedAsync(user)).ShouldBeFalse();
         (await users.IsInRoleAsync(user, PlatformRoles.Admin)).ShouldBeFalse();
         var promotion = new AdminPromotionService(users, roles, database, Options.Create(new PlatformAdminOptions { AdminEmail = email }));
+        var cancellation = new IdentityCancellation { Token = TestContext.Current.CancellationToken };
 
         var completed = await PlatformAdminBootstrap.ConfirmAsync(
-            users, promotion, email, NullLogger.Instance, TestContext.Current.CancellationToken);
+            users, promotion, cancellation, email, NullLogger.Instance, TestContext.Current.CancellationToken);
 
         completed.ShouldBeTrue();
         user.EmailConfirmed.ShouldBeTrue();
@@ -56,11 +57,12 @@ public sealed class PlatformAdminBootstrapTests(PostgresAppFixture fixture)
         var user = new ApplicationUser { UserName = email, Email = email };
         (await users.CreateAsync(user)).Succeeded.ShouldBeTrue();
         var promotion = new AdminPromotionService(users, roles, database, Options.Create(new PlatformAdminOptions { AdminEmail = email }));
+        var cancellation = new IdentityCancellation { Token = TestContext.Current.CancellationToken };
 
         var first = await PlatformAdminBootstrap.ConfirmAsync(
-            users, promotion, email, NullLogger.Instance, TestContext.Current.CancellationToken);
+            users, promotion, cancellation, email, NullLogger.Instance, TestContext.Current.CancellationToken);
         var second = await PlatformAdminBootstrap.ConfirmAsync(
-            users, promotion, email, NullLogger.Instance, TestContext.Current.CancellationToken);
+            users, promotion, cancellation, email, NullLogger.Instance, TestContext.Current.CancellationToken);
 
         first.ShouldBeTrue();
         second.ShouldBeTrue();

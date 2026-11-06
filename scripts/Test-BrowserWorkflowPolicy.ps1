@@ -14,6 +14,8 @@ Assert-True ($main -match '(?m)^  deploy:$') 'The main workflow must define the 
 Assert-True ($main -match "github\.event_name == 'push' && github\.ref == 'refs/heads/main'") 'Deployment must run only for main pushes.'
 Assert-True ($main -match '(?m)^    needs: \[fast, tests, publish\]$') 'Deployment must wait for all validation jobs.'
 Assert-True ($main -match '(?m)^    environment: production$') 'Deployment must use the production environment.'
+Assert-True ($main -match '(?m)^      - name: Verify this commit is still the tip of main$') 'Deployment must check whether this commit is superseded.'
+Assert-True ($main -match "steps\.tip\.outputs\.superseded != 'true'") 'Deployment steps must be gated on the tip check.'
 Assert-True ($main -notmatch 'DEPLOY_ENABLED|workflow_dispatch') 'Main pushes deploy without a manual enable flag or separate trigger.'
 
 Assert-True ($request -match 'types: \[labeled, synchronize, reopened, ready_for_review\]') 'Opt-in browser runs must support labels and subsequent commits.'
@@ -31,4 +33,4 @@ Assert-True ($nightly -match 'issues: write') 'Nightly reporting must be able to
 Assert-True ($nightly -match 'Publish-NightlyValidationIssue\.ps1 -Suite Browser') 'Browser failures must be reported.'
 Assert-True ($nightly -match 'Publish-NightlyValidationIssue\.ps1 -Suite Performance') 'Performance failures and regressions must be reported.'
 
-Write-Host 'PASS: PR browser runs are opt-in; deployment is validated and limited to main pushes.'
+Write-Host 'PASS: PR browser runs are opt-in; deployment is validated, tip-checked, and limited to main pushes.'

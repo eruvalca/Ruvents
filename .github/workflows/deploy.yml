@@ -188,14 +188,28 @@ jobs:
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
       - uses: ./.github/actions/setup-dotnet
+      - name: Verify this commit is still the tip of main
+        id: tip
+        shell: bash
+        run: |
+          current=$(git rev-parse HEAD)
+          tip=$(git ls-remote origin refs/heads/main | cut -f1)
+          test -n "$tip"
+          if [ "$current" != "$tip" ]; then
+            echo "superseded=true" >> "$GITHUB_OUTPUT"
+            echo "Superseded by $tip; skipping deployment."
+          fi
       - uses: azure/login@a641126d1b8aa4d1fa005f4f92df94a3a4c4c906 # v3.1.0
+        if: steps.tip.outputs.superseded != 'true'
         with:
           client-id: ${{ vars.AZURE_CLIENT_ID }}
           tenant-id: ${{ vars.AZURE_TENANT_ID }}
           subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
       - name: Deploy infrastructure, apply migrations, then deploy web
+        if: steps.tip.outputs.superseded != 'true'
         run: aspire deploy --environment Production --non-interactive
       - name: Verify deployed application
+        if: steps.tip.outputs.superseded != 'true'
         shell: bash
         run: |
           host=$(az containerapp show --resource-group "$Azure__ResourceGroup" --name ruvents-web --query properties.configuration.ingress.fqdn --output tsv)
