@@ -79,9 +79,13 @@ public static class Extensions
 
             // The deployment injects the Application Insights connection string. Local runs
             // have none and continue to export over OTLP only.
-            if (!string.IsNullOrWhiteSpace(builder.Configuration["APPLICATIONINSIGHTS_CONNECTION_STRING"]))
+            var applicationInsightsConnectionString = builder.Configuration["APPLICATIONINSIGHTS_CONNECTION_STRING"];
+            if (!string.IsNullOrWhiteSpace(applicationInsightsConnectionString))
             {
-                builder.Services.AddOpenTelemetry().UseAzureMonitor();
+                // Pass the configured value explicitly rather than relying on the process
+                // environment variable resolving to the same value.
+                builder.Services.AddOpenTelemetry()
+                    .UseAzureMonitor(options => options.ConnectionString = applicationInsightsConnectionString);
             }
 
             return builder;

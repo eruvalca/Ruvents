@@ -27,13 +27,21 @@ public sealed class AdminPromotionServiceTests
         await using var database = CreateDatabase();
         roles.RoleExistsAsync(PlatformRoles.Admin).Returns(false, true);
         roles.CreateAsync(Arg.Any<IdentityRole>())
-            .Returns(Task.FromException<IdentityResult>(new DbUpdateException("duplicate role")));
+            .Returns(call =>
+            {
+                // Mirror a failed insert: the role is tracked as added when the save fails.
+                var role = call.Arg<IdentityRole>();
+                database.Roles.Attach(role);
+                database.Entry(role).State = EntityState.Added;
+                return Task.FromException<IdentityResult>(new DbUpdateException("duplicate role"));
+            });
         var service = new AdminPromotionService(
             identity.Users, roles, database, Options.Create(new PlatformAdminOptions { AdminEmail = AdminEmail }));
 
         var promoted = await service.PromoteIfConfiguredAsync(user, TestContext.Current.CancellationToken);
 
         promoted.ShouldBeTrue();
+        database.ChangeTracker.Entries<IdentityRole>().ShouldBeEmpty();
         await identity.Users.Received(1).AddToRoleAsync(user, PlatformRoles.Admin);
     }
 

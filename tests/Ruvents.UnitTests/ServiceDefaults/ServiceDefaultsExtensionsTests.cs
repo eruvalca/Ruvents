@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using Azure.Monitor.OpenTelemetry.AspNetCore;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -20,6 +21,9 @@ namespace Ruvents.UnitTests.ServiceDefaults;
     Justification = "xUnit requires public test classes for discovery.")]
 public sealed class ServiceDefaultsExtensionsTests
 {
+    private const string ApplicationInsightsConnectionString =
+        "InstrumentationKey=00000000-0000-0000-0000-000000000001;IngestionEndpoint=https://127.0.0.1:1/";
+
     [Theory]
     [InlineData("/health", false)]
     [InlineData("/HEALTH/ready", false)]
@@ -147,6 +151,45 @@ public sealed class ServiceDefaultsExtensionsTests
     public void MappingNullApplicationRetainsArgumentGuard() =>
         Should.Throw<ArgumentNullException>(() => ServiceDefaultsApi.MapDefaultEndpoints(null!))
             .ShouldBeOfType<ArgumentNullException>().ParamName.ShouldBe("app");
+
+    [Fact]
+    public async Task ApplicationInsightsRegistersAzureMonitorAlongsideOtlpAndKeepsTheTraceFilterAsync()
+    {
+        var builder = CreateBuilder(Environments.Production);
+        builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"] = "http://127.0.0.1:1";
+        builder.Configuration["APPLICATIONINSIGHTS_CONNECTION_STRING"] = ApplicationInsightsConnectionString;
+
+        builder.ConfigureOpenTelemetry();
+
+        await using var app = builder.Build();
+        app.Services.GetRequiredService<MeterProvider>().ShouldNotBeNull();
+        app.Services.GetRequiredService<TracerProvider>().ShouldNotBeNull();
+        app.Services.GetRequiredService<IOptions<AzureMonitorOptions>>().Value.ConnectionString
+            .ShouldBe(ApplicationInsightsConnectionString);
+
+        var filter = app.Services.GetRequiredService<IOptions<AspNetCoreTraceInstrumentationOptions>>().Value.Filter;
+        filter.ShouldNotBeNull();
+        var health = new DefaultHttpContext();
+        health.Request.Path = "/health";
+        filter(health).ShouldBeFalse();
+        var application = new DefaultHttpContext();
+        application.Request.Path = "/events";
+        filter(application).ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task MissingApplicationInsightsConnectionStringSkipsAzureMonitorAsync()
+    {
+        var builder = CreateBuilder(Environments.Production);
+
+        builder.ConfigureOpenTelemetry();
+
+        await using var app = builder.Build();
+        app.Services.GetRequiredService<MeterProvider>().ShouldNotBeNull();
+        app.Services.GetRequiredService<TracerProvider>().ShouldNotBeNull();
+        app.Services.GetRequiredService<IOptions<AzureMonitorOptions>>().Value.ConnectionString
+            .ShouldBeNullOrWhiteSpace();
+    }
 
     private static WebApplicationBuilder CreateBuilder(string environment)
     {
