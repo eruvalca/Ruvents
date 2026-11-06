@@ -100,14 +100,18 @@ builder.Services.AddAuthentication(options =>
     })
     .AddIdentityCookies();
 
-var connectionString = builder.Configuration.GetConnectionString("ruventsdb");
-if (string.IsNullOrEmpty(connectionString) && builder.Configuration.GetValue<bool>("Ruvents:DesignTime"))
+var configuredConnectionString = builder.Configuration.GetConnectionString("ruventsdb");
+var designTimePlaceholder = string.IsNullOrEmpty(configuredConnectionString)
+    && builder.Configuration.GetValue<bool>("Ruvents:DesignTime");
+if (designTimePlaceholder)
 {
     // The deployment pipeline builds and bundles the model before Azure resolves the
     // database connection string. The AppHost sets this flag on the migration tool only,
     // so a running application never falls back to a placeholder.
-    connectionString = "Host=localhost;Database=ruvents";
+    configuredConnectionString = "Host=localhost;Database=ruvents";
 }
+
+var connectionString = configuredConnectionString;
 
 if (string.IsNullOrEmpty(connectionString))
 {
@@ -115,7 +119,18 @@ if (string.IsNullOrEmpty(connectionString))
 }
 // The factory supports one context per Blazor operation and also registers the scoped context used by Identity.
 builder.Services.AddDbContextFactory<ApplicationDbContext>(options => options.UseNpgsql(connectionString));
-builder.EnrichNpgsqlDbContext<ApplicationDbContext>();
+// Azure deployments inject a connection string without credentials; the Azure
+// enrichment supplies the managed identity token and TLS. Local Aspire runs keep
+// using the container's username and password. Credential-free bundle generation
+// must not resolve a token, so the placeholder path uses the provider-only enrichment.
+if (designTimePlaceholder)
+{
+    builder.EnrichNpgsqlDbContext<ApplicationDbContext>();
+}
+else
+{
+    builder.EnrichAzureNpgsqlDbContext<ApplicationDbContext>();
+}
 // Bound readiness independently of EF's transient retries for normal application operations.
 builder.Services.PostConfigure<HealthCheckServiceOptions>(options =>
 {

@@ -22,7 +22,7 @@
     <ProjectReference Include="..\Ruvents.ServiceDefaults\Ruvents.ServiceDefaults.csproj" />
     <PackageReference Include="Aspire.Azure.Storage.Blobs" />
     <PackageReference Include="Cropper.Blazor" />
-    <PackageReference Include="Aspire.Npgsql.EntityFrameworkCore.PostgreSQL" />
+    <PackageReference Include="Aspire.Azure.Npgsql.EntityFrameworkCore.PostgreSQL" />
     <PackageReference Include="OneOf" />
     <PackageReference Include="OneOf.SourceGenerator" PrivateAssets="all" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" />

@@ -308,8 +308,10 @@ session lifetime. Data uses an Aspire-managed named volume rather than a reposit
 file. This is a fresh PostgreSQL schema; the original SQLite scaffold is removed.
 
 Aspire supplies `ConnectionStrings:ruventsdb` to both the application and migration
-tool. The application uses Npgsql EF Core 10.0.3, EF Core 10.0.14, and Aspire's
-Npgsql EF integration 13.6.4. Its non-pooled `IDbContextFactory<ApplicationDbContext>`
+tool. The application uses Npgsql EF Core 10.0.3, EF Core 10.0.14, and Aspire's Azure
+Npgsql EF integration 13.6.4. That enrichment adds the managed identity token and TLS
+for Azure's credential-free connection string, while local runs keep using the
+container's username and password. Its non-pooled `IDbContextFactory<ApplicationDbContext>`
 supports a context per Blazor operation; Identity can still resolve the scoped
 context. Dispose factory-created contexts with `await using`.
 
@@ -610,9 +612,11 @@ Keep generated artifacts, deployment state, and telemetry out of Git and public
 workflow artifacts. Local deploys must not overlap a GitHub deploy.
 
 Bundle generation runs before Azure resolves the database connection string, so the
-AppHost sets `Ruvents__DesignTime=true` on the migration tool only. With that flag the
-application builds its model against a provider-only placeholder instead of failing;
-a running application never sets it, so a missing connection string still fails fast.
+AppHost sets `Ruvents__DesignTime=true` on the migration tool only. With that flag and
+no configured connection, the application builds its model against a local placeholder
+using the provider-only Npgsql enrichment, which keeps Azure token acquisition out of
+credential-free bundle generation; a running application never sets the flag, so a
+missing connection string still fails fast.
 
 References: [Aspire Container Apps](https://aspire.dev/deployment/azure/container-apps/),
 [Aspire CI/CD](https://aspire.dev/deployment/ci-cd/),
