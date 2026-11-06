@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Ruvents.Data;
 using Ruvents.SharedKernel.Security;
@@ -8,6 +9,7 @@ namespace Ruvents.Features.Account.Services;
 internal sealed class AdminPromotionService(
     UserManager<ApplicationUser> userManager,
     RoleManager<IdentityRole> roleManager,
+    ApplicationDbContext database,
     IOptions<PlatformAdminOptions> options) : IAdminPromotionService
 {
     public async Task<bool> PromoteIfConfiguredAsync(ApplicationUser user, CancellationToken cancellationToken)
@@ -41,10 +43,26 @@ internal sealed class AdminPromotionService(
 
         if (!await roleManager.RoleExistsAsync(PlatformRoles.Admin))
         {
-            var creation = await roleManager.CreateAsync(new IdentityRole(PlatformRoles.Admin));
-            if (!creation.Succeeded && !await roleManager.RoleExistsAsync(PlatformRoles.Admin))
+            var role = new IdentityRole(PlatformRoles.Admin);
+            try
             {
-                return false;
+                var creation = await roleManager.CreateAsync(role);
+                if (!creation.Succeeded && !await roleManager.RoleExistsAsync(PlatformRoles.Admin))
+                {
+                    return false;
+                }
+            }
+            catch (DbUpdateException)
+            {
+                // A concurrent promotion, such as the administrator signing in while the
+                // bootstrap job runs, may create the role between the check and the insert.
+                // Detach the failed insert so the next save in this scope cannot retry it,
+                // then only fail when the role is still missing.
+                database.Entry(role).State = EntityState.Detached;
+                if (!await roleManager.RoleExistsAsync(PlatformRoles.Admin))
+                {
+                    throw;
+                }
             }
         }
 

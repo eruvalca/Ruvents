@@ -157,9 +157,17 @@ var app = builder.Build();
 if (builder.Configuration.GetValue<bool>(PlatformAdminBootstrap.ConfirmConfigurationKey))
 {
     using var timeout = new CancellationTokenSource(TimeSpan.FromMinutes(5));
-    Environment.ExitCode = await PlatformAdminBootstrap.RunAsync(app.Services, builder.Configuration, app.Logger, timeout.Token)
-        ? 0
-        : 1;
+    try
+    {
+        Environment.ExitCode = await PlatformAdminBootstrap.RunAsync(app.Services, builder.Configuration, app.Logger, timeout.Token)
+            ? 0
+            : 1;
+    }
+    finally
+    {
+        // The job never calls RunAsync, so dispose the host explicitly to flush logs.
+        await app.DisposeAsync();
+    }
     return;
 }
 
