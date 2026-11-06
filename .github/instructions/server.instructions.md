@@ -68,12 +68,16 @@ procedures remain in the [root README](../../README.md).
   schema version 3 and passkeys.
 - `/health` includes database readiness; `/alive` checks process liveness
   independently of database availability. Preserve the bounded database
-  readiness check and Aspire's monitoring of `/health`. Both endpoints are
-  currently Development-only; exposing them elsewhere is a deliberate operational
-  decision, not an incidental change. Keep readiness and liveness separate.
+  readiness check and Aspire's monitoring of `/health`. The deployment opts in with
+  `HealthChecks__ExposeEndpoints=true` because the Container Apps probes target both
+  paths; keep the responses status-only, and do not expose them elsewhere without the
+  same deliberate decision.
 - Registration requires a profile photo and accounts activate immediately because no
   email sender is configured in production. Password resets are an administrator
-  action; keep the identity contract if a real email service is introduced.
+  action; keep the identity contract if a real email service is introduced. The
+  deployment confirms the configured platform administrator through the manual
+  `ruvents-admin-bootstrap` job, which sets `EmailConfirmed` and promotes the account.
+  `Ruvents__ConfirmAdmin` belongs only on that job; never set it on the web app.
 - The AppHost sets `Ruvents__DesignTime=true` on the migration tool only, so bundle
   generation can build the model before Azure resolves the connection string. Do not
   apply that fallback to the running application.

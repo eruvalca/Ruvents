@@ -148,16 +148,16 @@ jobs:
           if-no-files-found: warn
 
   publish:
-    name: Validate publish pipeline
+    name: Validate deployment artifacts
     needs: changes
     # 'deploy' is the scope flag for publish-relevant inputs (anything outside tests/).
-    # This AppHost declares no compute environment, so the pipeline emits no
-    # artifacts yet; the job is a smoke check until a hosting target is chosen.
+    # The AppHost targets Azure Container Apps, so this validates the generated
+    # artifacts and the EF migration bundle without touching Azure.
     if: needs.changes.outputs.deploy == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
       - uses: ./.github/actions/setup-dotnet
-      - name: Run the publish pipeline
+      - name: Validate deployment artifacts and migration bundle
         run: aspire publish --environment Production --output-path "$RUNNER_TEMP/ruvents-preview" --non-interactive

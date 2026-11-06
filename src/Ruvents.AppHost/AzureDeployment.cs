@@ -29,7 +29,8 @@ internal static class AzureDeployment
     }
 
     internal static void Configure(IDistributedApplicationBuilder builder, IResourceBuilder<ProjectResource> web,
-        IResourceBuilder<EFMigrationResource> migrations)
+        IResourceBuilder<EFMigrationResource> migrations, IResourceBuilder<IResourceWithConnectionString> database,
+        string? adminEmail)
     {
         var logs = builder.AddAzureLogAnalyticsWorkspace("logs");
         var insights = builder.AddAzureApplicationInsights("insights", logs);
@@ -37,12 +38,16 @@ internal static class AzureDeployment
             .WithAzureLogAnalyticsWorkspace(logs);
         // PostgreSQL object ownership must be shared by the migration bundle and the web application.
         var databaseIdentity = builder.AddAzureUserAssignedIdentity("ruvents-database-identity");
+        // The configured address is promoted on registration and sign-in. Confirmation is
+        // an operator action; see the one-shot administrator job below.
+        var configuredAdminEmail = adminEmail ?? string.Empty;
 
         web.WithAzureUserAssignedIdentity(databaseIdentity)
             .WithReference(insights)
             .WithEnvironment("ASPNETCORE_ENVIRONMENT", "Production")
             .WithEnvironment("ASPNETCORE_FORWARDEDHEADERS_ENABLED", "true")
             .WithEnvironment("HealthChecks__ExposeEndpoints", "true")
+            .WithEnvironment("Platform__AdminEmail", configuredAdminEmail)
             .PublishAsAzureContainerApp((_, app) =>
             {
                 // Blazor Server circuits live in memory, so start with one replica.
@@ -85,6 +90,32 @@ internal static class AzureDeployment
                 var container = job.Template.Containers[0].Unwrap();
                 container.Command.Add("/app/efbundle");
                 container.Args.Add("--verbose");
+            });
+
+        // A manual job that confirms the configured administrator after the operator has
+        // registered the account. It runs the same web project with the confirmation
+        // flag set, exits without serving HTTP, and is idempotent.
+        const string AdminBootstrapName = "ruvents-admin-bootstrap";
+        builder.AddProject<Projects.Ruvents>(AdminBootstrapName)
+            .WithReference(database)
+            .WaitFor(database)
+            .WithEnvironment("ASPNETCORE_ENVIRONMENT", "Production")
+            .WithEnvironment("DOTNET_ENVIRONMENT", "Production")
+            .WithEnvironment("Platform__AdminEmail", configuredAdminEmail)
+            .WithEnvironment("Ruvents__ConfirmAdmin", "true")
+            // A job has no ingress, but the project still carries a launch-profile HTTP
+            // endpoint. Pin the URLs so publishing does not try to resolve that endpoint.
+            .WithEnvironment("ASPNETCORE_URLS", "http://127.0.0.1:0")
+            .WithEnvironment("HTTP_PORTS", "8080")
+            .WithAzureUserAssignedIdentity(databaseIdentity)
+            .PublishAsAzureContainerAppJob((_, job) =>
+            {
+                job.Name = AdminBootstrapName;
+                job.Configuration.TriggerType = ContainerAppJobTriggerType.Manual;
+                job.Configuration.ReplicaTimeout = 600;
+                job.Configuration.ReplicaRetryLimit = 0;
+                job.Configuration.ManualTriggerConfig.Parallelism = 1;
+                job.Configuration.ManualTriggerConfig.ReplicaCompletionCount = 1;
             });
 
         ConfigureMigrationGate(builder, web.Resource, migrations.Resource);

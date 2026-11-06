@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using Azure.Monitor.OpenTelemetry.AspNetCore;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.DependencyInjection;
@@ -74,6 +75,13 @@ public static class Extensions
             if (useOtlpExporter)
             {
                 builder.Services.AddOpenTelemetry().UseOtlpExporter();
+            }
+
+            // The deployment injects the Application Insights connection string. Local runs
+            // have none and continue to export over OTLP only.
+            if (!string.IsNullOrWhiteSpace(builder.Configuration["APPLICATIONINSIGHTS_CONNECTION_STRING"]))
+            {
+                builder.Services.AddOpenTelemetry().UseAzureMonitor();
             }
 
             return builder;

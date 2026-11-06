@@ -57,12 +57,19 @@ setup and runtime procedures remain in the [root README](../../README.md).
 
 ## Publish and workflows
 
-- `aspire publish` runs the publish pipeline; the CI `publish` job does that on main
-  and on pull requests that change publish-relevant inputs. The AppHost declares no
-  compute environment, so the pipeline succeeds without emitting artifacts — treat
-  it as a smoke check until a hosting target is chosen. This template does not
-  deploy; do not add a deployment job or cloud-specific wiring without an explicit
-  decision to adopt a hosting target.
+- `aspire publish` runs the publish pipeline; the CI `publish` job validates the
+  Container Apps artifacts and the migration bundle on pull requests that change
+  publish-relevant inputs. The AppHost targets Azure Container Apps in `Production`.
+  `scripts/Initialize-AzureDeployment.ps1` performs the one-time Azure and GitHub
+  bootstrap, and the manual `deploy.yml` workflow runs `aspire deploy` behind the
+  repository variable `DEPLOY_ENABLED`. Do not change the deployment identity's
+  scope, add cloud-specific wiring, or weaken the migration gate without an explicit
+  decision and the matching bootstrap and README update.
+- The manual `ruvents-admin-bootstrap` job is the only supported out-of-band path for
+  confirming the platform administrator. It runs the web project with
+  `Ruvents__ConfirmAdmin=true`; never set that flag on `ruvents-web`. Keep
+  `Platform__AdminEmail`, `PLATFORM_ADMIN_EMAIL`, and the documented first-admin
+  procedure aligned.
 - Workflows select work through `scripts/Get-ValidationScope.ps1`. Browser
   validation is opt-in per pull request through the `run-full-browser` label and
   is never merge-blocking; the nightly workflow owns the full browser and

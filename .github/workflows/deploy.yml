@@ -56,6 +56,7 @@ jobs:
       Azure__Location: ${{ vars.AZURE_LOCATION }}
       Azure__CredentialSource: AzureCli
       Azure__AllowResourceGroupCreation: false
+      Platform__AdminEmail: ${{ vars.PLATFORM_ADMIN_EMAIL }}
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
       - uses: ./.github/actions/setup-dotnet

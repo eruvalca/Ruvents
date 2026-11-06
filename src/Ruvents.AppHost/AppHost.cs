@@ -47,7 +47,7 @@ if (postgres is not null)
 }
 else
 {
-    AzureDeployment.Configure(builder, web, migrations);
+    AzureDeployment.Configure(builder, web, migrations, database, builder.Configuration["Platform:AdminEmail"]);
 }
 
 // The host owns Ctrl+C/SIGTERM shutdown; there is no outer operation to cancel it.
