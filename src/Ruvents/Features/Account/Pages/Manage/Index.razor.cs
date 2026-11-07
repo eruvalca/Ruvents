@@ -173,14 +173,10 @@ public sealed partial class Index
     /// though it accepts null.
     /// </summary>
     [AttributeUsage(AttributeTargets.Property)]
-    private sealed class OptionalPhoneAttribute : ValidationAttribute
+    private sealed class OptionalPhoneAttribute()
+        : ValidationAttribute("The {0} field is not a valid phone number.")
     {
         private static readonly PhoneAttribute _phone = new();
-
-        public OptionalPhoneAttribute()
-            : base("The {0} field is not a valid phone number.")
-        {
-        }
 
         public override bool IsValid(object? value) =>
             value is not string text || string.IsNullOrWhiteSpace(text) || _phone.IsValid(text);
