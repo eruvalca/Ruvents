@@ -129,6 +129,9 @@ public sealed class IdentityEndpointBehaviorTests
     {
         await using var context = EndpointContext.Create();
         var user = CreateUser();
+        user.FirstName = "Persist";
+        user.MiddleName = "Q";
+        user.LastName = "User";
         user.PhoneNumber = null;
         user.PasswordHash = "password-hash-must-not-leak";
         user.SecurityStamp = "security-stamp-must-not-leak";
@@ -147,8 +150,13 @@ public sealed class IdentityEndpointBehaviorTests
         context.Http.Response.Headers.ContentDisposition.ToString().ShouldContain("attachment;");
         context.Http.Response.Headers.ContentDisposition.ToString().ShouldContain("PersonalData.json");
         var data = JsonSerializer.Deserialize<Dictionary<string, string>>(await context.ReadBodyAsync()).ShouldNotBeNull();
+        // The derived ApplicationUser properties precede the inherited IdentityUser
+        // properties in reflection order, and this assertion preserves export order.
         data.ShouldBe(new Dictionary<string, string>(StringComparer.Ordinal)
         {
+            ["FirstName"] = "Persist",
+            ["MiddleName"] = "Q",
+            ["LastName"] = "User",
             ["Id"] = user.Id,
             ["UserName"] = user.UserName!,
             ["Email"] = user.Email!,

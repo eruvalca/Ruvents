@@ -9,10 +9,13 @@ namespace Ruvents.Data;
     Justification = "Provides the application's Identity/EF user type while inheriting its current members from IdentityUser.")]
 internal sealed class ApplicationUser : IdentityUser
 {
+    [PersonalData]
     public string FirstName { get; set; } = string.Empty;
 
+    [PersonalData]
     public string MiddleName { get; set; } = string.Empty;
 
+    [PersonalData]
     public string LastName { get; set; } = string.Empty;
 
     /// <summary>

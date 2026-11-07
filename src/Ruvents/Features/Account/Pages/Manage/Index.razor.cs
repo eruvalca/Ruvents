@@ -37,11 +37,14 @@ public sealed partial class Index
 
         _username = await UserManager.GetUserNameAsync(_user);
         _phoneNumber = await UserManager.GetPhoneNumberAsync(_user);
-        _defaultDisplayName = UserProfileNames.BuildDisplayName(
+        // Use the same bounded resolver that saved DisplayName, so a truncated default
+        // is still recognized as the default on a later name edit.
+        _defaultDisplayName = UserProfileNames.ResolveDisplayName(
+            null,
             _user.FirstName,
             _user.MiddleName,
             _user.LastName,
-            fallback: string.Empty);
+            string.Empty);
 
         // Keep posted values on a validation or update failure; only load the stored
         // profile for a fresh GET.
@@ -74,16 +77,28 @@ public sealed partial class Index
             UserProfileNames.DisplayNameFromEmail(_username ?? string.Empty));
         var phoneNumber = string.IsNullOrWhiteSpace(Input.PhoneNumber) ? null : Input.PhoneNumber.Trim();
 
-        var changed = false;
-        changed |= SetValue(_user.FirstName, firstName, value => _user.FirstName = value ?? string.Empty);
-        changed |= SetValue(_user.MiddleName, middleName, value => _user.MiddleName = value ?? string.Empty);
-        changed |= SetValue(_user.LastName, lastName, value => _user.LastName = value ?? string.Empty);
-        changed |= SetValue(_user.DisplayName, displayName, value => _user.DisplayName = value ?? string.Empty);
-        changed |= SetValue(_user.PhoneNumber, phoneNumber, value => _user.PhoneNumber = value);
+        var namesChanged = false;
+        namesChanged |= SetValue(_user.FirstName, firstName, value => _user.FirstName = value ?? string.Empty);
+        namesChanged |= SetValue(_user.MiddleName, middleName, value => _user.MiddleName = value ?? string.Empty);
+        namesChanged |= SetValue(_user.LastName, lastName, value => _user.LastName = value ?? string.Empty);
+        namesChanged |= SetValue(_user.DisplayName, displayName, value => _user.DisplayName = value ?? string.Empty);
 
-        if (changed)
+        IdentityResult? result = null;
+        if (!string.Equals(_user.PhoneNumber, phoneNumber, StringComparison.Ordinal))
         {
-            var result = await UserManager.UpdateAsync(_user);
+            // Keep phone changes inside Identity's dedicated API. A new number has not
+            // been verified, so clear the previous confirmation before the write. The
+            // user object already carries the name changes, so this write persists both.
+            _user.PhoneNumberConfirmed = false;
+            result = await UserManager.SetPhoneNumberAsync(_user, phoneNumber);
+        }
+        else if (namesChanged)
+        {
+            result = await UserManager.UpdateAsync(_user);
+        }
+
+        if (result is not null)
+        {
             if (!result.Succeeded)
             {
                 RedirectManager.RedirectToCurrentPageWithStatus($"Error: {result.Errors.FormatDescriptions(", ")}", HttpContext);

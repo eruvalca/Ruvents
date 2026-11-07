@@ -1,10 +1,8 @@
 using System.Diagnostics.CodeAnalysis;
 using Bunit;
 using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Primitives;
 using NSubstitute;
 using Ruvents.Data;
 using Ruvents.Features.Account.Pages;
@@ -28,26 +26,6 @@ public sealed class RegistrationTests
         var submit = component.FindAll("button[type='submit']");
         submit.Count.ShouldBe(1);
         submit[0].TextContent.ShouldBe("Create account");
-    }
-
-    [Fact]
-    public async Task PostedCropIsKeptInViewAfterAFailedRegistrationAsync()
-    {
-        await using var context = new BunitContext();
-        var account = context.ConfigureInteractiveAccount();
-        account.Http.Request.Method = HttpMethods.Post;
-        account.Http.Request.ContentType = "application/x-www-form-urlencoded";
-        account.Http.Request.Form = new FormCollection(new Dictionary<string, StringValues>(StringComparer.Ordinal)
-        {
-            ["PhotoData"] = "data:image/jpeg;base64,AQID",
-        });
-
-        var component = account.Render<Register>(context);
-
-        component.Find("img.avatar-preview").GetAttribute("src").ShouldBe("data:image/jpeg;base64,AQID");
-        component.Find("input[name='PhotoData']").GetAttribute("value").ShouldBe("data:image/jpeg;base64,AQID");
-        // The crop is still presented by the registration form, not by the photo tool.
-        component.FindAll("button[type='submit']").Count.ShouldBe(1);
     }
 
     [Fact]

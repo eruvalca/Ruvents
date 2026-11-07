@@ -45,6 +45,7 @@ public sealed class ProfileTests
         await component.Find("form").SubmitAsync();
 
         await account.Users.DidNotReceiveWithAnyArgs().UpdateAsync(default!);
+        await account.Users.DidNotReceiveWithAnyArgs().SetPhoneNumberAsync(default!, default);
         await account.SignIn.Received(1).RefreshSignInAsync(user);
         account.StatusCookie.ShouldContain("Your profile has been updated");
     }
@@ -60,7 +61,9 @@ public sealed class ProfileTests
         SetNames(user, "Ada", "Grace", "Lovelace", "Ada Grace Lovelace");
         account.Http.Request.Method = HttpMethods.Get;
         user.PhoneNumber = "+1 (312) 555-0199";
+        user.PhoneNumberConfirmed = true;
         account.Users.GetPhoneNumberAsync(user).Returns(user.PhoneNumber);
+        account.Users.SetPhoneNumberAsync(user, phone).Returns(IdentityResult.Success);
         var navigation = context.Services.GetRequiredService<NavigationManager>();
         navigation.NavigateTo("Account/Manage?from=profile");
         var component = account.Render<Profile>(context);
@@ -70,16 +73,41 @@ public sealed class ProfileTests
         await component.Find("form").SubmitAsync();
 
         component.FindAll(".error-text[role='alert']").ShouldBeEmpty();
-        await account.Users.Received(1).UpdateAsync(user);
-        user.PhoneNumber.ShouldBe(phone);
+        await account.Users.Received(1).SetPhoneNumberAsync(user, phone);
+        await account.Users.DidNotReceiveWithAnyArgs().UpdateAsync(default!);
+        user.PhoneNumberConfirmed.ShouldBeFalse();
         await account.SignIn.Received(1).RefreshSignInAsync(user);
         Received.InOrder(() =>
         {
-            _ = account.Users.UpdateAsync(user);
+            _ = account.Users.SetPhoneNumberAsync(user, phone);
             _ = account.SignIn.RefreshSignInAsync(user);
         });
         account.StatusCookie.ShouldContain("Your profile has been updated");
         navigation.Uri.ShouldBe("http://localhost/Account/Manage");
+    }
+
+    [Fact]
+    public async Task PhoneAndNameChangesArePersistedInOneWriteAsync()
+    {
+        await using var context = new BunitContext();
+        var account = context.ConfigureAccount();
+        var user = account.Authenticate();
+        SetNames(user, "Ada", "Grace", "Lovelace", "Ada Grace Lovelace");
+        account.Http.Request.Method = HttpMethods.Get;
+        user.PhoneNumber = "+1 (312) 555-0199";
+        account.Users.GetPhoneNumberAsync(user).Returns(user.PhoneNumber);
+        account.Users.SetPhoneNumberAsync(user, "+1 (312) 555-0123").Returns(IdentityResult.Success);
+        var component = account.Render<Profile>(context);
+        await component.Find("input[name='Input.FirstName']").ChangeAsync(new ChangeEventArgs { Value = "Augusta" });
+        await component.Find("input[name='Input.PhoneNumber']").ChangeAsync(new ChangeEventArgs { Value = "+1 (312) 555-0123" });
+
+        await component.Find("form").SubmitAsync();
+
+        await account.Users.Received(1).SetPhoneNumberAsync(user, "+1 (312) 555-0123");
+        await account.Users.DidNotReceiveWithAnyArgs().UpdateAsync(default!);
+        user.FirstName.ShouldBe("Augusta");
+        user.DisplayName.ShouldBe("Augusta Grace Lovelace");
+        await account.SignIn.Received(1).RefreshSignInAsync(user);
     }
 
     [Fact]
@@ -98,6 +126,30 @@ public sealed class ProfileTests
         await account.Users.Received(1).UpdateAsync(user);
         user.LastName.ShouldBe("Byron");
         user.DisplayName.ShouldBe("Ada Grace Byron");
+    }
+
+    [Fact]
+    public async Task TruncatedDefaultDisplayNameStillFollowsNameEditsAsync()
+    {
+        await using var context = new BunitContext();
+        var account = context.ConfigureAccount();
+        var user = account.Authenticate();
+        var firstName = new string('a', 40);
+        var middleName = new string('b', 40);
+        var lastName = new string('c', 40);
+        var storedDefault = UserProfileNames.ResolveDisplayName(null, firstName, middleName, lastName, string.Empty);
+        storedDefault.Length.ShouldBe(UserProfileNames.MaxDisplayNameLength);
+        SetNames(user, firstName, middleName, lastName, storedDefault);
+        account.Http.Request.Method = HttpMethods.Get;
+        var component = account.Render<Profile>(context);
+        var newLastName = new string('d', 40);
+
+        await component.Find("input[name='Input.LastName']").ChangeAsync(new ChangeEventArgs { Value = newLastName });
+        await component.Find("form").SubmitAsync();
+
+        var expected = UserProfileNames.ResolveDisplayName(null, firstName, middleName, newLastName, string.Empty);
+        await account.Users.Received(1).UpdateAsync(user);
+        user.DisplayName.ShouldBe(expected);
     }
 
     [Fact]
@@ -147,7 +199,7 @@ public sealed class ProfileTests
         var user = account.Authenticate();
         SetNames(user, "Ada", "Grace", "Lovelace", "Ada Grace Lovelace");
         account.Http.Request.Method = HttpMethods.Get;
-        account.Users.UpdateAsync(Arg.Any<ApplicationUser>())
+        account.Users.SetPhoneNumberAsync(user, "312-555-0123")
             .Returns(IdentityResult.Failed(new IdentityError { Description = "Profile save failed" }));
 
         var component = account.Render<Profile>(context);
@@ -155,7 +207,8 @@ public sealed class ProfileTests
 
         await component.Find("form").SubmitAsync();
 
-        await account.Users.Received(1).UpdateAsync(user);
+        await account.Users.Received(1).SetPhoneNumberAsync(user, "312-555-0123");
+        await account.Users.DidNotReceiveWithAnyArgs().UpdateAsync(default!);
         await account.SignIn.DidNotReceiveWithAnyArgs().RefreshSignInAsync(default!);
         account.StatusCookie.ShouldContain("Profile save failed");
         account.StatusCookie.ShouldNotContain("Your profile has been updated");
@@ -176,6 +229,7 @@ public sealed class ProfileTests
 
         component.Find(".error-text[role='alert']").TextContent.ShouldContain("not a valid phone number");
         await account.Users.DidNotReceiveWithAnyArgs().UpdateAsync(default!);
+        await account.Users.DidNotReceiveWithAnyArgs().SetPhoneNumberAsync(default!, default);
         await account.SignIn.DidNotReceiveWithAnyArgs().RefreshSignInAsync(default!);
         account.StatusCookie.ShouldBeEmpty();
     }
@@ -195,6 +249,7 @@ public sealed class ProfileTests
 
         component.Find(".error-text[role='alert']").TextContent.ShouldContain("Last name");
         await account.Users.DidNotReceiveWithAnyArgs().UpdateAsync(default!);
+        await account.Users.DidNotReceiveWithAnyArgs().SetPhoneNumberAsync(default!, default);
         await account.SignIn.DidNotReceiveWithAnyArgs().RefreshSignInAsync(default!);
     }
 
@@ -220,6 +275,7 @@ public sealed class ProfileTests
         await account.Users.DidNotReceiveWithAnyArgs().GetUserNameAsync(default!);
         await account.Users.DidNotReceiveWithAnyArgs().GetPhoneNumberAsync(default!);
         await account.Users.DidNotReceiveWithAnyArgs().UpdateAsync(default!);
+        await account.Users.DidNotReceiveWithAnyArgs().SetPhoneNumberAsync(default!, default);
         await account.SignIn.DidNotReceiveWithAnyArgs().RefreshSignInAsync(default!);
     }
 

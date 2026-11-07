@@ -14,7 +14,6 @@ public sealed partial class Register
 {
     private IEnumerable<IdentityError>? _identityErrors;
     private string? _photoError;
-    private string? _photoPreview;
 
     [SupplyParameterFromForm]
     private InputModel Input { get; set; } = default!;
@@ -27,17 +26,7 @@ public sealed partial class Register
 
     private string? Message => _identityErrors is null ? null : $"Error: {_identityErrors.FormatDescriptions(", ")}";
 
-    protected override void OnInitialized()
-    {
-        Input ??= new();
-
-        // A failed post re-renders this page statically, so keep a validated crop in
-        // view instead of asking the user to position the photo again.
-        if (HttpMethods.IsPost(HttpContext.Request.Method))
-        {
-            _photoPreview = ProfilePhotoWriter.ReadPostedPreview(HttpContext);
-        }
-    }
+    protected override void OnInitialized() => Input ??= new();
 
     public async Task RegisterUserAsync(EditContext editContext)
     {

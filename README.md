@@ -209,8 +209,7 @@ the current photo on the profile page. The picker stays disabled until the circu
 connects, because a selection made during prerendering is dropped without notice.
 Registration owns its own submit button so preparing a crop never registers the
 account; the standalone photo pages ask the component for the button because a static
-page cannot observe the crop state inside an interactive child. A crop posted with a
-request that fails afterwards is shown again instead of being discarded.
+page cannot observe the crop state inside an interactive child.
 
 Planning pages live in `Ruvents.UI` so they can run under either renderer. They depend
 on `IPlanningApi`: the server host implements it with the application services and the

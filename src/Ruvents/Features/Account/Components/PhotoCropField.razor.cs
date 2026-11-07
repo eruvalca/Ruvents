@@ -29,13 +29,6 @@ public sealed partial class PhotoCropField : CancellableComponentBase
     [Parameter]
     public string? SubmitLabel { get; set; }
 
-    /// <summary>
-    /// A crop posted with a request that failed afterwards, so the user does not have
-    /// to choose and position the photo again to correct another field or retry.
-    /// </summary>
-    [Parameter]
-    public string? InitialPreview { get; set; }
-
     [Inject]
     private IProfilePhotoStore Photos { get; set; } = default!;
 
@@ -43,16 +36,6 @@ public sealed partial class PhotoCropField : CancellableComponentBase
     private string? _source;
     private string? _preview;
     private string? _error;
-    private bool _previewSeeded;
-
-    protected override void OnParametersSet()
-    {
-        if (!_previewSeeded && !string.IsNullOrEmpty(InitialPreview))
-        {
-            _preview = InitialPreview;
-            _previewSeeded = true;
-        }
-    }
 
     private async Task OnFileSelectedAsync(InputFileChangeEventArgs args)
     {
