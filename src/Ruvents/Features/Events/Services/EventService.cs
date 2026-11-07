@@ -208,26 +208,64 @@ internal sealed class EventService(
             return [];
         }
 
-        var threshold = timeProvider.GetUtcNow().AddDays(-1);
+        const int BatchSize = 25;
+        const int MaxResults = 10;
+
+        var now = timeProvider.GetUtcNow();
+        // Events that started in the last day may still be running, so they stay in the
+        // candidate window; anything already finished is removed before the list is
+        // limited, otherwise finished events could crowd out later ones.
+        var threshold = now.AddDays(-1);
         await using var db = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        return await db.Events
-            .Where(calendarEvent => groupIds.Contains(calendarEvent.FamilyGroupId)
-                && calendarEvent.Status == EventStatus.Scheduled
-                && calendarEvent.StartUtc >= threshold)
-            .OrderBy(calendarEvent => calendarEvent.StartUtc)
-            .Take(10)
-            .Select(calendarEvent => new PlanningEventSummary(
-                calendarEvent.Id,
-                calendarEvent.FamilyGroupId,
-                calendarEvent.Title,
-                calendarEvent.StartUtc,
-                calendarEvent.EndUtc,
-                calendarEvent.IsAllDay,
-                calendarEvent.TimeZoneId,
-                calendarEvent.LocationName,
-                calendarEvent.Status,
-                calendarEvent.CoverImageBlobName != null))
-            .ToListAsync(cancellationToken);
+
+        var results = new List<PlanningEventSummary>(MaxResults);
+        var skip = 0;
+        while (results.Count < MaxResults)
+        {
+            var batch = await db.Events
+                .Where(calendarEvent => groupIds.Contains(calendarEvent.FamilyGroupId)
+                    && calendarEvent.Status == EventStatus.Scheduled
+                    && calendarEvent.StartUtc >= threshold)
+                .OrderBy(calendarEvent => calendarEvent.StartUtc)
+                .ThenBy(calendarEvent => calendarEvent.Id)
+                .Skip(skip)
+                .Take(BatchSize)
+                .Select(calendarEvent => new PlanningEventSummary(
+                    calendarEvent.Id,
+                    calendarEvent.FamilyGroupId,
+                    calendarEvent.Title,
+                    calendarEvent.StartUtc,
+                    calendarEvent.EndUtc,
+                    calendarEvent.IsAllDay,
+                    calendarEvent.TimeZoneId,
+                    calendarEvent.LocationName,
+                    calendarEvent.Status,
+                    calendarEvent.CoverImageBlobName != null))
+                .ToListAsync(cancellationToken);
+
+            if (batch.Count == 0)
+            {
+                break;
+            }
+
+            skip += batch.Count;
+            var remaining = MaxResults - results.Count;
+            results.AddRange(batch
+                .Where(calendarEvent => EventTiming.GetTimeState(
+                    calendarEvent.StartUtc,
+                    calendarEvent.EndUtc,
+                    calendarEvent.IsAllDay,
+                    calendarEvent.TimeZoneId,
+                    now) is not EventTimeState.Past)
+                .Take(remaining));
+
+            if (batch.Count < BatchSize)
+            {
+                break;
+            }
+        }
+
+        return results;
     }
 
     internal async Task<bool> CanManageAsync(Guid familyGroupId, string createdByUserId, string userId, CancellationToken cancellationToken)

@@ -36,6 +36,19 @@ public sealed partial class EventEdit
         ViewerTimeZone.ResolvedZoneId is { } zoneId
         && !string.Equals(zoneId, _model.TimeZoneId, StringComparison.OrdinalIgnoreCase);
 
+    // The form is only touched by the zone fix-up once initialization has supplied a
+    // model, and only while its values are still the server-side fallback.
+    private bool _modelReady;
+    private bool _zoneResolutionAttempted;
+    private string? _fallbackZoneId;
+    private DateTime _fallbackStart;
+    private DateTime? _fallbackEnd;
+
+    private bool DefaultsAreUntouched =>
+        string.Equals(_model.TimeZoneId, _fallbackZoneId, StringComparison.Ordinal)
+        && _model.StartLocal == _fallbackStart
+        && _model.EndLocal == _fallbackEnd;
+
     protected override async Task OnInitializedAsync()
     {
         _zones = TimeZoneInfo.GetSystemTimeZones();
@@ -66,6 +79,7 @@ public sealed partial class EventEdit
                 EndLocal = detail.EndUtc is null ? null : TimeZoneInfo.ConvertTime(detail.EndUtc.Value, zone).DateTime,
                 RsvpDeadlineLocal = detail.RsvpDeadlineUtc is null ? null : TimeZoneInfo.ConvertTime(detail.RsvpDeadlineUtc.Value, zone).DateTime,
             };
+            _modelReady = true;
             return;
         }
 
@@ -92,17 +106,34 @@ public sealed partial class EventEdit
         _selectedGroupId = selected;
         _selectedGroupName = _groups.FirstOrDefault(group => group.Id == _selectedGroupId)?.Name;
 
-        _model.TimeZoneId = TimeZoneInfo.Local.Id;
-        _model.StartLocal = TimeProvider.GetLocalNow().LocalDateTime.Date.AddDays(1).AddHours(18);
+        // A page reached after the browser zone is known uses it directly; otherwise this
+        // is the server-side fallback that the first interactive render replaces.
+        var resolvedZoneId = ViewerTimeZone.ResolvedZoneId;
+        _fallbackZoneId = resolvedZoneId is null ? TimeZoneInfo.Local.Id : null;
+        ApplyDefaultTimes(ResolveZone(resolvedZoneId ?? TimeZoneInfo.Local.Id));
+        _fallbackStart = _model.StartLocal;
+        _fallbackEnd = _model.EndLocal;
+        _modelReady = true;
+    }
+
+    private void ApplyDefaultTimes(TimeZoneInfo zone)
+    {
+        _model.TimeZoneId = zone.Id;
+        _model.StartLocal = TimeZoneInfo.ConvertTime(TimeProvider.GetUtcNow(), zone).DateTime.Date.AddDays(1).AddHours(18);
         _model.EndLocal = _model.StartLocal.AddMinutes(30);
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (!firstRender || IsDisposed)
+        // The first render can complete while OnInitializedAsync is still awaiting, so
+        // wait for the model before touching it. Later renders retry because the model
+        // completing triggers one.
+        if (IsDisposed || !_modelReady || _zoneResolutionAttempted)
         {
             return;
         }
+
+        _zoneResolutionAttempted = true;
 
         using var operation = CreateOperation();
         if (ViewerTimeZone.ResolvedZoneId is null)
@@ -115,17 +146,14 @@ public sealed partial class EventEdit
             return;
         }
 
-        // The prerender supplied the server's zone, so a new event starts on the
-        // browser's zone once the renderer can report it. Editing keeps the event's
-        // own zone because the wall-clock fields below are entered in that zone.
-        if (EventId is null)
+        // Editing keeps the event's own zone because the wall-clock fields are entered
+        // in that zone; only a new event adopts the browser zone.
+        if (EventId is null && _fallbackZoneId is not null && DefaultsAreUntouched)
         {
-            var zone = ResolveZone(zoneId);
-            _model.TimeZoneId = zone.Id;
-            _model.StartLocal = TimeZoneInfo.ConvertTime(TimeProvider.GetUtcNow(), zone).DateTime.Date.AddDays(1).AddHours(18);
-            _model.EndLocal = _model.StartLocal.AddMinutes(30);
+            ApplyDefaultTimes(ResolveZone(zoneId));
         }
 
+        _fallbackZoneId = null;
         StateHasChanged();
     }
 

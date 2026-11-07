@@ -15,10 +15,17 @@ public sealed class ViewerTimeZone(IJSRuntime jsRuntime) : IViewerTimeZone
 
     public async ValueTask<string?> ResolveAsync(CancellationToken cancellationToken)
     {
-        // A shared instance keeps concurrent callers waiting on the same lookup
-        // instead of seeing an unresolved null.
-        var resolution = _resolution ??= ResolveCoreAsync(cancellationToken);
-        return await resolution;
+        // The result belongs to the scope, not to the component that first asked, so a
+        // navigation that cancels its caller must not cancel the shared lookup.
+        var resolution = _resolution ??= ResolveCoreAsync(CancellationToken.None);
+        var zoneId = await resolution.WaitAsync(cancellationToken);
+        if (zoneId is null)
+        {
+            // JavaScript may be unavailable for this renderer; let a later caller retry.
+            _resolution = null;
+        }
+
+        return zoneId;
     }
 
     private async Task<string?> ResolveCoreAsync(CancellationToken cancellationToken)

@@ -289,6 +289,59 @@ public sealed class FamilyLoadScenarioTests(PostgresAppFixture fixture)
     }
 
     [Fact]
+    public async Task FinishedEventsDoNotCrowdOutLaterUpcomingEvents()
+    {
+        await using var scope = fixture.CreateScope();
+        var services = new ScenarioServices(scope.ServiceProvider);
+        var owner = await services.CreateUserAsync("Late planner");
+        var groupId = await services.Families.CreateAsync(owner.Id, "Late Family", null, Token);
+
+        // These started inside the one-day lookback but have already ended, so they must
+        // not consume the limited result slots ahead of the event that is still ahead.
+        for (var index = 0; index < 10; index++)
+        {
+            var start = fixture.Clock.Now.AddHours(-12).AddMinutes(index);
+            _ = await services.Events.CreateAsync(
+                new PlanningEventInput(
+                    groupId,
+                    $"Finished {index}",
+                    null,
+                    "Community hall",
+                    null,
+                    null,
+                    start,
+                    start.AddMinutes(30),
+                    false,
+                    "UTC",
+                    null),
+                owner.Id,
+                Token);
+        }
+
+        var upcomingStart = fixture.Clock.Now.AddDays(2);
+        var upcomingId = await services.Events.CreateAsync(
+            new PlanningEventInput(
+                groupId,
+                "Still ahead",
+                null,
+                "Community hall",
+                null,
+                null,
+                upcomingStart,
+                upcomingStart.AddHours(2),
+                false,
+                "UTC",
+                null),
+            owner.Id,
+            Token);
+
+        var upcoming = await services.Events.ListUpcomingAsync(owner.Id, Token);
+
+        upcoming.Count.ShouldBe(1);
+        upcoming.ShouldContain(item => item.Id == upcomingId);
+    }
+
+    [Fact]
     public async Task AdministrationModeratesAndRemovesALargeFamilyWithoutLeavingOrphans()
     {
         await using var scope = fixture.CreateScope();
