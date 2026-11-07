@@ -22,6 +22,7 @@ internal sealed class ApplicationUser : IdentityUser
     /// Name shown on membership, attendee, and comment lists. Defaults to the
     /// user's full name and falls back to the email local part for older accounts.
     /// </summary>
+    [PersonalData]
     public string DisplayName { get; set; } = string.Empty;
 
     public DateTimeOffset? SuspendedAtUtc { get; set; }

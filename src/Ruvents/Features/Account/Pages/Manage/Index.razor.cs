@@ -127,7 +127,8 @@ public sealed partial class Index
         var legacyDefault = _defaultDisplayName.Length == 0
             ? UserProfileNames.DisplayNameFromEmail(_username ?? string.Empty)
             : _defaultDisplayName;
-        return string.Equals(posted, legacyDefault, StringComparison.Ordinal);
+        // Older saved defaults may end with the separator the cutoff landed on.
+        return string.Equals(posted, legacyDefault.Trim(), StringComparison.Ordinal);
     }
 
     private static bool SetValue(string? current, string? value, Action<string?> apply)

@@ -20,9 +20,12 @@ internal static class UserProfileNames
             ? BuildDisplayName(firstName, middleName, lastName, fallback)
             : requested.Trim();
 
-        return displayName.Length <= MaxDisplayNameLength
+        var truncated = displayName.Length <= MaxDisplayNameLength
             ? displayName
             : TrimWithoutSplittingPair(displayName, MaxDisplayNameLength);
+
+        // A cut that lands on a separator would otherwise leave a trailing space.
+        return truncated.TrimEnd();
     }
 
     private static string TrimWithoutSplittingPair(string value, int maxLength)

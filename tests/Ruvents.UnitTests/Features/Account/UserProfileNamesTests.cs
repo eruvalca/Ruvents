@@ -18,9 +18,25 @@ public sealed class UserProfileNamesTests
             "𠮷田",
             string.Empty);
 
-        displayName.Length.ShouldBe(99);
-        displayName.ShouldBe(new string('a', 49) + " " + new string('b', 48) + " ");
+        // The cut lands on the high surrogate, so the pair and the trailing
+        // separator before it are both dropped.
+        displayName.Length.ShouldBe(98);
+        displayName.ShouldBe(new string('a', 49) + " " + new string('b', 48));
         displayName.Any(char.IsSurrogate).ShouldBeFalse();
+    }
+
+    [Fact]
+    public void DisplayNameTruncationDoesNotLeaveATrailingSeparator()
+    {
+        var displayName = UserProfileNames.ResolveDisplayName(
+            null,
+            new string('a', 49),
+            new string('b', 49),
+            "Lovelace",
+            string.Empty);
+
+        displayName.ShouldBe(new string('a', 49) + " " + new string('b', 49));
+        displayName.Length.ShouldBe(99);
     }
 
     [Fact]

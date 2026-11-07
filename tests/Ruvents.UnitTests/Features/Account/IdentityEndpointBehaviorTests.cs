@@ -132,6 +132,7 @@ public sealed class IdentityEndpointBehaviorTests
         user.FirstName = "Persist";
         user.MiddleName = "Q";
         user.LastName = "User";
+        user.DisplayName = "Persist";
         user.PhoneNumber = null;
         user.PasswordHash = "password-hash-must-not-leak";
         user.SecurityStamp = "security-stamp-must-not-leak";
@@ -157,6 +158,7 @@ public sealed class IdentityEndpointBehaviorTests
             ["FirstName"] = "Persist",
             ["MiddleName"] = "Q",
             ["LastName"] = "User",
+            ["DisplayName"] = "Persist",
             ["Id"] = user.Id,
             ["UserName"] = user.UserName!,
             ["Email"] = user.Email!,

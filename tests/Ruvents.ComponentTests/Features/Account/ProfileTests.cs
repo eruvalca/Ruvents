@@ -153,6 +153,30 @@ public sealed class ProfileTests
     }
 
     [Fact]
+    public async Task LegacyDefaultEndingInASeparatorStillFollowsNameEditsAsync()
+    {
+        await using var context = new BunitContext();
+        var account = context.ConfigureAccount();
+        var user = account.Authenticate();
+        var firstName = new string('a', 49);
+        var middleName = new string('b', 49);
+        var lastName = "Lovelace";
+        // Simulate a default saved before trailing separators were trimmed.
+        var storedDefault = $"{firstName} {middleName} ";
+        storedDefault.Length.ShouldBe(UserProfileNames.MaxDisplayNameLength);
+        SetNames(user, firstName, middleName, lastName, storedDefault);
+        account.Http.Request.Method = HttpMethods.Get;
+        var component = account.Render<Profile>(context);
+        var newFirstName = new string('z', 49);
+
+        await component.Find("input[name='Input.FirstName']").ChangeAsync(new ChangeEventArgs { Value = newFirstName });
+        await component.Find("form").SubmitAsync();
+
+        await account.Users.Received(1).UpdateAsync(user);
+        user.DisplayName.ShouldBe($"{newFirstName} {middleName}");
+    }
+
+    [Fact]
     public async Task CustomDisplayNameIsPreservedWhenNamesChangeAsync()
     {
         await using var context = new BunitContext();
