@@ -22,7 +22,15 @@ internal static class UserProfileNames
 
         return displayName.Length <= MaxDisplayNameLength
             ? displayName
-            : displayName[..MaxDisplayNameLength];
+            : TrimWithoutSplittingPair(displayName, MaxDisplayNameLength);
+    }
+
+    private static string TrimWithoutSplittingPair(string value, int maxLength)
+    {
+        // A hard UTF-16 slice can leave an unmatched high surrogate, which cannot be
+        // encoded losslessly. Include neither half of the pair when the cut lands there.
+        var length = char.IsHighSurrogate(value[maxLength - 1]) ? maxLength - 1 : maxLength;
+        return value[..length];
     }
 
     internal static string BuildDisplayName(string? firstName, string? middleName, string? lastName, string fallback)
