@@ -48,7 +48,7 @@ public sealed partial class EventDetail
     private EventTimeState TimeState =>
         _event is null
             ? EventTimeState.Upcoming
-            : EventTiming.GetTimeState(_event.StartUtc, _event.EndUtc, _event.IsAllDay, DisplayZoneId, _now);
+            : EventTiming.GetTimeState(_event.StartUtc, _event.EndUtc, _event.IsAllDay, _event.TimeZoneId, _now);
 
     private bool ShowsEventZone =>
         _event is not null

@@ -83,7 +83,7 @@ public sealed partial class GroupDetail
     }
 
     private EventTimeState StateOf(PlanningEventSummary calendarEvent) =>
-        EventDisplay.State(calendarEvent, ViewerTimeZone.ResolvedZoneId, _now);
+        EventDisplay.State(calendarEvent, _now);
 
     private string DisplayZoneId(PlanningEventSummary calendarEvent) =>
         EventDisplay.ZoneId(calendarEvent, ViewerTimeZone.ResolvedZoneId);

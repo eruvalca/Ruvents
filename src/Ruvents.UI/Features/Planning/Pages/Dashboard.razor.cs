@@ -14,8 +14,8 @@ public sealed partial class Dashboard
     private bool _loading = true;
     private DateTimeOffset _now;
 
-    [Inject]
-    private IViewerTimeZone ViewerTimeZone { get; set; } = default!;
+    [CascadingParameter(Name = "ViewerTimeZoneId")]
+    public string? ViewerTimeZoneId { get; set; }
 
     [Inject]
     private TimeProvider TimeProvider { get; set; } = default!;
@@ -24,28 +24,13 @@ public sealed partial class Dashboard
     {
         using var operation = CreateOperation();
         _now = TimeProvider.GetUtcNow();
-        // The directory keeps events that started yesterday so multi-day events stay
-        // visible, so anything already finished is dropped here.
+        // The directory drops finished events before it limits the result, so this is
+        // only a guard for the boundary the server computed a moment earlier.
         _events = await Api.ListUpcomingEventsAsync(operation.Token);
         Apply();
         _groups = await Api.ListFamiliesAsync(operation.Token);
         _unread = await Api.UnreadCountAsync(operation.Token);
         _loading = false;
-    }
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (!firstRender || IsDisposed || ViewerTimeZone.ResolvedZoneId is not null)
-        {
-            return;
-        }
-
-        using var operation = CreateOperation();
-        if (await ViewerTimeZone.ResolveAsync(operation.Token) is not null && !IsDisposed)
-        {
-            Apply();
-            StateHasChanged();
-        }
     }
 
     private void Apply() =>
@@ -54,11 +39,11 @@ public sealed partial class Dashboard
             .ToList();
 
     private EventTimeState StateOf(PlanningEventSummary calendarEvent) =>
-        EventDisplay.State(calendarEvent, ViewerTimeZone.ResolvedZoneId, _now);
+        EventDisplay.State(calendarEvent, _now);
 
     private string DisplayZoneId(PlanningEventSummary calendarEvent) =>
-        EventDisplay.ZoneId(calendarEvent, ViewerTimeZone.ResolvedZoneId);
+        EventDisplay.ZoneId(calendarEvent, ViewerTimeZoneId);
 
     private bool ShowsEventZone(PlanningEventSummary calendarEvent) =>
-        EventDisplay.ShowsEventZone(calendarEvent, ViewerTimeZone.ResolvedZoneId);
+        EventDisplay.ShowsEventZone(calendarEvent, ViewerTimeZoneId);
 }

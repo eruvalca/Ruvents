@@ -22,6 +22,20 @@
             }
         })();
     </script>
+    <script>
+        // Remember the browser's zone so a statically rendered page can format in it on
+        // the next request. Keep the name in sync with App.razor.cs.
+        (function () {
+            try {
+                var zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+                if (zone) {
+                    document.cookie = 'ruvents-tz=' + encodeURIComponent(zone) + '; path=/; max-age=31536000; samesite=lax';
+                }
+            } catch (error) {
+                // Without a zone the pages keep each event's own zone.
+            }
+        })();
+    </script>
     <link rel="stylesheet" href="@Assets["Ruvents.styles.css"]" />
     <link rel="stylesheet" href="@Assets["_content/Ruvents.UI/theme.css"]" />
     <link rel="stylesheet" href="@Assets["app.css"]" />
@@ -34,8 +48,10 @@
 </head>
 
 <body>
-    <CascadingValue Name="RequestAborted" Value="HttpContext.RequestAborted" IsFixed="true">
-        <Routes />
+    <CascadingValue Name="ViewerTimeZoneId" Value="ViewerTimeZoneId" IsFixed="true">
+        <CascadingValue Name="RequestAborted" Value="HttpContext.RequestAborted" IsFixed="true">
+            <Routes />
+        </CascadingValue>
     </CascadingValue>
     <ReconnectModal />
     <script src="_content/Cropper.Blazor/cropper.min.js"></script>
