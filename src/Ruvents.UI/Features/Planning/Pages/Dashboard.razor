@@ -54,7 +54,15 @@ else
                             <img class="event-cover" src="@($"events/{calendarEvent.Id}/cover")" alt="" />
                         }
                         <a class="event-title" href="@($"events/{calendarEvent.Id}")">@calendarEvent.Title</a>
-                        <p class="event-when">@EventTiming.FormatDate(calendarEvent.StartUtc, calendarEvent.IsAllDay, calendarEvent.TimeZoneId)</p>
+                        <p class="event-when">@EventTiming.FormatDate(calendarEvent.StartUtc, calendarEvent.IsAllDay, DisplayZoneId(calendarEvent))</p>
+                        @if (ShowsEventZone(calendarEvent))
+                        {
+                            <p class="event-zone">Event time @EventTiming.FormatDate(calendarEvent.StartUtc, false, calendarEvent.TimeZoneId) (@calendarEvent.TimeZoneId)</p>
+                        }
+                        @if (StateOf(calendarEvent) == EventTimeState.InProgress)
+                        {
+                            <span class="chip" data-tone="mint">Happening now</span>
+                        }
                         <p class="event-where">@calendarEvent.LocationName</p>
                     </li>
                 }

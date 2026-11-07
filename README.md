@@ -152,7 +152,12 @@ The application plans family gatherings:
   restore it. The end time defaults to 30 minutes after the start and must stay after
   it. Creating an event marks the creator as attending, and they can still adjust that
   RSVP, including which of their household members attend. A member of exactly one
-  family group gets that group selected automatically when creating an event.
+  family group gets that group selected automatically when creating an event. Times are
+  shown in the viewer's browser zone, with the event's own zone repeated when the two
+  differ; the edit form enters wall-clock times in the event's zone and says so. A group
+  page separates current and upcoming events from a **Past events** section ordered most
+  recent first, and an event that has started but not ended is marked "Happening now",
+  so a finished event no longer reads like an upcoming one.
 - **RSVPs** are per person: the account holder, their household members, and named
   additional guests each count separately. A soft deadline closes responses, and the
   creator or an organizer can reopen it.

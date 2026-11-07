@@ -3,8 +3,8 @@ using System.Globalization;
 namespace Ruvents.SharedKernel.Events;
 
 /// <summary>
-/// Formats event instants for display. All-day events keep their calendar date in UTC;
-/// timed events are shown in the event's own time zone.
+/// Formats event instants for display and reports where an event sits in time. All-day
+/// events keep their calendar date in UTC; timed events are shown in the supplied zone.
 /// </summary>
 public static class EventTiming
 {
@@ -42,6 +42,50 @@ public static class EventTiming
             ? end.ToString("h:mm tt", CultureInfo.CurrentCulture)
             : end.ToString("ddd, MMM d, yyyy h:mm tt", CultureInfo.CurrentCulture);
         return $"{result} – {endText}";
+    }
+
+    public static EventTimeState GetTimeState(
+        DateTimeOffset startUtc,
+        DateTimeOffset? endUtc,
+        bool isAllDay,
+        string timeZoneId,
+        DateTimeOffset nowUtc)
+    {
+        if (nowUtc < startUtc)
+        {
+            return EventTimeState.Upcoming;
+        }
+
+        return nowUtc >= GetExclusiveEndUtc(startUtc, endUtc, isAllDay, timeZoneId)
+            ? EventTimeState.Past
+            : EventTimeState.InProgress;
+    }
+
+    private static DateTimeOffset GetExclusiveEndUtc(
+        DateTimeOffset startUtc,
+        DateTimeOffset? endUtc,
+        bool isAllDay,
+        string timeZoneId)
+    {
+        if (isAllDay)
+        {
+            // All-day instants are stored at UTC midnight and displayed as calendar
+            // dates, so the stored end date is the last day the event covers.
+            var lastDate = (endUtc ?? startUtc).UtcDateTime.Date;
+            return new DateTimeOffset(lastDate.AddDays(1), TimeSpan.Zero);
+        }
+
+        if (endUtc is not null)
+        {
+            return endUtc.Value;
+        }
+
+        // A timed event without an end stays current through the end of its start day;
+        // otherwise it would read as past the moment it begins.
+        var zone = ResolveTimeZone(timeZoneId);
+        var startLocal = TimeZoneInfo.ConvertTime(startUtc, zone);
+        var nextMidnight = startLocal.Date.AddDays(1);
+        return new DateTimeOffset(nextMidnight, zone.GetUtcOffset(nextMidnight)).ToUniversalTime();
     }
 
     public static string FormatDate(DateTimeOffset instant, bool isAllDay, string timeZoneId) =>

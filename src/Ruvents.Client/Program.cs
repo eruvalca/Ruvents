@@ -5,6 +5,7 @@ using Ruvents.UI.Planning;
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 
 builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddScoped<IViewerTimeZone, ViewerTimeZone>();
 builder.Services.AddAuthorizationCore();
 builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddAuthenticationStateDeserialization();

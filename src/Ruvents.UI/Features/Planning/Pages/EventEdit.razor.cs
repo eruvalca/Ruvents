@@ -29,6 +29,13 @@ public sealed partial class EventEdit
     [Inject]
     private TimeProvider TimeProvider { get; set; } = default!;
 
+    [Inject]
+    private IViewerTimeZone ViewerTimeZone { get; set; } = default!;
+
+    private bool ViewerZoneDiffers =>
+        ViewerTimeZone.ResolvedZoneId is { } zoneId
+        && !string.Equals(zoneId, _model.TimeZoneId, StringComparison.OrdinalIgnoreCase);
+
     protected override async Task OnInitializedAsync()
     {
         _zones = TimeZoneInfo.GetSystemTimeZones();
@@ -88,6 +95,38 @@ public sealed partial class EventEdit
         _model.TimeZoneId = TimeZoneInfo.Local.Id;
         _model.StartLocal = TimeProvider.GetLocalNow().LocalDateTime.Date.AddDays(1).AddHours(18);
         _model.EndLocal = _model.StartLocal.AddMinutes(30);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || IsDisposed)
+        {
+            return;
+        }
+
+        using var operation = CreateOperation();
+        if (ViewerTimeZone.ResolvedZoneId is null)
+        {
+            await ViewerTimeZone.ResolveAsync(operation.Token);
+        }
+
+        if (IsDisposed || ViewerTimeZone.ResolvedZoneId is not { } zoneId)
+        {
+            return;
+        }
+
+        // The prerender supplied the server's zone, so a new event starts on the
+        // browser's zone once the renderer can report it. Editing keeps the event's
+        // own zone because the wall-clock fields below are entered in that zone.
+        if (EventId is null)
+        {
+            var zone = ResolveZone(zoneId);
+            _model.TimeZoneId = zone.Id;
+            _model.StartLocal = TimeZoneInfo.ConvertTime(TimeProvider.GetUtcNow(), zone).DateTime.Date.AddDays(1).AddHours(18);
+            _model.EndLocal = _model.StartLocal.AddMinutes(30);
+        }
+
+        StateHasChanged();
     }
 
     private void OnStartChanged()

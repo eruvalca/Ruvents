@@ -70,4 +70,57 @@ public sealed class EventTimingTests : IDisposable
         text.ShouldContain("Jun 4, 2026");
         text.ShouldContain("7:00 PM");
     }
+
+    [Fact]
+    public void TimedEventMovesFromUpcomingToInProgressToPast()
+    {
+        var start = new DateTimeOffset(2026, 6, 1, 18, 0, 0, TimeSpan.Zero);
+        var end = start.AddHours(1);
+
+        EventTiming.GetTimeState(start, end, isAllDay: false, WesternZone, start.AddMinutes(-1))
+            .ShouldBe(EventTimeState.Upcoming);
+        EventTiming.GetTimeState(start, end, isAllDay: false, WesternZone, start.AddMinutes(30))
+            .ShouldBe(EventTimeState.InProgress);
+        EventTiming.GetTimeState(start, end, isAllDay: false, WesternZone, end)
+            .ShouldBe(EventTimeState.Past);
+    }
+
+    [Fact]
+    public void AllDayEventStaysCurrentThroughItsUtcCalendarDate()
+    {
+        // Stored at UTC midnight, so a zone west of UTC must not end it early.
+        var start = new DateTimeOffset(2026, 6, 1, 0, 0, 0, TimeSpan.Zero);
+
+        EventTiming.GetTimeState(start, null, isAllDay: true, WesternZone, start.AddHours(-1))
+            .ShouldBe(EventTimeState.Upcoming);
+        EventTiming.GetTimeState(start, null, isAllDay: true, WesternZone, start.AddHours(23))
+            .ShouldBe(EventTimeState.InProgress);
+        EventTiming.GetTimeState(start, null, isAllDay: true, WesternZone, start.AddDays(1))
+            .ShouldBe(EventTimeState.Past);
+    }
+
+    [Fact]
+    public void AllDayEventKeepsItsStoredEndDateAsTheLastDayItCovers()
+    {
+        var start = new DateTimeOffset(2026, 6, 1, 0, 0, 0, TimeSpan.Zero);
+        var end = new DateTimeOffset(2026, 6, 3, 0, 0, 0, TimeSpan.Zero);
+
+        EventTiming.GetTimeState(start, end, isAllDay: true, WesternZone, end.AddHours(12))
+            .ShouldBe(EventTimeState.InProgress);
+        EventTiming.GetTimeState(start, end, isAllDay: true, WesternZone, end.AddDays(1))
+            .ShouldBe(EventTimeState.Past);
+    }
+
+    [Fact]
+    public void TimedEventWithoutAnEndStaysCurrentThroughItsStartDay()
+    {
+        // 22:00 UTC on 1 June is 18:00 in New York, so the event covers the rest of
+        // that local day rather than ending the moment it starts.
+        var start = new DateTimeOffset(2026, 6, 1, 22, 0, 0, TimeSpan.Zero);
+
+        EventTiming.GetTimeState(start, null, isAllDay: false, WesternZone, start.AddHours(5))
+            .ShouldBe(EventTimeState.InProgress);
+        EventTiming.GetTimeState(start, null, isAllDay: false, WesternZone, start.AddHours(7))
+            .ShouldBe(EventTimeState.Past);
+    }
 }
