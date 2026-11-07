@@ -103,6 +103,8 @@ public sealed class GroupDetailTests
     {
         public string? ResolvedZoneId => null;
 
+        public bool IsConfirmed => false;
+
         public ValueTask<string?> ResolveAsync(CancellationToken cancellationToken) =>
             ValueTask.FromResult<string?>(null);
     }

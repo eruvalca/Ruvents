@@ -109,10 +109,11 @@ public sealed partial class EventEdit
         _selectedGroupId = selected;
         _selectedGroupName = _groups.FirstOrDefault(group => group.Id == _selectedGroupId)?.Name;
 
-        // A page reached after the browser zone is known uses it directly; otherwise this
-        // is the server-side fallback that the first interactive render replaces.
+        // A page reached after the browser zone is confirmed uses it directly. A zone
+        // carried over from an earlier request is provisional and is reconciled once the
+        // renderer can confirm it, so it counts as the fallback too.
         var resolvedZoneId = ViewerTimeZone.ResolvedZoneId;
-        _fallbackZoneId = resolvedZoneId is null ? TimeZoneInfo.Local.Id : null;
+        _fallbackZoneId = ViewerTimeZone.IsConfirmed ? null : resolvedZoneId ?? TimeZoneInfo.Local.Id;
         ApplyDefaultTimes(ResolveZone(resolvedZoneId ?? TimeZoneInfo.Local.Id));
         _fallbackStart = _model.StartLocal;
         _fallbackEnd = _model.EndLocal;
@@ -139,12 +140,12 @@ public sealed partial class EventEdit
         _zoneResolutionAttempted = true;
 
         using var operation = CreateOperation();
-        if (ViewerTimeZone.ResolvedZoneId is null)
+        if (!ViewerTimeZone.IsConfirmed)
         {
             await ViewerTimeZone.ResolveAsync(operation.Token);
         }
 
-        if (IsDisposed || ViewerTimeZone.ResolvedZoneId is not { } zoneId)
+        if (IsDisposed || !ViewerTimeZone.IsConfirmed || ViewerTimeZone.ResolvedZoneId is not { } zoneId)
         {
             return;
         }

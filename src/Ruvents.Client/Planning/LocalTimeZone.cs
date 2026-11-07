@@ -10,6 +10,8 @@ internal sealed class LocalTimeZone : IViewerTimeZone
 {
     public string? ResolvedZoneId => TimeZoneInfo.Local.Id;
 
+    public bool IsConfirmed => true;
+
     public ValueTask<string?> ResolveAsync(CancellationToken cancellationToken) =>
         ValueTask.FromResult(ResolvedZoneId);
 }

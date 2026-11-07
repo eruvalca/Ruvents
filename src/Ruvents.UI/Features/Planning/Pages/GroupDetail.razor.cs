@@ -14,6 +14,7 @@ public sealed partial class GroupDetail
     private IReadOnlyList<PlanningEventSummary> _upcoming = [];
     private IReadOnlyList<PlanningEventSummary> _past = [];
     private bool _showAllPast;
+    private bool _zoneResolutionAttempted;
     private DateTimeOffset _now;
     private string? _message;
     private string _messageKind = "information";
@@ -38,15 +39,18 @@ public sealed partial class GroupDetail
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (!firstRender || IsDisposed || ViewerTimeZone.ResolvedZoneId is not null)
+        // A zone carried over from an earlier request is only provisional, so confirm it
+        // once the renderer can ask the browser.
+        if (IsDisposed || ViewerTimeZone.IsConfirmed || _zoneResolutionAttempted)
         {
             return;
         }
 
+        _zoneResolutionAttempted = true;
+
         using var operation = CreateOperation();
         if (await ViewerTimeZone.ResolveAsync(operation.Token) is not null && !IsDisposed)
         {
-            Partition();
             StateHasChanged();
         }
     }

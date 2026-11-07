@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
 using Ruvents.UI.Planning;
 
 namespace Ruvents.Features.PlanningApi;
@@ -35,6 +36,8 @@ internal sealed class ServerViewerTimeZone(
         }
     }
 
+    public bool IsConfirmed => browserTimeZone.ResolvedZoneId is not null;
+
     public ValueTask<string?> ResolveAsync(CancellationToken cancellationToken) =>
         browserTimeZone.ResolveAsync(cancellationToken);
 
@@ -57,8 +60,9 @@ internal sealed class ServerViewerTimeZone(
         if (_cookieZoneId is not null)
         {
             // A request that reaches this point is statically rendering or prerendering,
-            // so this response can carry the zone forward.
-            persistentComponentState.RegisterOnPersisting(PersistZoneAsync);
+            // so this response can carry the zone forward. Both interactive render modes
+            // are registered, so the callback must name the mode it belongs to.
+            persistentComponentState.RegisterOnPersisting(PersistZoneAsync, RenderMode.InteractiveAuto);
         }
     }
 

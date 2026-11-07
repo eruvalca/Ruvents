@@ -36,6 +36,7 @@ public sealed partial class EventDetail
     private string _newSlotName = string.Empty;
     private int _newSlotQuantity = 1;
     private DateTimeOffset _now;
+    private bool _zoneResolutionAttempted;
 
     [Inject]
     private IViewerTimeZone ViewerTimeZone { get; set; } = default!;
@@ -67,10 +68,12 @@ public sealed partial class EventDetail
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (!firstRender || IsDisposed || ViewerTimeZone.ResolvedZoneId is not null)
+        if (IsDisposed || ViewerTimeZone.IsConfirmed || _zoneResolutionAttempted)
         {
             return;
         }
+
+        _zoneResolutionAttempted = true;
 
         using var operation = CreateOperation();
         if (await ViewerTimeZone.ResolveAsync(operation.Token) is not null && !IsDisposed)

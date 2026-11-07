@@ -13,6 +13,8 @@ public sealed class ViewerTimeZone(IJSRuntime jsRuntime) : IViewerTimeZone
 
     public string? ResolvedZoneId { get; private set; }
 
+    public bool IsConfirmed => ResolvedZoneId is not null;
+
     public async ValueTask<string?> ResolveAsync(CancellationToken cancellationToken)
     {
         // The result belongs to the scope, not to the component that first asked, so a

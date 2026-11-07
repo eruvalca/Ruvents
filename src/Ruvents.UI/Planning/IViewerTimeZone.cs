@@ -7,9 +7,15 @@ namespace Ruvents.UI.Planning;
 /// </summary>
 public interface IViewerTimeZone
 {
-    /// <summary>Gets the browser zone once resolved, or <see langword="null"/> before then.</summary>
+    /// <summary>
+    /// Gets the best-known zone: the browser's confirmed zone, or a provisional value
+    /// carried over from an earlier request until the renderer connects.
+    /// </summary>
     string? ResolvedZoneId { get; }
 
-    /// <summary>Resolves the browser zone once and caches it for the lifetime of the scope.</summary>
+    /// <summary>Gets whether <see cref="ResolvedZoneId"/> came from the browser this session.</summary>
+    bool IsConfirmed { get; }
+
+    /// <summary>Resolves and confirms the browser zone, caching it for the lifetime of the scope.</summary>
     ValueTask<string?> ResolveAsync(CancellationToken cancellationToken);
 }
