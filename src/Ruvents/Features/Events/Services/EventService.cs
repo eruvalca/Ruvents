@@ -212,9 +212,9 @@ internal sealed class EventService(
         const int MaxResults = 10;
 
         var now = timeProvider.GetUtcNow();
-        // Events that started in the last day may still be running, so they stay in the
-        // candidate window; anything already finished is removed before the list is
-        // limited, otherwise finished events could crowd out later ones.
+        // Events that started recently, or that are still running after an earlier start
+        // (multi-day), stay in the candidate window; anything already finished is removed
+        // before the list is limited, otherwise it could crowd out later events.
         var threshold = now.AddDays(-1);
         await using var db = await dbContextFactory.CreateDbContextAsync(cancellationToken);
 
@@ -225,7 +225,8 @@ internal sealed class EventService(
             var batch = await db.Events
                 .Where(calendarEvent => groupIds.Contains(calendarEvent.FamilyGroupId)
                     && calendarEvent.Status == EventStatus.Scheduled
-                    && calendarEvent.StartUtc >= threshold)
+                    && (calendarEvent.StartUtc >= threshold
+                        || (calendarEvent.EndUtc != null && calendarEvent.EndUtc >= threshold)))
                 .OrderBy(calendarEvent => calendarEvent.StartUtc)
                 .ThenBy(calendarEvent => calendarEvent.Id)
                 .Skip(skip)

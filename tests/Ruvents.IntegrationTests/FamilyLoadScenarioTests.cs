@@ -342,6 +342,57 @@ public sealed class FamilyLoadScenarioTests(PostgresAppFixture fixture)
     }
 
     [Fact]
+    public async Task OngoingMultiDayEventsStayInTheDashboardCandidates()
+    {
+        await using var scope = fixture.CreateScope();
+        var services = new ScenarioServices(scope.ServiceProvider);
+        var owner = await services.CreateUserAsync("Multi-day host");
+        var groupId = await services.Families.CreateAsync(owner.Id, "Multi-day Family", null, Token);
+
+        // Started before the one-day lookback but still running, so a start-only cutoff
+        // would drop it while the shared state calculation reports it as in progress.
+        var ongoingStart = fixture.Clock.Now.AddDays(-3);
+        _ = await services.Events.CreateAsync(
+            new PlanningEventInput(
+                groupId,
+                "Still running",
+                null,
+                "Cabin",
+                null,
+                null,
+                ongoingStart,
+                fixture.Clock.Now.AddHours(4),
+                false,
+                "UTC",
+                null),
+            owner.Id,
+            Token);
+
+        var upcomingStart = fixture.Clock.Now.AddDays(2);
+        _ = await services.Events.CreateAsync(
+            new PlanningEventInput(
+                groupId,
+                "Later",
+                null,
+                "Community hall",
+                null,
+                null,
+                upcomingStart,
+                upcomingStart.AddHours(2),
+                false,
+                "UTC",
+                null),
+            owner.Id,
+            Token);
+
+        var upcoming = await services.Events.ListUpcomingAsync(owner.Id, Token);
+
+        upcoming.Count.ShouldBe(2);
+        upcoming[0].Title.ShouldBe("Still running");
+        upcoming[1].Title.ShouldBe("Later");
+    }
+
+    [Fact]
     public async Task AdministrationModeratesAndRemovesALargeFamilyWithoutLeavingOrphans()
     {
         await using var scope = fixture.CreateScope();

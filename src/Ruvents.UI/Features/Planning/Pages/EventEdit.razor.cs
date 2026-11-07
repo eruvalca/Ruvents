@@ -37,7 +37,9 @@ public sealed partial class EventEdit
         && !string.Equals(zoneId, _model.TimeZoneId, StringComparison.OrdinalIgnoreCase);
 
     // The form is only touched by the zone fix-up once initialization has supplied a
-    // model, and only while its values are still the server-side fallback.
+    // model, and only while its values are still the server-side fallback. An entered
+    // RSVP deadline counts as a touch: it is interpreted in the same zone on save, so
+    // switching the zone under it would shift the saved instant.
     private bool _modelReady;
     private bool _zoneResolutionAttempted;
     private string? _fallbackZoneId;
@@ -47,7 +49,8 @@ public sealed partial class EventEdit
     private bool DefaultsAreUntouched =>
         string.Equals(_model.TimeZoneId, _fallbackZoneId, StringComparison.Ordinal)
         && _model.StartLocal == _fallbackStart
-        && _model.EndLocal == _fallbackEnd;
+        && _model.EndLocal == _fallbackEnd
+        && _model.RsvpDeadlineLocal is null;
 
     protected override async Task OnInitializedAsync()
     {
