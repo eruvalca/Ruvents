@@ -51,6 +51,11 @@ public sealed partial class EventDetail
             ? EventTimeState.Upcoming
             : EventTiming.GetTimeState(_event.StartUtc, _event.EndUtc, _event.IsAllDay, _event.TimeZoneId, _now);
 
+    private bool IsHappeningNow =>
+        _event is not null
+        && _event.Status != EventStatus.Cancelled
+        && TimeState == EventTimeState.InProgress;
+
     private bool ShowsEventZone =>
         _event is not null
         && !_event.IsAllDay

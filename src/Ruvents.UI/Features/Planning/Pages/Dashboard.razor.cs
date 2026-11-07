@@ -41,6 +41,9 @@ public sealed partial class Dashboard
     private EventTimeState StateOf(PlanningEventSummary calendarEvent) =>
         EventDisplay.State(calendarEvent, _now);
 
+    private bool IsHappeningNow(PlanningEventSummary calendarEvent) =>
+        EventDisplay.IsHappeningNow(calendarEvent, _now);
+
     private string DisplayZoneId(PlanningEventSummary calendarEvent) =>
         EventDisplay.ZoneId(calendarEvent, ViewerTimeZoneId);
 

@@ -63,6 +63,29 @@ public sealed class GroupDetailTests
         string.Join(", ", Titles(Section(component, "Past events"))).ShouldBe("Yesterday, Long ago");
     }
 
+    [Fact]
+    public async Task ScheduledEventInItsWindowShowsHappeningNowAsync()
+    {
+        await using var context = CreateContext(
+            Summary("Live", _now.AddHours(-1), _now.AddHours(1), EventStatus.Scheduled));
+
+        var events = Section(Render(context), "Events");
+
+        events.TextContent.ShouldContain("Happening now");
+    }
+
+    [Fact]
+    public async Task CancelledEventDoesNotClaimToBeHappeningNowAsync()
+    {
+        await using var context = CreateContext(
+            Summary("Called off", _now.AddHours(-1), _now.AddHours(1), EventStatus.Cancelled));
+
+        var events = Section(Render(context), "Events");
+
+        events.TextContent.ShouldContain("Cancelled");
+        events.TextContent.ShouldNotContain("Happening now");
+    }
+
     private static BunitContext CreateContext(params PlanningEventSummary[] events)
     {
         var context = new BunitContext();

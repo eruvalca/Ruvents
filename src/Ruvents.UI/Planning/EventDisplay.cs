@@ -23,6 +23,11 @@ internal static class EventDisplay
             summary.TimeZoneId,
             nowUtc);
 
+    public static bool IsHappeningNow(PlanningEventSummary summary, DateTimeOffset nowUtc) =>
+        // Cancellation supersedes the time window: a called-off event is not live even
+        // while its original start and end still bracket the current moment.
+        summary.Status != EventStatus.Cancelled && State(summary, nowUtc) is EventTimeState.InProgress;
+
     public static bool ShowsEventZone(PlanningEventSummary summary, string? viewerZoneId) =>
         !summary.IsAllDay
         && !string.IsNullOrWhiteSpace(viewerZoneId)

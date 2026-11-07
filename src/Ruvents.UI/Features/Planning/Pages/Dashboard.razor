@@ -59,7 +59,7 @@ else
                         {
                             <p class="event-zone">Event time @EventTiming.FormatDate(calendarEvent.StartUtc, false, calendarEvent.TimeZoneId) (@calendarEvent.TimeZoneId)</p>
                         }
-                        @if (StateOf(calendarEvent) == EventTimeState.InProgress)
+                        @if (IsHappeningNow(calendarEvent))
                         {
                             <span class="chip" data-tone="mint">Happening now</span>
                         }

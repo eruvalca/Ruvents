@@ -40,7 +40,6 @@ else
             <ul class="card-grid">
                 @foreach (var calendarEvent in _upcoming)
                 {
-                    var state = StateOf(calendarEvent);
                     <li>
                         <a class="event-title" href="@($"events/{calendarEvent.Id}")">@calendarEvent.Title</a>
                         <p class="event-when">@EventTiming.FormatDate(calendarEvent.StartUtc, calendarEvent.IsAllDay, DisplayZoneId(calendarEvent))</p>
@@ -48,7 +47,7 @@ else
                         {
                             <p class="event-zone">Event time @EventTiming.FormatDate(calendarEvent.StartUtc, false, calendarEvent.TimeZoneId) (@calendarEvent.TimeZoneId)</p>
                         }
-                        @if (state == EventTimeState.InProgress)
+                        @if (IsHappeningNow(calendarEvent))
                         {
                             <span class="chip" data-tone="mint">Happening now</span>
                         }
