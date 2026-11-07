@@ -22,7 +22,7 @@
 
 <form @formname="manage-profile-photo" method="post" enctype="multipart/form-data">
     <AntiforgeryToken />
-    <PhotoCropField @rendermode="InteractiveServer" />
+    <PhotoCropField @rendermode="InteractiveServer" SubmitLabel="Save photo" InitialPreview="@_photoPreview" />
     <noscript>
         <div class="form-field">
             <label for="Photo">Choose a photo</label>

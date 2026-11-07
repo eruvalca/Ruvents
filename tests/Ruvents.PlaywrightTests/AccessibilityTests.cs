@@ -51,7 +51,7 @@ public sealed class AccessibilityTests(ITestOutputHelper output)
             await AssertAccessibilityAsync(page, "Login");
 
             await page.GotoAsync("/Account/Register");
-            await page.GetByRole(AriaRole.Heading, new() { Name = "Register", Exact = true }).WaitForAsync();
+            await page.GetByRole(AriaRole.Heading, new() { Name = "Create your account", Exact = true }).WaitForAsync();
             await AssertAccessibilityAsync(page, "Register");
 
             // The dark palette must meet the same contrast budget as the light one.
@@ -61,7 +61,7 @@ public sealed class AccessibilityTests(ITestOutputHelper output)
             await AssertAccessibilityAsync(page, "Home (dark)");
 
             await page.GotoAsync("/Account/Register");
-            await page.GetByRole(AriaRole.Heading, new() { Name = "Register", Exact = true }).WaitForAsync();
+            await page.GetByRole(AriaRole.Heading, new() { Name = "Create your account", Exact = true }).WaitForAsync();
             await AssertAccessibilityAsync(page, "Register (dark)");
         }
         finally

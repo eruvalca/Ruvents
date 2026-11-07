@@ -35,10 +35,8 @@ public sealed class IdentityEndpointExtensionsTests
         [
             "/Account/Logout",
             "/Account/Manage/DownloadPersonalData",
-            "/Account/Manage/LinkExternalLogin",
             "/Account/PasskeyCreationOptions",
             "/Account/PasskeyRequestOptions",
-            "/Account/PerformExternalLogin",
         ]);
         foreach (var endpoint in endpoints)
         {

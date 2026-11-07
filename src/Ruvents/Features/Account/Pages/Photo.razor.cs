@@ -10,6 +10,7 @@ public sealed partial class Photo
 {
     private ApplicationUser? _user;
     private string? _error;
+    private string? _photoPreview;
 
     [SupplyParameterFromQuery]
     private string? ReturnUrl { get; set; }
@@ -33,6 +34,7 @@ public sealed partial class Photo
             return;
         }
 
+        _photoPreview = ProfilePhotoWriter.ReadPostedPreview(HttpContext);
         _error = await PhotoWriter.TryReplaceAsync(_user, HttpContext, HttpContext.RequestAborted);
         if (_error is null)
         {

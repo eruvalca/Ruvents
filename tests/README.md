@@ -515,16 +515,16 @@ lines, and eight trivial lines (no-op email methods, layout/content slots, the
 database-context constructor, and the fixed revalidation interval). Tests do not
 mutate cached private state or invoke private event handlers merely to cover them.
 Generated logging/union code, migrations, startup, build-tool execution, actual
-WebAuthn JavaScript, database persistence, and live external providers remain
-outside this unit/component testing scope.
+WebAuthn JavaScript, and database persistence remain outside this unit/component
+testing scope.
 
 Endpoint tests invoke mapped delegates against in-memory HTTP contexts with
 substituted dependencies; they never start their application or send a network
 request. Revalidation tests invoke the framework's protected validation hook
 directly, avoiding its 30-minute background timer. bUnit tests use actual form
 events; the existing form helper supplies posted values only where bUnit does not
-run static SSR form mapping. For example, an empty phone string fails validation,
-while an explicitly null posted phone value removes the saved number.
+run static SSR form mapping. For example, the profile form helper supplies the
+nullable posted phone value that static SSR mapping provides.
 
 ## Initial test scope
 
@@ -534,7 +534,7 @@ It verifies each outcome, payloads, operation ordering, short-circuited failures
 credential/token decoding, and the passkey limit. Component tests exercise the
 real pages and services to check validation, redirects, account-privacy responses,
 partial-failure messages, and recovery-code rendering. Every test owns its mutable
-state; no database, Aspire process, browser, or external provider is required.
+state; no database, Aspire process, or browser is required.
 
 The following initial-scope descriptions and acceptance records document the
 original test setup before the account outcome suite was added.

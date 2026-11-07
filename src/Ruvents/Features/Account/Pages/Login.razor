@@ -1,7 +1,6 @@
 @page "/Account/Login"
 
 @using System.ComponentModel.DataAnnotations
-@using Microsoft.AspNetCore.Authentication
 @using Microsoft.AspNetCore.Identity
 @using Ruvents.Data
 
@@ -20,8 +19,6 @@
         <StatusMessage Message="@_errorMessage" />
         <EditForm class="account-form" EditContext="_editContext" method="post" OnSubmit="LoginUserAsync" FormName="login">
             <DataAnnotationsValidator />
-            <h2>Use a local account to log in.</h2>
-            <hr />
             <ValidationSummary class="error-text" role="alert" />
             <div class="form-field">
                 <label for="Input.Email">Email</label>
@@ -60,10 +57,5 @@
                 </p>
             </div>
         </EditForm>
-    </section>
-    <section>
-        <h3>Use another service to log in.</h3>
-        <hr />
-        <ExternalLoginPicker />
     </section>
 </div>

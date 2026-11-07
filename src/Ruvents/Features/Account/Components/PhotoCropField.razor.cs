@@ -21,6 +21,21 @@ public sealed partial class PhotoCropField : CancellableComponentBase
 
     private static readonly Options _options = new() { AspectRatio = 1m, AutoCropArea = 1m };
 
+    /// <summary>
+    /// Label for the submit button rendered once a crop exists. When null, the
+    /// containing page owns the form's submit button, so capturing a crop never
+    /// posts the form by itself.
+    /// </summary>
+    [Parameter]
+    public string? SubmitLabel { get; set; }
+
+    /// <summary>
+    /// A crop posted with a request that failed afterwards, so the user does not have
+    /// to choose and position the photo again to correct another field or retry.
+    /// </summary>
+    [Parameter]
+    public string? InitialPreview { get; set; }
+
     [Inject]
     private IProfilePhotoStore Photos { get; set; } = default!;
 
@@ -28,6 +43,16 @@ public sealed partial class PhotoCropField : CancellableComponentBase
     private string? _source;
     private string? _preview;
     private string? _error;
+    private bool _previewSeeded;
+
+    protected override void OnParametersSet()
+    {
+        if (!_previewSeeded && !string.IsNullOrEmpty(InitialPreview))
+        {
+            _preview = InitialPreview;
+            _previewSeeded = true;
+        }
+    }
 
     private async Task OnFileSelectedAsync(InputFileChangeEventArgs args)
     {

@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Ruvents.Data;
 using Ruvents.Features.Account.Extensions;
+using Ruvents.Features.Account.Models;
 using Ruvents.Features.Account.Services;
 
 namespace Ruvents.Features.Account.Pages;
@@ -13,6 +14,7 @@ public sealed partial class Register
 {
     private IEnumerable<IdentityError>? _identityErrors;
     private string? _photoError;
+    private string? _photoPreview;
 
     [SupplyParameterFromForm]
     private InputModel Input { get; set; } = default!;
@@ -25,7 +27,17 @@ public sealed partial class Register
 
     private string? Message => _identityErrors is null ? null : $"Error: {_identityErrors.FormatDescriptions(", ")}";
 
-    protected override void OnInitialized() => Input ??= new();
+    protected override void OnInitialized()
+    {
+        Input ??= new();
+
+        // A failed post re-renders this page statically, so keep a validated crop in
+        // view instead of asking the user to position the photo again.
+        if (HttpMethods.IsPost(HttpContext.Request.Method))
+        {
+            _photoPreview = ProfilePhotoWriter.ReadPostedPreview(HttpContext);
+        }
+    }
 
     public async Task RegisterUserAsync(EditContext editContext)
     {
@@ -36,7 +48,10 @@ public sealed partial class Register
             return;
         }
 
-        var result = await AccountRegistration.PasswordAsync(Input.Email, Input.Password);
+        var result = await AccountRegistration.PasswordAsync(
+            Input.Email,
+            Input.Password,
+            new ProfileNameInput(Input.FirstName, Input.MiddleName, Input.LastName, Input.DisplayName));
         await result.Match(
             created => CompleteRegistrationAsync(created.User),
             rejected =>
@@ -119,6 +134,24 @@ public sealed partial class Register
 
     private sealed class InputModel
     {
+        [Required]
+        [StringLength(UserProfileNames.MaxNameLength)]
+        [Display(Name = "First name")]
+        public string FirstName { get; set; } = "";
+
+        [StringLength(UserProfileNames.MaxNameLength)]
+        [Display(Name = "Middle name")]
+        public string MiddleName { get; set; } = "";
+
+        [Required]
+        [StringLength(UserProfileNames.MaxNameLength)]
+        [Display(Name = "Last name")]
+        public string LastName { get; set; } = "";
+
+        [StringLength(UserProfileNames.MaxDisplayNameLength)]
+        [Display(Name = "Display name")]
+        public string? DisplayName { get; set; }
+
         [Required]
         [EmailAddress]
         [Display(Name = "Email")]

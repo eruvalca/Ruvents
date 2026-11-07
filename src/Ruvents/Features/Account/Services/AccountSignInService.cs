@@ -45,7 +45,4 @@ internal sealed class AccountSignInService(
     // token as soon as the code is consumed so SignInManager's completion still runs.
     public async Task<SignInOutcome> RecoveryCodeAsync(string code) =>
         (await signInManager.TwoFactorRecoveryCodeSignInAsync(code.NormalizeRecoveryCode())).ToSignInOutcome();
-
-    public async Task<SignInOutcome> ExternalAsync(string provider, string providerKey) =>
-        (await signInManager.ExternalLoginSignInAsync(provider, providerKey, isPersistent: false, bypassTwoFactor: true)).ToSignInOutcome();
 }

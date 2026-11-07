@@ -77,19 +77,6 @@ public sealed class AccountSignInServiceTests
     }
 
     [Fact]
-    public async Task ExternalUsesTemporarySignInAndBypassesTwoFactorAsync()
-    {
-        using var identity = IdentityTestContext.Create();
-        identity.SignIn.ExternalLoginSignInAsync("Provider", "key", false, true).Returns(SignInResult.NotAllowed);
-        var service = new AccountSignInService(identity.SignIn, Substitute.For<IAdminPromotionService>(), identity.Cancellation);
-
-        var result = await service.ExternalAsync("Provider", "key");
-
-        result.Value.ShouldBeOfType<SignInOutcome.NotAllowed>();
-        await identity.SignIn.Received(1).ExternalLoginSignInAsync("Provider", "key", false, true);
-    }
-
-    [Fact]
     public async Task UnexpectedIdentityExceptionPropagatesAsync()
     {
         using var identity = IdentityTestContext.Create();
