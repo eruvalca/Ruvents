@@ -21,6 +21,14 @@ public sealed partial class PhotoCropField : CancellableComponentBase
 
     private static readonly Options _options = new() { AspectRatio = 1m, AutoCropArea = 1m };
 
+    /// <summary>
+    /// Label for the submit button rendered once a crop exists. When null, the
+    /// containing page owns the form's submit button, so capturing a crop never
+    /// posts the form by itself.
+    /// </summary>
+    [Parameter]
+    public string? SubmitLabel { get; set; }
+
     [Inject]
     private IProfilePhotoStore Photos { get; set; } = default!;
 

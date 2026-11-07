@@ -93,12 +93,7 @@ builder.Services.AddScoped<INotificationQueries>(provider => provider.GetRequire
 builder.Services.AddScoped<IAdministration, AdministrationService>();
 builder.Services.AddScoped<Ruvents.UI.Planning.IPlanningApi, ServerPlanningApi>();
 
-builder.Services.AddAuthentication(options =>
-    {
-        options.DefaultScheme = IdentityConstants.ApplicationScheme;
-        options.DefaultSignInScheme = IdentityConstants.ExternalScheme;
-    })
-    .AddIdentityCookies();
+builder.Services.AddAuthentication(IdentityConstants.ApplicationScheme).AddIdentityCookies();
 
 var configuredConnectionString = builder.Configuration.GetConnectionString("ruventsdb");
 var designTimePlaceholder = string.IsNullOrEmpty(configuredConnectionString)
@@ -149,8 +144,8 @@ builder.Services.AddIdentityCore<ApplicationUser>(options =>
         // Accounts activate immediately: the deployment does not send email, and password
         // resets are an administrator action. The confirmation hook is still enabled
         // because SignInManager consults it on every sign-in path (password, passkey,
-        // external, two-factor); SuspensionAwareUserConfirmation treats every
-        // unsuspended account as confirmed and is what makes a suspension block sign-in.
+        // two-factor); SuspensionAwareUserConfirmation treats every unsuspended account
+        // as confirmed and is what makes a suspension block sign-in.
         options.SignIn.RequireConfirmedAccount = true;
         options.Stores.SchemaVersion = IdentitySchemaVersions.Version3;
     })

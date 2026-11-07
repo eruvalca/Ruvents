@@ -9,9 +9,20 @@ namespace Ruvents.Data;
     Justification = "Provides the application's Identity/EF user type while inheriting its current members from IdentityUser.")]
 internal sealed class ApplicationUser : IdentityUser
 {
+    [PersonalData]
+    public string FirstName { get; set; } = string.Empty;
+
+    [PersonalData]
+    public string MiddleName { get; set; } = string.Empty;
+
+    [PersonalData]
+    public string LastName { get; set; } = string.Empty;
+
     /// <summary>
-    /// Name shown on membership and attendee lists. Falls back to the email local part when empty.
+    /// Name shown on membership, attendee, and comment lists. Defaults to the
+    /// user's full name and falls back to the email local part for older accounts.
     /// </summary>
+    [PersonalData]
     public string DisplayName { get; set; } = string.Empty;
 
     public DateTimeOffset? SuspendedAtUtc { get; set; }

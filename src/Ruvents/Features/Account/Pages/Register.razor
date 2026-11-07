@@ -1,10 +1,7 @@
 @page "/Account/Register"
 
 @using System.ComponentModel.DataAnnotations
-@using System.Text
-@using System.Text.Encodings.Web
 @using Microsoft.AspNetCore.Identity
-@using Microsoft.AspNetCore.WebUtilities
 @using Ruvents.Data
 @using Ruvents.UI.Components
 
@@ -14,12 +11,11 @@
 @inject IProfilePhotoStore ProfilePhotos
 @inject IProfilePhotoUploadReader PhotoUploads
 @inject ILogger<Register> Logger
-@inject NavigationManager NavigationManager
 @inject IdentityRedirectManager RedirectManager
 
-<PageTitle>Register</PageTitle>
+<PageTitle>Create account</PageTitle>
 
-<h1>Register</h1>
+<h1>Create your account</h1>
 
 <div class="account-sections">
     <StatusMessage Message="@Message" />
@@ -29,37 +25,67 @@
     }
     <EditForm class="account-form" Model="Input" method="post" enctype="multipart/form-data" OnValidSubmit="RegisterUserAsync" FormName="register">
         <DataAnnotationsValidator />
-        <h2>Create a new account.</h2>
-        <hr />
+        <p class="form-intro">Your name is used on comments, RSVPs, and family member lists.</p>
         <ValidationSummary class="error-text" role="alert" />
-        <div class="form-field">
-            <label for="Input.Email">Email</label>
-            <InputText @bind-Value="Input.Email" id="Input.Email" autocomplete="username" aria-required="true" placeholder="name@example.com" />
-            <ValidationMessage For="() => Input.Email" class="error-text" />
-        </div>
-        <div class="form-field">
-            <label for="Input.Password">Password</label>
-            <InputText type="password" @bind-Value="Input.Password" id="Input.Password" autocomplete="new-password" aria-required="true" placeholder="password" />
-            <ValidationMessage For="() => Input.Password" class="error-text" />
-        </div>
-        <div class="form-field">
-            <label for="Input.ConfirmPassword">Confirm Password</label>
-            <InputText type="password" @bind-Value="Input.ConfirmPassword" id="Input.ConfirmPassword" autocomplete="new-password" aria-required="true" placeholder="password" />
-            <ValidationMessage For="() => Input.ConfirmPassword" class="error-text" />
-        </div>
-        <PhotoCropField @rendermode="InteractiveServer" />
-        <noscript>
+
+        <fieldset>
+            <legend>Your name</legend>
             <div class="form-field">
-                <label for="Photo">Profile photo</label>
-                <input type="file" id="Photo" name="Photo" accept="image/jpeg,image/png,image/webp" aria-required="true" />
-                <p>A photo is required to use the application. Positioning the photo needs JavaScript.</p>
+                <label for="Input.FirstName">First name</label>
+                <InputText @bind-Value="Input.FirstName" id="Input.FirstName" autocomplete="given-name" aria-required="true" />
+                <ValidationMessage For="() => Input.FirstName" class="error-text" />
             </div>
-        </noscript>
-        <button type="submit">Register</button>
+            <div class="form-field">
+                <label for="Input.MiddleName">Middle name <span class="optional">(optional)</span></label>
+                <InputText @bind-Value="Input.MiddleName" id="Input.MiddleName" autocomplete="additional-name" />
+                <ValidationMessage For="() => Input.MiddleName" class="error-text" />
+            </div>
+            <div class="form-field">
+                <label for="Input.LastName">Last name</label>
+                <InputText @bind-Value="Input.LastName" id="Input.LastName" autocomplete="family-name" aria-required="true" />
+                <ValidationMessage For="() => Input.LastName" class="error-text" />
+            </div>
+            <div class="form-field">
+                <label for="Input.DisplayName">Display name <span class="optional">(optional)</span></label>
+                <InputText @bind-Value="Input.DisplayName" id="Input.DisplayName" autocomplete="nickname" placeholder="Defaults to your full name" />
+                <p>Choose a different name if you would rather not show your full name.</p>
+                <ValidationMessage For="() => Input.DisplayName" class="error-text" />
+            </div>
+        </fieldset>
+
+        <fieldset>
+            <legend>Sign-in details</legend>
+            <div class="form-field">
+                <label for="Input.Email">Email</label>
+                <InputText @bind-Value="Input.Email" id="Input.Email" autocomplete="username" aria-required="true" placeholder="name@example.com" />
+                <ValidationMessage For="() => Input.Email" class="error-text" />
+            </div>
+            <div class="form-field">
+                <label for="Input.Password">Password</label>
+                <InputText type="password" @bind-Value="Input.Password" id="Input.Password" autocomplete="new-password" aria-required="true" placeholder="password" />
+                <p>At least 6 characters, including an uppercase letter, a lowercase letter, a number, and a symbol.</p>
+                <ValidationMessage For="() => Input.Password" class="error-text" />
+            </div>
+            <div class="form-field">
+                <label for="Input.ConfirmPassword">Confirm password</label>
+                <InputText type="password" @bind-Value="Input.ConfirmPassword" id="Input.ConfirmPassword" autocomplete="new-password" aria-required="true" placeholder="password" />
+                <ValidationMessage For="() => Input.ConfirmPassword" class="error-text" />
+            </div>
+        </fieldset>
+
+        <fieldset>
+            <legend>Profile photo</legend>
+            <p class="form-intro">A profile photo is required. It is shown beside your name.</p>
+            <PhotoCropField @rendermode="InteractiveServer" />
+            <noscript>
+                <div class="form-field">
+                    <label for="Photo">Profile photo</label>
+                    <input type="file" id="Photo" name="Photo" accept="image/jpeg,image/png,image/webp" aria-required="true" />
+                    <p>A photo is required to use the application. Positioning the photo needs JavaScript.</p>
+                </div>
+            </noscript>
+        </fieldset>
+
+        <button type="submit">Create account</button>
     </EditForm>
-    <section>
-        <h3>Use another service to register.</h3>
-        <hr />
-        <ExternalLoginPicker />
-    </section>
 </div>

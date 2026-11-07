@@ -5,11 +5,11 @@
 
 <div class="photo-crop">
     <div class="form-field">
-        <label for="crop-photo">Profile photo</label>
+        <label for="crop-photo">Choose a photo</label>
         @* The picker is prerendered before the circuit connects; a selection made
            then is silently dropped, so keep it disabled until it can respond. *@
         <InputFile id="crop-photo" accept="image/jpeg,image/png,image/webp" OnChange="OnFileSelectedAsync" disabled="@(!RendererInfo.IsInteractive)" />
-        <p>JPEG, PNG, or WebP, up to 2 MB. Drag and zoom to position your face, then choose <strong>Use this crop</strong>.</p>
+        <p>JPEG, PNG, or WebP, up to 2 MB. Drag and zoom to position the photo, then choose <strong>Use this crop</strong>.</p>
     </div>
 
     @if (_source is not null)
@@ -25,10 +25,17 @@
         <p class="photo-crop-preview">
             <img class="avatar-preview" src="@_preview" alt="Your cropped profile photo" width="96" height="96" />
         </p>
-        @* The preview state lives in this interactive component, and a static
-           parent cannot observe it across the render-mode boundary. Rendering the
-           submit button here keeps it absent until there is a crop to save. *@
-        <button type="submit">Save photo</button>
+        @if (SubmitLabel is not null)
+        {
+            @* Only the standalone photo pages ask this component for a submit
+               button. On the registration form the page's own submit button owns
+               the post, so saving the crop must not register the account. *@
+            <button type="submit">@SubmitLabel</button>
+        }
+        else
+        {
+            <p class="photo-crop-status" role="status">Your photo is ready.</p>
+        }
     }
 
     <input type="hidden" name="PhotoData" value="@_preview" />

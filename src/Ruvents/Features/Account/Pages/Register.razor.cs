@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Ruvents.Data;
 using Ruvents.Features.Account.Extensions;
+using Ruvents.Features.Account.Models;
 using Ruvents.Features.Account.Services;
 
 namespace Ruvents.Features.Account.Pages;
@@ -36,7 +37,10 @@ public sealed partial class Register
             return;
         }
 
-        var result = await AccountRegistration.PasswordAsync(Input.Email, Input.Password);
+        var result = await AccountRegistration.PasswordAsync(
+            Input.Email,
+            Input.Password,
+            new ProfileNameInput(Input.FirstName, Input.MiddleName, Input.LastName, Input.DisplayName));
         await result.Match(
             created => CompleteRegistrationAsync(created.User),
             rejected =>
@@ -119,6 +123,24 @@ public sealed partial class Register
 
     private sealed class InputModel
     {
+        [Required]
+        [StringLength(UserProfileNames.MaxNameLength)]
+        [Display(Name = "First name")]
+        public string FirstName { get; set; } = "";
+
+        [StringLength(UserProfileNames.MaxNameLength)]
+        [Display(Name = "Middle name")]
+        public string MiddleName { get; set; } = "";
+
+        [Required]
+        [StringLength(UserProfileNames.MaxNameLength)]
+        [Display(Name = "Last name")]
+        public string LastName { get; set; } = "";
+
+        [StringLength(UserProfileNames.MaxDisplayNameLength)]
+        [Display(Name = "Display name")]
+        public string? DisplayName { get; set; }
+
         [Required]
         [EmailAddress]
         [Display(Name = "Email")]

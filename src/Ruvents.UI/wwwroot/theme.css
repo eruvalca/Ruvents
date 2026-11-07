@@ -323,6 +323,22 @@ legend {
     color: var(--ink-muted);
 }
 
+.form-intro {
+    margin: 0 0 var(--gap-md);
+    color: var(--ink-muted);
+}
+
+.optional {
+    font-weight: 400;
+    color: var(--ink-muted);
+}
+
+.photo-crop-status {
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--ink-muted);
+}
+
 .checkbox-field {
     display: inline-flex;
     align-items: center;

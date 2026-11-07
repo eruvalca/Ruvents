@@ -11,13 +11,13 @@
 @inject UserManager<ApplicationUser> UserManager
 @inject IdentityRedirectManager RedirectManager
 
-<PageTitle>Profile photo</PageTitle>
+<PageTitle>Add a profile photo</PageTitle>
 
-<h1>Profile photo</h1>
+<h1>Add a profile photo</h1>
 
 <StatusMessage Message="@_error" />
 
-<p>Every account needs a profile photo before you can use the application.</p>
+<p>Every account needs a profile photo before you can use the application. It is shown beside your name.</p>
 
 @if (HasPhoto)
 {
@@ -28,7 +28,7 @@
 
 <form @formname="profile-photo" method="post" enctype="multipart/form-data">
     <AntiforgeryToken />
-    <PhotoCropField @rendermode="InteractiveServer" />
+    <PhotoCropField @rendermode="InteractiveServer" SubmitLabel="Save photo" />
     <noscript>
         <div class="form-field">
             <label for="Photo">Choose a photo</label>

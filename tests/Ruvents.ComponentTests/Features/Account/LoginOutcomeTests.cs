@@ -1,8 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using Bunit;
-using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
@@ -16,24 +14,6 @@ namespace Ruvents.ComponentTests.Features.Account;
     Justification = "xUnit requires public test classes for discovery.")]
 public sealed class LoginOutcomeTests
 {
-    [Theory]
-    [InlineData("GET", 1)]
-    [InlineData("POST", 0)]
-    public async Task OpeningLoginClearsExternalCookieOnlyOnGetAsync(string method, int expectedSignOuts)
-    {
-        await using var context = new BunitContext();
-        var account = context.ConfigureAccount();
-        var authentication = Substitute.For<IAuthenticationService>();
-        context.Services.AddSingleton(authentication);
-        account.Http.Request.Method = method;
-
-        account.Render<Login>(context);
-
-        await authentication.Received(expectedSignOuts).SignOutAsync(account.Http, IdentityConstants.ExternalScheme, null);
-        await authentication.ReceivedWithAnyArgs(expectedSignOuts).SignOutAsync(default!, default, default);
-        await account.SignIn.DidNotReceive().SignOutAsync();
-    }
-
     [Theory]
     [InlineData(false)]
     [InlineData(true)]

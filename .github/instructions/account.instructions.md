@@ -25,15 +25,22 @@ Account tests also follow the [test guide](tests.instructions.md).
   hooks intact. Account pages stay on static SSR under the repository-wide
   [render-mode rules](../copilot-instructions.md#project-boundaries-and-rendering);
   do not apply a global interactive render mode that changes account behavior.
-- Registration and the photo page use `PhotoCropField`. The cropped image arrives in
+- Registration and the photo pages use `PhotoCropField`. The cropped image arrives in
   the `PhotoData` form field, is validated by `ProfilePhotoService`, and is written
   after the account write commits. Keep the `<noscript>` file input working, and read
   `HttpContext.Request.Form` only when the request actually carries a form.
   Replacing a photo on an existing account goes through `ProfilePhotoWriter`, which
   the gate page and `Account/Manage/Photo` share and which refreshes the sign-in
-  cookie so the photo claim stays accurate. `PhotoCropField` owns the form's submit
-  button because its crop state lives behind the render-mode boundary, where the
-  static page cannot read it; keep the `<noscript>` fallback's own button.
+  cookie so the photo claim stays accurate. Capturing a crop must not post a form by
+  itself: registration passes no `SubmitLabel` so its own submit button owns the
+  post, while the standalone photo pages pass `SubmitLabel="Save photo"` because
+  their crop state lives behind the render-mode boundary, where the static page
+  cannot observe it. Keep each `<noscript>` fallback's own submit button.
+- Registration collects first, middle, and last names plus an optional display-name
+  override. `UserProfileNames.ResolveDisplayName` owns the `"{first} {middle} {last}"`
+  default and the email-local-part fallback for accounts without names; use it rather
+  than re-deriving the display name. `Account/Manage` edits the same fields, and a
+  blank or unchanged default display name follows name edits.
 - `BlazorDisableThrowNavigationException` is enabled. After redirecting, return
   or otherwise terminate the current branch when subsequent work must not
   execute. Do not rely on navigation throwing to stop an account operation.

@@ -1,5 +1,4 @@
 using System.Diagnostics.CodeAnalysis;
-using System.Security.Claims;
 using Microsoft.AspNetCore.Identity;
 using NSubstitute;
 using Ruvents.Data;
@@ -14,7 +13,6 @@ namespace Ruvents.UnitTests.Features.Account;
 public sealed class AccountRegistrationServiceTests
 {
     private static readonly string[] _passwordCreationSteps = ["username", "email", "create-password"];
-    private static readonly string[] _externalCreationSteps = ["username", "email", "create", "link"];
     private static readonly string[] _creationErrorCodes = ["EmailTaken", "PasswordWeak"];
     private static readonly string[] _creationErrorDescriptions = ["Email already used", "Password is too weak"];
 
@@ -32,12 +30,16 @@ public sealed class AccountRegistrationServiceTests
         });
         var service = new AccountRegistrationService(identity.Users, identity.Store, identity.Cancellation, Substitute.For<IAdminPromotionService>());
 
-        var result = await service.PasswordAsync("member@example.test", "secret");
+        var result = await service.PasswordAsync("member@example.test", "secret", Name());
 
         var user = result.Value.ShouldBeOfType<RegistrationOutcome.Created>().User;
         user.ShouldBeSameAs(createdUser);
         user.UserName.ShouldBe("member@example.test");
         user.Email.ShouldBe("member@example.test");
+        user.FirstName.ShouldBe("Ada");
+        user.MiddleName.ShouldBe("Grace");
+        user.LastName.ShouldBe("Lovelace");
+        user.DisplayName.ShouldBe("Ada Grace Lovelace");
         steps.ShouldBe(_passwordCreationSteps);
         await identity.Users.DidNotReceiveWithAnyArgs().CreateAsync(default!);
         await identity.Users.DidNotReceiveWithAnyArgs().AddLoginAsync(default!, default!);
@@ -51,86 +53,35 @@ public sealed class AccountRegistrationServiceTests
         identity.Users.CreateAsync(Arg.Any<ApplicationUser>(), "secret").Returns(RejectedCreation());
         var service = new AccountRegistrationService(identity.Users, identity.Store, identity.Cancellation, Substitute.For<IAdminPromotionService>());
 
-        var result = await service.PasswordAsync("member@example.test", "secret");
+        var result = await service.PasswordAsync("member@example.test", "secret", Name());
 
         var errors = result.Value.ShouldBeOfType<RegistrationOutcome.CreationRejected>().Errors;
         errors.Select(error => error.Code).ShouldBe(_creationErrorCodes);
         errors.Select(error => error.Description).ShouldBe(_creationErrorDescriptions);
     }
 
-    [Fact]
-    public async Task ExternalCreationInitializesThenLinksTheCreatedUserAsync()
-    {
-        using var identity = IdentityTestContext.Create();
-        var steps = ConfigureUserInitialization(identity);
-        ApplicationUser? createdUser = null;
-        var login = CreateExternalLogin();
-        identity.Users.CreateAsync(Arg.Any<ApplicationUser>()).Returns(call =>
-        {
-            steps.Add("create");
-            createdUser = call.Arg<ApplicationUser>();
-            return IdentityResult.Success;
-        });
-        identity.Users.AddLoginAsync(Arg.Any<ApplicationUser>(), login).Returns(call =>
-        {
-            steps.Add("link");
-            call.Arg<ApplicationUser>().ShouldBeSameAs(createdUser);
-            return IdentityResult.Success;
-        });
-        var service = new AccountRegistrationService(identity.Users, identity.Store, identity.Cancellation, Substitute.For<IAdminPromotionService>());
-
-        var result = await service.ExternalAsync("member@example.test", login);
-
-        var user = result.Value.ShouldBeOfType<RegistrationOutcome.Created>().User;
-        user.ShouldBeSameAs(createdUser);
-        user.UserName.ShouldBe("member@example.test");
-        user.Email.ShouldBe("member@example.test");
-        steps.ShouldBe(_externalCreationSteps);
-        await identity.Users.DidNotReceiveWithAnyArgs().CreateAsync(default!, default!);
-    }
-
-    [Fact]
-    public async Task ExternalCreationRejectionPreservesErrorsAndSkipsLinkingAsync()
-    {
-        using var identity = IdentityTestContext.Create();
-        _ = ConfigureUserInitialization(identity);
-        identity.Users.CreateAsync(Arg.Any<ApplicationUser>()).Returns(RejectedCreation());
-        var service = new AccountRegistrationService(identity.Users, identity.Store, identity.Cancellation, Substitute.For<IAdminPromotionService>());
-
-        var result = await service.ExternalAsync("member@example.test", CreateExternalLogin());
-
-        var errors = result.Value.ShouldBeOfType<RegistrationOutcome.CreationRejected>().Errors;
-        errors.Select(error => error.Code).ShouldBe(_creationErrorCodes);
-        errors.Select(error => error.Description).ShouldBe(_creationErrorDescriptions);
-        await identity.Users.DidNotReceiveWithAnyArgs().AddLoginAsync(default!, default!);
-    }
-
-    [Fact]
-    public async Task LinkRejectionReturnsCreatedUserAndErrorsWithoutDeletingAccountAsync()
+    [Theory]
+    [InlineData("", "Ada Lovelace")]
+    [InlineData("Ada", "Ada")]
+    public async Task DisplayNameUsesTheFullNameUnlessAnOverrideIsSuppliedAsync(string displayName, string expected)
     {
         using var identity = IdentityTestContext.Create();
         _ = ConfigureUserInitialization(identity);
         ApplicationUser? createdUser = null;
-        identity.Users.CreateAsync(Arg.Any<ApplicationUser>()).Returns(call =>
+        identity.Users.CreateAsync(Arg.Any<ApplicationUser>(), "secret").Returns(call =>
         {
             createdUser = call.Arg<ApplicationUser>();
             return IdentityResult.Success;
         });
-        identity.Users.AddLoginAsync(Arg.Any<ApplicationUser>(), Arg.Any<UserLoginInfo>())
-            .Returns(IdentityResult.Failed(new IdentityError { Code = "ProviderConflict", Description = "Provider is already linked" }));
         var service = new AccountRegistrationService(identity.Users, identity.Store, identity.Cancellation, Substitute.For<IAdminPromotionService>());
 
-        var result = await service.ExternalAsync("member@example.test", CreateExternalLogin());
+        _ = await service.PasswordAsync(
+            "member@example.test",
+            "secret",
+            new ProfileNameInput("Ada", string.Empty, "Lovelace", displayName));
 
-        var failure = result.Value.ShouldBeOfType<ExternalRegistrationOutcome.ExternalLoginLinkFailed>();
-        failure.User.ShouldBeSameAs(createdUser);
-        failure.User.Email.ShouldBe("member@example.test");
-        var error = failure.Errors.ShouldHaveSingleItem();
-        error.Code.ShouldBe("ProviderConflict");
-        error.Description.ShouldBe("Provider is already linked");
-        await identity.Users.DidNotReceiveWithAnyArgs().DeleteAsync(default!);
-        await identity.Users.DidNotReceiveWithAnyArgs().GenerateEmailConfirmationTokenAsync(default!);
-        await identity.SignIn.DidNotReceiveWithAnyArgs().SignInAsync(default!, default(bool), default!);
+        createdUser.ShouldNotBeNull();
+        createdUser.DisplayName.ShouldBe(expected);
     }
 
     [Fact]
@@ -140,7 +91,7 @@ public sealed class AccountRegistrationServiceTests
         identity.Users.SupportsUserEmail.Returns(false);
         var service = new AccountRegistrationService(identity.Users, identity.Store, identity.Cancellation, Substitute.For<IAdminPromotionService>());
 
-        await Should.ThrowAsync<NotSupportedException>(() => service.PasswordAsync("member@example.test", "secret"));
+        await Should.ThrowAsync<NotSupportedException>(() => service.PasswordAsync("member@example.test", "secret", Name()));
 
         await identity.Users.DidNotReceiveWithAnyArgs().CreateAsync(default!, default!);
     }
@@ -156,7 +107,7 @@ public sealed class AccountRegistrationServiceTests
         var service = new AccountRegistrationService(identity.Users, identity.Store, identity.Cancellation, Substitute.For<IAdminPromotionService>());
 
         await Should.ThrowAsync<OperationCanceledException>(
-            () => service.PasswordAsync("member@example.test", "secret"));
+            () => service.PasswordAsync("member@example.test", "secret", Name()));
 
         await identity.Users.DidNotReceiveWithAnyArgs().CreateAsync(default!, default!);
     }
@@ -180,9 +131,10 @@ public sealed class AccountRegistrationServiceTests
         return steps;
     }
 
+    private static ProfileNameInput Name(string? displayName = null) =>
+        new("Ada", "Grace", "Lovelace", displayName);
+
     private static IdentityResult RejectedCreation() => IdentityResult.Failed(
         new IdentityError { Code = "EmailTaken", Description = "Email already used" },
         new IdentityError { Code = "PasswordWeak", Description = "Password is too weak" });
-
-    private static ExternalLoginInfo CreateExternalLogin() => new(new ClaimsPrincipal(), "Provider", "key", "Provider");
 }

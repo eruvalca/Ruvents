@@ -9,7 +9,6 @@ using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Routing;
-using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Primitives;
 using NSubstitute;
@@ -24,55 +23,6 @@ namespace Ruvents.UnitTests.Features.Account;
     Justification = "xUnit requires public test classes for discovery.")]
 public sealed class IdentityEndpointBehaviorTests
 {
-    [Fact]
-    public async Task ExternalLoginChallengePreservesProviderAndEncodesReturnUrlUnderPathBaseAsync()
-    {
-        await using var context = EndpointContext.Create();
-        const string ReturnUrl = "/events?search=café &page=2";
-        var properties = new AuthenticationProperties();
-        string? callback = null;
-        context.Identity.SignIn.ConfigureExternalAuthenticationProperties("Example", Arg.Any<string>(), null)
-            .Returns(call => { callback = call.ArgAt<string>(1); return properties; });
-        context.Http.Request.PathBase = "/app";
-        context.SetForm(("provider", "Example"), ("returnUrl", ReturnUrl));
-
-        await context.InvokeAsync("/Account/PerformExternalLogin");
-
-        var uri = new Uri(new Uri("https://ruvents.test"), callback.ShouldNotBeNull());
-        uri.AbsolutePath.ShouldBe("/app/Account/ExternalLogin");
-        var query = QueryHelpers.ParseQuery(uri.Query);
-        query["ReturnUrl"].ToString().ShouldBe(ReturnUrl);
-        query["Action"].ToString().ShouldBe("LoginCallback");
-        await context.Authentication.Received(1).ChallengeAsync(context.Http, "Example", properties);
-    }
-
-    [Fact]
-    public async Task LinkingLoginClearsExternalCookieAndBindsChallengeToCurrentUserAsync()
-    {
-        await using var context = EndpointContext.Create();
-        context.Identity.Users.GetUserId(context.Http.User).Returns("current-user");
-        context.Http.Request.PathBase = "/app";
-        context.SetForm(("provider", "Example"));
-        var properties = new AuthenticationProperties();
-        context.Identity.SignIn.ConfigureExternalAuthenticationProperties(
-            "Example", "/app/Account/Manage/ExternalLogins?Action=LinkLoginCallback", "current-user").Returns(properties);
-
-        await context.InvokeAsync("/Account/Manage/LinkExternalLogin");
-
-        // Resolve the non-substituted context holders before the ordering check; only the
-        // substituted services themselves are interceptable.
-        var signIn = context.Identity.SignIn;
-        var authentication = context.Authentication;
-        var http = context.Http;
-        Received.InOrder(() =>
-        {
-            _ = authentication.SignOutAsync(http, IdentityConstants.ExternalScheme, null);
-            signIn.ConfigureExternalAuthenticationProperties(
-                "Example", "/app/Account/Manage/ExternalLogins?Action=LinkLoginCallback", "current-user");
-            _ = authentication.ChallengeAsync(http, "Example", properties);
-        });
-    }
-
     [Theory]
     [InlineData("events?view=mine", "/app/events?view=mine")]
     [InlineData("", "/app/")]
@@ -179,6 +129,10 @@ public sealed class IdentityEndpointBehaviorTests
     {
         await using var context = EndpointContext.Create();
         var user = CreateUser();
+        user.FirstName = "Persist";
+        user.MiddleName = "Q";
+        user.LastName = "User";
+        user.DisplayName = "Persist";
         user.PhoneNumber = null;
         user.PasswordHash = "password-hash-must-not-leak";
         user.SecurityStamp = "security-stamp-must-not-leak";
@@ -197,8 +151,14 @@ public sealed class IdentityEndpointBehaviorTests
         context.Http.Response.Headers.ContentDisposition.ToString().ShouldContain("attachment;");
         context.Http.Response.Headers.ContentDisposition.ToString().ShouldContain("PersonalData.json");
         var data = JsonSerializer.Deserialize<Dictionary<string, string>>(await context.ReadBodyAsync()).ShouldNotBeNull();
+        // The derived ApplicationUser properties precede the inherited IdentityUser
+        // properties in reflection order, and this assertion preserves export order.
         data.ShouldBe(new Dictionary<string, string>(StringComparer.Ordinal)
         {
+            ["FirstName"] = "Persist",
+            ["MiddleName"] = "Q",
+            ["LastName"] = "User",
+            ["DisplayName"] = "Persist",
             ["Id"] = user.Id,
             ["UserName"] = user.UserName!,
             ["Email"] = user.Email!,

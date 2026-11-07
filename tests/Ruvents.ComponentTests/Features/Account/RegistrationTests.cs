@@ -1,5 +1,4 @@
 using System.Diagnostics.CodeAnalysis;
-using System.Security.Claims;
 using Bunit;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Identity;
@@ -7,7 +6,6 @@ using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using Ruvents.Data;
 using Ruvents.Features.Account.Pages;
-using Ruvents.Features.Account.Services;
 using Shouldly;
 using Xunit;
 
@@ -18,6 +16,19 @@ namespace Ruvents.ComponentTests.Features.Account;
 public sealed class RegistrationTests
 {
     [Fact]
+    public async Task RegistrationHasASingleSubmitButtonOwnedByThePageAsync()
+    {
+        await using var context = new BunitContext();
+        var account = context.ConfigureInteractiveAccount();
+
+        var component = account.Render<Register>(context);
+
+        var submit = component.FindAll("button[type='submit']");
+        submit.Count.ShouldBe(1);
+        submit[0].TextContent.ShouldBe("Create account");
+    }
+
+    [Fact]
     public async Task RejectedPasswordRegistrationDisplaysIdentityErrorAndSkipsContinuationAsync()
     {
         await using var context = new BunitContext();
@@ -25,6 +36,7 @@ public sealed class RegistrationTests
         account.Users.SupportsUserEmail.Returns(true);
         account.Users.CreateAsync(Arg.Any<ApplicationUser>(), "password").Returns(IdentityResult.Failed(new IdentityError { Description = "Email already registered" }));
         var component = account.Render<Register>(context);
+        await FillRequiredFieldsAsync(component);
         await component.Find("input[name='Input.Email']").ChangeAsync(new ChangeEventArgs { Value = "member@example.test" });
         await component.Find("input[name='Input.Password']").ChangeAsync(new ChangeEventArgs { Value = "password" });
         await component.Find("input[name='Input.ConfirmPassword']").ChangeAsync(new ChangeEventArgs { Value = "password" });
@@ -39,125 +51,69 @@ public sealed class RegistrationTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public async Task SuccessfulPasswordRegistrationStoresPhotoAndSignsInAsync(bool requireConfirmation)
+    public async Task SuccessfulPasswordRegistrationStoresNamesPhotoAndSignsInAsync(bool requireConfirmation)
     {
         await using var context = new BunitContext();
         var account = context.ConfigureInteractiveAccount();
         account.Users.SupportsUserEmail.Returns(true);
         account.Users.Options.SignIn.RequireConfirmedAccount = requireConfirmation;
-        account.Users.CreateAsync(Arg.Any<ApplicationUser>(), "password").Returns(IdentityResult.Success);
-        account.Users.GetUserIdAsync(Arg.Any<ApplicationUser>()).Returns("member");
+        ApplicationUser? created = null;
+        account.Users.CreateAsync(Arg.Any<ApplicationUser>(), "password").Returns(call =>
+        {
+            created = call.Arg<ApplicationUser>();
+            return IdentityResult.Success;
+        });
         account.Users.GetUserIdAsync(Arg.Any<ApplicationUser>()).Returns("member");
         var navigation = context.Services.GetRequiredService<NavigationManager>();
         navigation.NavigateTo("Account/Register?returnUrl=%2Fevents");
         var component = account.Render<Register>(context);
+        await FillRequiredFieldsAsync(component);
         await component.Find("input[name='Input.Email']").ChangeAsync(new ChangeEventArgs { Value = "member@example.test" });
         await component.Find("input[name='Input.Password']").ChangeAsync(new ChangeEventArgs { Value = "password" });
         await component.Find("input[name='Input.ConfirmPassword']").ChangeAsync(new ChangeEventArgs { Value = "password" });
 
         await component.Find("form").SubmitAsync();
 
+        created.ShouldNotBeNull();
+        created.FirstName.ShouldBe("Ada");
+        created.MiddleName.ShouldBe("Grace");
+        created.LastName.ShouldBe("Lovelace");
+        created.DisplayName.ShouldBe("Ada Grace Lovelace");
         await account.Photos.Received(1).SaveAsync(Arg.Any<string>(), Arg.Any<Stream>(), "image/png", Arg.Any<CancellationToken>());
         navigation.Uri.ShouldBe("http://localhost/events");
         await account.SignIn.Received(1).SignInAsync(Arg.Any<ApplicationUser>(), false, null);
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task ExternalRegistrationFailureSkipsEmailAndSignInAndExplainsPartialAccountAsync(bool linkFailed)
-    {
-        await using var context = new BunitContext();
-        var account = context.ConfigureAccount();
-        account.Users.SupportsUserEmail.Returns(true);
-        var login = new ExternalLoginInfo(new ClaimsPrincipal(new ClaimsIdentity()), "Provider", "key", "Provider");
-        account.SignIn.GetExternalLoginInfoAsync().Returns(login);
-        var failure = IdentityResult.Failed(new IdentityError { Description = "Operation rejected" });
-        account.Users.CreateAsync(Arg.Any<ApplicationUser>()).Returns(linkFailed ? IdentityResult.Success : failure);
-        account.Users.AddLoginAsync(Arg.Any<ApplicationUser>(), login).Returns(failure);
-        var component = account.Render<ExternalLogin>(context);
-        await component.Find("input[name='Input.Email']").ChangeAsync(new ChangeEventArgs { Value = "member@example.test" });
-
-        await component.Find("form").SubmitAsync();
-
-        await component.WaitForAssertionAsync(() => component.Find(".notice[data-kind='error']").TextContent.ShouldContain("Operation rejected"));
-        if (linkFailed)
-        {
-            component.Find("h1").TextContent.ShouldBe("Finish setting up your account");
-            var steps = component.FindAll("ol li");
-            steps.Count.ShouldBe(3);
-            steps[0].TextContent.ShouldContain("confirm your email");
-            steps[1].TextContent.ShouldContain("Reset your password");
-            steps[2].TextContent.ShouldContain("External logins");
-            component.FindAll("form").ShouldBeEmpty();
-        }
-        else
-        {
-            component.Find("h1").TextContent.ShouldBe("Register");
-            await account.Users.DidNotReceiveWithAnyArgs().AddLoginAsync(default!, default!);
-        }
-        await account.Users.DidNotReceiveWithAnyArgs().GenerateEmailConfirmationTokenAsync(default!);
-        await account.Emails.DidNotReceiveWithAnyArgs().SendConfirmationLinkAsync(default!, default!, default!);
-        await account.SignIn.DidNotReceiveWithAnyArgs().SignInAsync(default!, default(bool), default);
-        await account.Users.DidNotReceiveWithAnyArgs().DeleteAsync(default!);
-    }
-
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task SuccessfulExternalRegistrationConfirmsBeforeFollowingConfiguredSignInPolicyAsync(bool requireConfirmation)
-    {
-        await using var context = new BunitContext();
-        var account = context.ConfigureAccount();
-        account.Users.SupportsUserEmail.Returns(true);
-        account.Users.Options.SignIn.RequireConfirmedEmail = requireConfirmation;
-        var login = new ExternalLoginInfo(new ClaimsPrincipal(new ClaimsIdentity()), "Provider", "key", "Provider");
-        account.SignIn.GetExternalLoginInfoAsync().Returns(login);
-        account.Users.CreateAsync(Arg.Any<ApplicationUser>()).Returns(IdentityResult.Success);
-        account.Users.AddLoginAsync(Arg.Any<ApplicationUser>(), login).Returns(IdentityResult.Success);
-        account.Users.GetUserIdAsync(Arg.Any<ApplicationUser>()).Returns("member");
-        account.Users.GenerateEmailConfirmationTokenAsync(Arg.Any<ApplicationUser>()).Returns("token");
-        var navigation = context.Services.GetRequiredService<NavigationManager>();
-        navigation.NavigateTo("Account/ExternalLogin?returnUrl=%2Fevents");
-        var component = account.Render<ExternalLogin>(context);
-        await component.Find("input[name='Input.Email']").ChangeAsync(new ChangeEventArgs { Value = "member@example.test" });
-
-        await component.Find("form").SubmitAsync();
-
-        await account.Users.Received(1).AddLoginAsync(Arg.Any<ApplicationUser>(), login);
-        await account.Emails.Received(1).SendConfirmationLinkAsync(Arg.Any<ApplicationUser>(), "member@example.test",
-            "http://localhost/Account/ConfirmEmail?userId=member&amp;code=dG9rZW4");
-        if (requireConfirmation)
-        {
-            navigation.Uri.ShouldBe("http://localhost/Account/RegisterConfirmation?email=member%40example.test");
-            await account.SignIn.DidNotReceiveWithAnyArgs().SignInAsync(default!, default(bool), default);
-        }
-        else
-        {
-            navigation.Uri.ShouldBe("http://localhost/events");
-            await account.SignIn.Received(1).SignInAsync(Arg.Any<ApplicationUser>(), false, "Provider");
-        }
-    }
-
     [Fact]
-    public async Task FailedExternalLinkWithDevelopmentEmailSenderOffersExistingConfirmationPageAsync()
+    public async Task CustomDisplayNameOverridesTheFullNameDefaultAsync()
     {
         await using var context = new BunitContext();
-        var account = context.ConfigureAccount();
-        context.Services.AddSingleton<IEmailSender<ApplicationUser>>(new IdentityNoOpEmailSender());
+        var account = context.ConfigureInteractiveAccount();
         account.Users.SupportsUserEmail.Returns(true);
-        var login = new ExternalLoginInfo(new ClaimsPrincipal(new ClaimsIdentity()), "Provider", "key", "Provider");
-        account.SignIn.GetExternalLoginInfoAsync().Returns(login);
-        account.Users.CreateAsync(Arg.Any<ApplicationUser>()).Returns(IdentityResult.Success);
-        account.Users.AddLoginAsync(Arg.Any<ApplicationUser>(), login).Returns(IdentityResult.Failed());
-        var component = account.Render<ExternalLogin>(context);
+        ApplicationUser? created = null;
+        account.Users.CreateAsync(Arg.Any<ApplicationUser>(), "password").Returns(call =>
+        {
+            created = call.Arg<ApplicationUser>();
+            return IdentityResult.Success;
+        });
+        account.Users.GetUserIdAsync(Arg.Any<ApplicationUser>()).Returns("member");
+        var component = account.Render<Register>(context);
+        await FillRequiredFieldsAsync(component);
+        await component.Find("input[name='Input.DisplayName']").ChangeAsync(new ChangeEventArgs { Value = "Ada" });
         await component.Find("input[name='Input.Email']").ChangeAsync(new ChangeEventArgs { Value = "member@example.test" });
+        await component.Find("input[name='Input.Password']").ChangeAsync(new ChangeEventArgs { Value = "password" });
+        await component.Find("input[name='Input.ConfirmPassword']").ChangeAsync(new ChangeEventArgs { Value = "password" });
 
         await component.Find("form").SubmitAsync();
 
-        await component.WaitForAssertionAsync(() => component.Find("a[href^='Account/RegisterConfirmation']").GetAttribute("href")
-            .ShouldBe("Account/RegisterConfirmation?email=member%40example.test"));
-        component.Markup.ShouldContain("Password reset requires an email sender.");
-        await account.SignIn.DidNotReceiveWithAnyArgs().SignInAsync(default!, default(bool), default);
+        created.ShouldNotBeNull();
+        created.DisplayName.ShouldBe("Ada");
+    }
+
+    private static async Task FillRequiredFieldsAsync(IRenderedComponent<Register> component)
+    {
+        await component.Find("input[name='Input.FirstName']").ChangeAsync(new ChangeEventArgs { Value = "Ada" });
+        await component.Find("input[name='Input.MiddleName']").ChangeAsync(new ChangeEventArgs { Value = "Grace" });
+        await component.Find("input[name='Input.LastName']").ChangeAsync(new ChangeEventArgs { Value = "Lovelace" });
     }
 }

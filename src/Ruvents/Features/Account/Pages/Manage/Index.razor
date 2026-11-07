@@ -26,14 +26,45 @@
 <EditForm class="account-form" Model="Input" FormName="profile" OnValidSubmit="OnValidSubmitAsync" method="post">
     <DataAnnotationsValidator />
     <ValidationSummary class="error-text" role="alert" />
-    <div class="form-field">
-        <label for="username">Username</label>
-        <input type="text" value="@_username" id="username" placeholder="Choose your username." disabled />
-    </div>
-    <div class="form-field">
-        <label for="Input.PhoneNumber">Phone number</label>
-        <InputText @bind-Value="Input.PhoneNumber" id="Input.PhoneNumber" placeholder="Enter your phone number" />
-        <ValidationMessage For="() => Input.PhoneNumber" class="error-text" />
-    </div>
-    <button type="submit">Save</button>
+
+    <fieldset>
+        <legend>Your name</legend>
+        <div class="form-field">
+            <label for="Input.FirstName">First name</label>
+            <InputText @bind-Value="Input.FirstName" id="Input.FirstName" autocomplete="given-name" aria-required="true" />
+            <ValidationMessage For="() => Input.FirstName" class="error-text" />
+        </div>
+        <div class="form-field">
+            <label for="Input.MiddleName">Middle name <span class="optional">(optional)</span></label>
+            <InputText @bind-Value="Input.MiddleName" id="Input.MiddleName" autocomplete="additional-name" />
+            <ValidationMessage For="() => Input.MiddleName" class="error-text" />
+        </div>
+        <div class="form-field">
+            <label for="Input.LastName">Last name</label>
+            <InputText @bind-Value="Input.LastName" id="Input.LastName" autocomplete="family-name" aria-required="true" />
+            <ValidationMessage For="() => Input.LastName" class="error-text" />
+        </div>
+        <div class="form-field">
+            <label for="Input.DisplayName">Display name <span class="optional">(optional)</span></label>
+            <InputText @bind-Value="Input.DisplayName" id="Input.DisplayName" autocomplete="nickname" placeholder="Defaults to your full name" />
+            <p>This is the name others see on comments, RSVPs, and member lists.</p>
+            <ValidationMessage For="() => Input.DisplayName" class="error-text" />
+        </div>
+    </fieldset>
+
+    <fieldset>
+        <legend>Account details</legend>
+        <div class="form-field">
+            <label for="username">Email</label>
+            <input type="text" value="@_username" id="username" disabled />
+            <p>Change your email from <a href="Account/Manage/Email">Email settings</a>.</p>
+        </div>
+        <div class="form-field">
+            <label for="Input.PhoneNumber">Phone number <span class="optional">(optional)</span></label>
+            <InputText @bind-Value="Input.PhoneNumber" id="Input.PhoneNumber" autocomplete="tel" placeholder="Enter your phone number" />
+            <ValidationMessage For="() => Input.PhoneNumber" class="error-text" />
+        </div>
+    </fieldset>
+
+    <button type="submit">Save changes</button>
 </EditForm>

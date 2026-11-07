@@ -174,7 +174,7 @@ The application plans family gatherings:
   longest-standing member, so the family can still approve join requests. A suspended
   account cannot sign in on any path, because the
   suspension check rides the confirmation hook that `SignInManager` consults for
-  password, passkey, external, and two-factor sign-in.
+  password, passkey, and two-factor sign-in.
   The account matching the configured `Platform:AdminEmail` is promoted automatically at
   registration or sign-in, but only after the operator has confirmed that account's email:
   registration cannot prove ownership of an address, so a matching address alone must not
@@ -207,8 +207,9 @@ form post; without JavaScript the `<noscript>` file input still supplies the pho
 `/Account/Photo` and `Account/Manage/Photo` both use; account management also shows
 the current photo on the profile page. The picker stays disabled until the circuit
 connects, because a selection made during prerendering is dropped without notice.
-The component renders the form's submit button only once a crop exists, because a
-static page cannot observe state inside an interactive child.
+Registration owns its own submit button so preparing a crop never registers the
+account; the standalone photo pages ask the component for the button because a static
+page cannot observe the crop state inside an interactive child.
 
 Planning pages live in `Ruvents.UI` so they can run under either renderer. They depend
 on `IPlanningApi`: the server host implements it with the application services and the
@@ -318,8 +319,11 @@ context. Dispose factory-created contexts with `await using`.
 Identity schema version 3 is retained, including the `AspNetUserPasskeys` table.
 Registration does not send email: accounts activate immediately, and every account is
 required to upload a profile photo during registration before the rest of the
-application becomes available. Password resets are an administrator action rather than a
-self-service email flow. This setup does not configure a production email service.
+application becomes available. Registration also collects first, middle, and last names
+plus an optional display name; the display name defaults to the full name and falls back
+to the email local part for accounts created before names were collected. Password
+resets are an administrator action rather than a self-service email flow. This setup does
+not configure a production email service.
 
 A hosted deployment keeps the no-op sender. It defines `Platform:AdminEmail` and ships
 the manual `ruvents-admin-bootstrap` job, which confirms and promotes that account
@@ -327,9 +331,8 @@ after the operator registers it (see [Deployment](#deployment)). The Development
 confirmation link is never rendered in a hosted environment, so registration alone
 cannot promote an administrator. Replacing `IdentityNoOpEmailSender` with a real email
 service remains a separate decision for self-service confirmation and password reset;
-keep the identity contract if that is introduced. External-login provider credentials,
-a stable custom domain, and any further health-endpoint exposure remain
-application-specific decisions.
+keep the identity contract if that is introduced. A stable custom domain and any
+further health-endpoint exposure remain application-specific decisions.
 
 ## EF migrations
 

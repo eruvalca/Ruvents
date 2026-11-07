@@ -37,7 +37,6 @@ internal static class BunitAccountExtensions
                 Substitute.For<IUserClaimsPrincipalFactory<ApplicationUser>>(), options,
                 NullLogger<SignInManager<ApplicationUser>>.Instance,
                 Substitute.For<IAuthenticationSchemeProvider>(), Substitute.For<IUserConfirmation<ApplicationUser>>());
-            signIn.GetExternalAuthenticationSchemesAsync().Returns(Array.Empty<AuthenticationScheme>());
             context.Services.AddLogging();
             context.Services.AddSingleton(users);
             context.Services.AddSingleton(signIn);

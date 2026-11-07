@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Identity;
 using Ruvents.Data;
+using Ruvents.Features.Account.Extensions;
 using Ruvents.Features.Account.Services;
 
 namespace Ruvents.Features.Account.Pages.Manage;
@@ -13,6 +14,7 @@ public sealed partial class Index
     private ApplicationUser? _user;
     private string? _username;
     private string? _phoneNumber;
+    private string _defaultDisplayName = string.Empty;
 
     [CascadingParameter]
     private HttpContext HttpContext { get; set; } = default!;
@@ -35,8 +37,25 @@ public sealed partial class Index
 
         _username = await UserManager.GetUserNameAsync(_user);
         _phoneNumber = await UserManager.GetPhoneNumberAsync(_user);
+        // Use the same bounded resolver that saved DisplayName, so a truncated default
+        // is still recognized as the default on a later name edit.
+        _defaultDisplayName = UserProfileNames.ResolveDisplayName(
+            null,
+            _user.FirstName,
+            _user.MiddleName,
+            _user.LastName,
+            string.Empty);
 
-        Input.PhoneNumber ??= _phoneNumber;
+        // Keep posted values on a validation or update failure; only load the stored
+        // profile for a fresh GET.
+        if (HttpContext.Request.IsGet)
+        {
+            Input.FirstName = _user.FirstName;
+            Input.MiddleName = _user.MiddleName;
+            Input.LastName = _user.LastName;
+            Input.DisplayName = _user.DisplayName;
+            Input.PhoneNumber = _phoneNumber;
+        }
     }
 
     private async Task OnValidSubmitAsync()
@@ -47,15 +66,47 @@ public sealed partial class Index
             return;
         }
 
-        if (!string.Equals(Input.PhoneNumber, _phoneNumber, StringComparison.Ordinal))
+        var firstName = Input.FirstName?.Trim() ?? string.Empty;
+        var middleName = Input.MiddleName?.Trim() ?? string.Empty;
+        var lastName = Input.LastName?.Trim() ?? string.Empty;
+        var displayName = UserProfileNames.ResolveDisplayName(
+            KeepsDefaultDisplayName() ? null : Input.DisplayName,
+            firstName,
+            middleName,
+            lastName,
+            UserProfileNames.DisplayNameFromEmail(_username ?? string.Empty));
+        var phoneNumber = string.IsNullOrWhiteSpace(Input.PhoneNumber) ? null : Input.PhoneNumber.Trim();
+
+        var namesChanged = false;
+        namesChanged |= SetValue(_user.FirstName, firstName, value => _user.FirstName = value ?? string.Empty);
+        namesChanged |= SetValue(_user.MiddleName, middleName, value => _user.MiddleName = value ?? string.Empty);
+        namesChanged |= SetValue(_user.LastName, lastName, value => _user.LastName = value ?? string.Empty);
+        namesChanged |= SetValue(_user.DisplayName, displayName, value => _user.DisplayName = value ?? string.Empty);
+
+        IdentityResult? result = null;
+        if (!string.Equals(_user.PhoneNumber, phoneNumber, StringComparison.Ordinal))
         {
-            var setPhoneResult = await UserManager.SetPhoneNumberAsync(_user, Input.PhoneNumber);
-            if (!setPhoneResult.Succeeded)
+            // Keep phone changes inside Identity's dedicated API. A new number has not
+            // been verified, so clear the previous confirmation before the write. The
+            // user object already carries the name changes, so this write persists both.
+            _user.PhoneNumberConfirmed = false;
+            result = await UserManager.SetPhoneNumberAsync(_user, phoneNumber);
+        }
+        else if (namesChanged)
+        {
+            result = await UserManager.UpdateAsync(_user);
+        }
+
+        if (result is not null)
+        {
+            if (!result.Succeeded)
             {
-                RedirectManager.RedirectToCurrentPageWithStatus("Error: Failed to set phone number.", HttpContext);
+                RedirectManager.RedirectToCurrentPageWithStatus($"Error: {result.Errors.FormatDescriptions(", ")}", HttpContext);
                 return;
             }
 
+            // The profile write is committed, so refreshing the sign-in cookie must run
+            // to completion even if the request disconnects.
             Cancellation.CompleteWrite();
         }
 
@@ -63,10 +114,71 @@ public sealed partial class Index
         RedirectManager.RedirectToCurrentPageWithStatus("Your profile has been updated", HttpContext);
     }
 
+    private bool KeepsDefaultDisplayName()
+    {
+        if (string.IsNullOrWhiteSpace(Input.DisplayName))
+        {
+            return true;
+        }
+
+        var posted = Input.DisplayName.Trim();
+        // Accounts created before names were collected defaulted to the email local part;
+        // that value should follow the names once they are filled in.
+        var legacyDefault = _defaultDisplayName.Length == 0
+            ? UserProfileNames.DisplayNameFromEmail(_username ?? string.Empty)
+            : _defaultDisplayName;
+        // Older saved defaults may end with the separator the cutoff landed on.
+        return string.Equals(posted, legacyDefault.Trim(), StringComparison.Ordinal);
+    }
+
+    private static bool SetValue(string? current, string? value, Action<string?> apply)
+    {
+        if (string.Equals(current, value, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        apply(value);
+        return true;
+    }
+
     private sealed class InputModel
     {
-        [Phone]
+        [Required]
+        [StringLength(UserProfileNames.MaxNameLength)]
+        [Display(Name = "First name")]
+        public string FirstName { get; set; } = "";
+
+        [StringLength(UserProfileNames.MaxNameLength)]
+        [Display(Name = "Middle name")]
+        public string MiddleName { get; set; } = "";
+
+        [Required]
+        [StringLength(UserProfileNames.MaxNameLength)]
+        [Display(Name = "Last name")]
+        public string LastName { get; set; } = "";
+
+        [StringLength(UserProfileNames.MaxDisplayNameLength)]
+        [Display(Name = "Display name")]
+        public string? DisplayName { get; set; }
+
+        [OptionalPhone]
         [Display(Name = "Phone number")]
         public string? PhoneNumber { get; set; }
+    }
+
+    /// <summary>
+    /// Applies the normal phone-number check but accepts an empty value so the user can
+    /// remove a saved number. <see cref="PhoneAttribute"/> rejects an empty string even
+    /// though it accepts null.
+    /// </summary>
+    [AttributeUsage(AttributeTargets.Property)]
+    private sealed class OptionalPhoneAttribute()
+        : ValidationAttribute("The {0} field is not a valid phone number.")
+    {
+        private static readonly PhoneAttribute _phone = new();
+
+        public override bool IsValid(object? value) =>
+            value is not string text || string.IsNullOrWhiteSpace(text) || _phone.IsValid(text);
     }
 }

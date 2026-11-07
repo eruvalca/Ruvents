@@ -36,7 +36,15 @@ public sealed class IdentityPersistenceTests
             (await database.Database.GetPendingMigrationsAsync(timeout.Token)).ShouldBeEmpty();
             (await database.Database.GetAppliedMigrationsAsync(timeout.Token)).ShouldNotBeEmpty();
             var users = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
-            var user = new ApplicationUser { UserName = "persist@example.test", Email = "persist@example.test" };
+            var user = new ApplicationUser
+            {
+                UserName = "persist@example.test",
+                Email = "persist@example.test",
+                FirstName = "Persist",
+                MiddleName = "Q",
+                LastName = "User",
+                DisplayName = "Persist Q User",
+            };
             (await users.CreateAsync(user)).Succeeded.ShouldBeTrue();
             (await users.SetPhoneNumberAsync(user, "+15555550123")).Succeeded.ShouldBeTrue();
             userId = user.Id;
@@ -49,6 +57,10 @@ public sealed class IdentityPersistenceTests
         persisted.ShouldNotBeNull();
         persisted.Email.ShouldBe("persist@example.test");
         persisted.PhoneNumber.ShouldBe("+15555550123");
+        persisted.FirstName.ShouldBe("Persist");
+        persisted.MiddleName.ShouldBe("Q");
+        persisted.LastName.ShouldBe("User");
+        persisted.DisplayName.ShouldBe("Persist Q User");
         var duplicate = await persistedUsers.CreateAsync(new ApplicationUser { UserName = "PERSIST@EXAMPLE.TEST" });
         duplicate.Succeeded.ShouldBeFalse();
         duplicate.Errors.ShouldContain(error => string.Equals(error.Code, "DuplicateUserName", StringComparison.Ordinal));
