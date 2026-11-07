@@ -212,10 +212,12 @@ internal sealed class EventService(
         const int MaxResults = 10;
 
         var now = timeProvider.GetUtcNow();
-        // Events that started recently, or that are still running after an earlier start
-        // (multi-day), stay in the candidate window; anything already finished is removed
-        // before the list is limited, otherwise it could crowd out later events.
-        var threshold = now.AddDays(-1);
+        // A local day can be 25 hours long when clocks fall back, and a timed event
+        // without an end stays current until the end of its start day, so the candidate
+        // window is wider than 24 hours. Events that started recently, or whose stored
+        // end has not passed the window, stay candidates; anything already finished is
+        // removed before the list is limited so it cannot crowd out later events.
+        var threshold = now.AddHours(-25);
         await using var db = await dbContextFactory.CreateDbContextAsync(cancellationToken);
 
         var results = new List<PlanningEventSummary>(MaxResults);

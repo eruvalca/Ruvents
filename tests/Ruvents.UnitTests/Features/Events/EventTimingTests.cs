@@ -123,4 +123,18 @@ public sealed class EventTimingTests : IDisposable
         EventTiming.GetTimeState(start, null, isAllDay: false, WesternZone, start.AddHours(7))
             .ShouldBe(EventTimeState.Past);
     }
+
+    [Fact]
+    public void TimedEventWithoutAnEndCanStayCurrentForMoreThanTwentyFourHours()
+    {
+        // 1 November 2026 is a fall-back day in New York, so the local day lasts 25 hours
+        // and an event starting just after midnight is still current more than 24 hours
+        // later. Candidate queries must therefore widen their window past one day.
+        var start = new DateTimeOffset(2026, 11, 1, 4, 30, 0, TimeSpan.Zero);
+
+        EventTiming.GetTimeState(start, null, isAllDay: false, WesternZone, start.AddHours(24).AddMinutes(15))
+            .ShouldBe(EventTimeState.InProgress);
+        EventTiming.GetTimeState(start, null, isAllDay: false, WesternZone, start.AddHours(24).AddMinutes(45))
+            .ShouldBe(EventTimeState.Past);
+    }
 }

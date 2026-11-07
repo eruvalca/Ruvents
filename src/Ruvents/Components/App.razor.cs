@@ -1,12 +1,10 @@
 using Microsoft.AspNetCore.Components;
+using Ruvents.UI.Planning;
 
 namespace Ruvents.Components;
 
 public sealed partial class App
 {
-    /// <summary>Set by the pre-paint script in <c>App.razor</c> from the browser's zone.</summary>
-    internal const string ViewerTimeZoneCookieName = "ruvents-tz";
-
     [CascadingParameter] private HttpContext HttpContext { get; set; } = default!;
 
     // Statically rendered pages cannot call JavaScript, so they read the zone the
@@ -16,7 +14,7 @@ public sealed partial class App
     {
         get
         {
-            var value = HttpContext.Request.Cookies[ViewerTimeZoneCookieName];
+            var value = HttpContext.Request.Cookies[ViewerTimeZoneStorage.CookieName];
             if (string.IsNullOrWhiteSpace(value))
             {
                 return null;
