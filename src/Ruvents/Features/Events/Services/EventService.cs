@@ -221,17 +221,31 @@ internal sealed class EventService(
         await using var db = await dbContextFactory.CreateDbContextAsync(cancellationToken);
 
         var results = new List<PlanningEventSummary>(MaxResults);
-        var skip = 0;
+        DateTimeOffset? boundary = null;
+        List<Guid> seenAtBoundary = [];
         while (results.Count < MaxResults)
         {
-            var batch = await db.Events
-                .Where(calendarEvent => groupIds.Contains(calendarEvent.FamilyGroupId)
-                    && calendarEvent.Status == EventStatus.Scheduled
-                    && (calendarEvent.StartUtc >= threshold
-                        || (calendarEvent.EndUtc != null && calendarEvent.EndUtc >= threshold)))
+            var query = db.Events.Where(calendarEvent => groupIds.Contains(calendarEvent.FamilyGroupId)
+                && calendarEvent.Status == EventStatus.Scheduled
+                && (calendarEvent.StartUtc >= threshold
+                    || (calendarEvent.EndUtc != null && calendarEvent.EndUtc >= threshold)));
+
+            // Keyset paging instead of an offset: a concurrent insert or delete cannot
+            // shift the window and hide an event. Rows already returned at the boundary
+            // instant are excluded so a tie is read exactly once.
+            if (boundary is { } start)
+            {
+                query = query.Where(calendarEvent => calendarEvent.StartUtc >= start);
+                if (seenAtBoundary.Count > 0)
+                {
+                    var seen = seenAtBoundary;
+                    query = query.Where(calendarEvent => !seen.Contains(calendarEvent.Id));
+                }
+            }
+
+            var batch = await query
                 .OrderBy(calendarEvent => calendarEvent.StartUtc)
                 .ThenBy(calendarEvent => calendarEvent.Id)
-                .Skip(skip)
                 .Take(BatchSize)
                 .Select(calendarEvent => new PlanningEventSummary(
                     calendarEvent.Id,
@@ -251,7 +265,17 @@ internal sealed class EventService(
                 break;
             }
 
-            skip += batch.Count;
+            var lastStart = batch[^1].StartUtc;
+            if (boundary is null || boundary.Value != lastStart)
+            {
+                boundary = lastStart;
+                seenAtBoundary.Clear();
+            }
+
+            seenAtBoundary.AddRange(batch
+                .Where(calendarEvent => calendarEvent.StartUtc == lastStart)
+                .Select(calendarEvent => calendarEvent.Id));
+
             var remaining = MaxResults - results.Count;
             results.AddRange(batch
                 .Where(calendarEvent => EventTiming.GetTimeState(

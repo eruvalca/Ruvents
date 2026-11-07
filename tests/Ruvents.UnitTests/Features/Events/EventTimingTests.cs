@@ -137,4 +137,32 @@ public sealed class EventTimingTests : IDisposable
         EventTiming.GetTimeState(start, null, isAllDay: false, WesternZone, start.AddHours(24).AddMinutes(45))
             .ShouldBe(EventTimeState.Past);
     }
+
+    [Fact]
+    public void TimedEventWithoutAnEndHandlesAMidnightThatDoesNotExist()
+    {
+        // Chile moves clocks forward at midnight, so 11 September 2022 begins at 01:00
+        // and the previous day ends when the jump happens, at 04:00 UTC.
+        var start = new DateTimeOffset(2022, 9, 10, 20, 0, 0, TimeSpan.Zero);
+        var end = new DateTimeOffset(2022, 9, 11, 4, 0, 0, TimeSpan.Zero);
+
+        EventTiming.GetTimeState(start, null, isAllDay: false, "America/Santiago", end.AddSeconds(-1))
+            .ShouldBe(EventTimeState.InProgress);
+        EventTiming.GetTimeState(start, null, isAllDay: false, "America/Santiago", end)
+            .ShouldBe(EventTimeState.Past);
+    }
+
+    [Fact]
+    public void TimedEventWithoutAnEndHandlesAMidnightThatHappensTwice()
+    {
+        // Cuba moves clocks back at 01:00, so 6 November 2022 has two 00:00 hours and
+        // only the first one ends the previous day, at 04:00 UTC.
+        var start = new DateTimeOffset(2022, 11, 5, 18, 0, 0, TimeSpan.Zero);
+        var end = new DateTimeOffset(2022, 11, 6, 4, 0, 0, TimeSpan.Zero);
+
+        EventTiming.GetTimeState(start, null, isAllDay: false, "America/Havana", end.AddSeconds(-1))
+            .ShouldBe(EventTimeState.InProgress);
+        EventTiming.GetTimeState(start, null, isAllDay: false, "America/Havana", end)
+            .ShouldBe(EventTimeState.Past);
+    }
 }

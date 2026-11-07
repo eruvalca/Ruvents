@@ -84,8 +84,31 @@ public static class EventTiming
         // otherwise it would read as past the moment it begins.
         var zone = ResolveTimeZone(timeZoneId);
         var startLocal = TimeZoneInfo.ConvertTime(startUtc, zone);
-        var nextMidnight = startLocal.Date.AddDays(1);
-        return new DateTimeOffset(nextMidnight, zone.GetUtcOffset(nextMidnight)).ToUniversalTime();
+        return NextMidnightUtc(startLocal, zone);
+    }
+
+    private static DateTimeOffset NextMidnightUtc(DateTimeOffset startLocal, TimeZoneInfo zone)
+    {
+        var nextMidnight = DateTime.SpecifyKind(startLocal.Date.AddDays(1), DateTimeKind.Unspecified);
+
+        if (!zone.IsInvalidTime(nextMidnight) && !zone.IsAmbiguousTime(nextMidnight))
+        {
+            return new DateTimeOffset(nextMidnight, zone.GetUtcOffset(nextMidnight)).ToUniversalTime();
+        }
+
+        // A daylight adjustment can skip midnight or repeat it. The offsets just before
+        // and just after the boundary give the two possible instants for that wall time.
+        var before = new DateTimeOffset(nextMidnight, zone.GetUtcOffset(nextMidnight.AddHours(-3)));
+        var after = new DateTimeOffset(nextMidnight, zone.GetUtcOffset(nextMidnight.AddHours(3)));
+
+        if (zone.IsInvalidTime(nextMidnight))
+        {
+            // The clock jumps over midnight, so the date rolls over when the jump happens.
+            return (before > after ? before : after).ToUniversalTime();
+        }
+
+        // Midnight happens twice; the date has already rolled over on the first one.
+        return (before < after ? before : after).ToUniversalTime();
     }
 
     public static string FormatDate(DateTimeOffset instant, bool isAllDay, string timeZoneId) =>
