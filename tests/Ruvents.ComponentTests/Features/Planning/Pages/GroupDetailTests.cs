@@ -106,6 +106,49 @@ public sealed class GroupDetailTests
         });
     }
 
+    [Fact]
+    public async Task PastEventsPreviewSixAndTheToggleRevealsAndHidesTheRestAsync()
+    {
+        await using var context = CreateContext(
+            Enumerable.Range(0, 8)
+                .Select(index => PastEvent($"Past {index}", _now.AddDays(-(index + 1))))
+                .ToArray());
+
+        var component = Render(context);
+
+        PastCards(component).Count.ShouldBe(6);
+        PastToggle(component).TextContent.Trim().ShouldBe("Show all 8 past events");
+
+        await PastToggle(component).ClickAsync();
+        await component.WaitForAssertionAsync(() =>
+        {
+            PastCards(component).Count.ShouldBe(8);
+            PastToggle(component).TextContent.Trim().ShouldBe("Show fewer past events");
+        });
+
+        await PastToggle(component).ClickAsync();
+        await component.WaitForAssertionAsync(() =>
+        {
+            PastCards(component).Count.ShouldBe(6);
+            PastToggle(component).TextContent.Trim().ShouldBe("Show all 8 past events");
+        });
+    }
+
+    [Fact]
+    public async Task SixPastEventsFitThePreviewWithoutAToggleAsync()
+    {
+        await using var context = CreateContext(
+            Enumerable.Range(0, 6)
+                .Select(index => PastEvent($"Past {index}", _now.AddDays(-(index + 1))))
+                .ToArray());
+
+        var component = Render(context);
+        var past = Section(component, "Past events");
+
+        PastCards(component).Count.ShouldBe(6);
+        past.QuerySelector("button").ShouldBeNull();
+    }
+
     private static BunitContext CreateContext(params PlanningEventSummary[] events) =>
         CreateContext(new UnresolvedViewerTimeZone(), events);
 
@@ -132,6 +175,12 @@ public sealed class GroupDetailTests
 
     private static string[] Titles(AngleSharp.Dom.IElement section) =>
         section.QuerySelectorAll("a.event-title").Select(link => link.TextContent).ToArray();
+
+    private static List<AngleSharp.Dom.IElement> PastCards(IRenderedComponent<GroupDetailPage> component) =>
+        Section(component, "Past events").QuerySelectorAll("li.is-past").ToList();
+
+    private static AngleSharp.Dom.IElement PastToggle(IRenderedComponent<GroupDetailPage> component) =>
+        Section(component, "Past events").QuerySelector("button")!;
 
     private static PlanningEventSummary UpcomingEvent(string title, DateTimeOffset start) =>
         Summary(title, start, start.AddHours(2), EventStatus.Scheduled);
