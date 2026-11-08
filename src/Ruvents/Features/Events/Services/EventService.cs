@@ -212,23 +212,30 @@ internal sealed class EventService(
         const int MaxResults = 10;
 
         var now = timeProvider.GetUtcNow();
-        // An all-day date is stored at UTC midnight, so its stored end can trail the real
-        // end of the event by up to 36 hours in the most negative zone; a timed event
-        // without an end can stay current for 26 hours. A two-day window keeps every
-        // still-current candidate, and finished ones are removed before the list is
-        // limited so they cannot crowd out later events.
-        var threshold = now.AddHours(-48);
+        // Finished events are excluded in the query so a backlog of expired events cannot
+        // make the paging loop read batch after batch. The bounds cover how far a still-
+        // current event can look expired from its stored instants: 26 hours for a timed
+        // event without an end (a two-hour rollback) and 40 hours for an all-day date in a
+        // zone far behind UTC. The exact zone-aware check still runs on every candidate.
+        var noEndCutoff = now.AddHours(-26);
+        var allDayCutoff = now.AddHours(-40);
         await using var db = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+
+        var candidates = db.Events.Where(calendarEvent =>
+            groupIds.Contains(calendarEvent.FamilyGroupId)
+            && calendarEvent.Status == EventStatus.Scheduled
+            && (calendarEvent.StartUtc > now
+                || (calendarEvent.EndUtc != null && calendarEvent.EndUtc > now)
+                || (calendarEvent.EndUtc == null && calendarEvent.StartUtc >= noEndCutoff)
+                || (calendarEvent.IsAllDay
+                    && (calendarEvent.EndUtc ?? calendarEvent.StartUtc) >= allDayCutoff)));
 
         var results = new List<PlanningEventSummary>(MaxResults);
         DateTimeOffset? boundary = null;
         List<Guid> seenAtBoundary = [];
         while (results.Count < MaxResults)
         {
-            var query = db.Events.Where(calendarEvent => groupIds.Contains(calendarEvent.FamilyGroupId)
-                && calendarEvent.Status == EventStatus.Scheduled
-                && (calendarEvent.StartUtc >= threshold
-                    || (calendarEvent.EndUtc != null && calendarEvent.EndUtc >= threshold)));
+            var query = candidates;
 
             // Keyset paging instead of an offset: a concurrent insert or delete cannot
             // shift the window and hide an event. Rows already returned at the boundary

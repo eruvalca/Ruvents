@@ -401,8 +401,10 @@ public sealed class FamilyLoadScenarioTests(PostgresAppFixture fixture)
         var groupId = await services.Families.CreateAsync(owner.Id, "Tie Family", null, Token);
 
         // Thirty events share one start instant, so the first 25-row batch ends inside the
-        // tie. All of them have finished, and five current events follow the group.
-        var tieStart = fixture.Clock.Now.AddHours(-12);
+        // tie. They have no end and started 25 hours ago, so they are finished but still
+        // inside the candidate window; the exact state filter must discard them and the
+        // loop must continue to the live events.
+        var tieStart = fixture.Clock.Now.AddHours(-25);
         for (var index = 0; index < 30; index++)
         {
             _ = await services.Events.CreateAsync(
@@ -414,7 +416,7 @@ public sealed class FamilyLoadScenarioTests(PostgresAppFixture fixture)
                     null,
                     null,
                     tieStart,
-                    tieStart.AddMinutes(30),
+                    null,
                     false,
                     "UTC",
                     null),
