@@ -18,13 +18,12 @@ public sealed class TimeZoneHandoffTests(ITestOutputHelper output)
     private const string Password = "Browser1!pass";
     private const string GroupName = "Browser Timezone Family";
     private const string EventTitle = "Global Call";
+    private const string PlanningClientHeader = "X-Ruvents-Client";
+    private const string PlanningClientValue = "planning-ui";
 
     // The static registration form accepts a plain file upload when JavaScript is off.
     private const string OnePixelPng =
         "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
-
-    private const string PlanningClientHeader = "X-Ruvents-Client";
-    private const string PlanningClientValue = "planning-ui";
 
     private static readonly Dictionary<string, string> _clientHeaders = new(StringComparer.Ordinal)
     {
@@ -33,10 +32,10 @@ public sealed class TimeZoneHandoffTests(ITestOutputHelper output)
 
     [Fact]
     [Trait("Category", "BrowserSmoke")]
-    public async Task EventTimesFollowTheBrowserZoneThroughServerAndWebAssemblyAsync()
+    public async Task TimeZoneHandoffWorksWithAndWithoutAPrerenderedCookieAsync()
     {
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
-        timeout.CancelAfter(TimeSpan.FromMinutes(5));
+        timeout.CancelAfter(TimeSpan.FromMinutes(6));
 
         await using var builder = await TestAppHost.CreateAsync(timeout.Token);
         await using var app = await builder.BuildAsync(timeout.Token);
@@ -48,10 +47,27 @@ public sealed class TimeZoneHandoffTests(ITestOutputHelper output)
         var baseUrl = app.GetEndpoint("ruvents-web", "https").ToString();
 
         var registrationState = await RegisterWithoutJavaScriptAsync(browser, baseUrl);
-        var (groupId, storageState) = await SeedFamilyAndEventAsync(browser, baseUrl, registrationState);
+        var (groupId, cookieState) = await SeedFamilyAndEventAsync(browser, baseUrl, registrationState);
 
-        // A fresh context has no WebAssembly cache, so the first navigation uses Blazor
-        // Server; the storage state already carries the cookie the page script wrote.
+        // With the cookie, the prerender already uses the viewer's zone.
+        await VerifyHandoffAsync(browser, baseUrl, groupId, cookieState, expectsFallbackInMarkup: false, timeout.Token);
+
+        // Without it, the prerender falls back to the event's zone and the Server
+        // renderer corrects the card once it can ask the browser.
+        await VerifyHandoffAsync(browser, baseUrl, groupId, registrationState, expectsFallbackInMarkup: true, timeout.Token);
+
+        output.WriteLine("The UTC event rendered as 3:00 AM in Tokyo with and without a prerendered cookie, and after the WebAssembly handoff.");
+    }
+
+    private static async Task VerifyHandoffAsync(
+        IBrowser browser,
+        string baseUrl,
+        Guid groupId,
+        string storageState,
+        bool expectsFallbackInMarkup,
+        CancellationToken cancellationToken)
+    {
+        // A fresh context has no WebAssembly cache, so the first navigation uses Blazor Server.
         await using var context = await browser.NewContextAsync(new()
         {
             BaseURL = baseUrl,
@@ -60,15 +76,22 @@ public sealed class TimeZoneHandoffTests(ITestOutputHelper output)
             StorageState = storageState,
         });
 
-        // The raw response proves the server-side render used the cookie's zone.
-        var html = await (await context.APIRequest.GetAsync($"/groups/{groupId}")).TextAsync();
-        html.ShouldContain("3:00 AM");
-        html.ShouldContain("Event time");
-        html.ShouldContain("(UTC)");
+        // The raw response shows which zone the server-side render used.
+        var markup = await (await context.APIRequest.GetAsync($"/groups/{groupId}")).TextAsync();
+        if (expectsFallbackInMarkup)
+        {
+            markup.ShouldContain("6:00 PM");
+            markup.ShouldNotContain("3:00 AM");
+        }
+        else
+        {
+            markup.ShouldContain("3:00 AM");
+            markup.ShouldContain("Event time");
+            markup.ShouldContain("(UTC)");
+        }
 
         var page = await context.NewPageAsync();
         var circuitOpened = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var runtimeDownloaded = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var socketsAfterReload = new ConcurrentQueue<string>();
         var trackReloadSockets = false;
         page.WebSocket += (_, socket) =>
@@ -87,51 +110,26 @@ public sealed class TimeZoneHandoffTests(ITestOutputHelper output)
                 circuitOpened.TrySetResult();
             }
         };
-        page.Response += (_, response) =>
-        {
-            if (response.Url.Contains("dotnet.native.", StringComparison.Ordinal))
-            {
-                runtimeDownloaded.TrySetResult();
-            }
-        };
 
         await page.GotoAsync($"/groups/{groupId}");
-        await circuitOpened.Task.WaitAsync(TimeSpan.FromSeconds(30), timeout.Token);
+        await circuitOpened.Task.WaitAsync(TimeSpan.FromSeconds(30), cancellationToken);
         await AssertTokyoTimeAsync(page);
         (await page.EvaluateAsync<string>("() => document.cookie")).ShouldContain("ruvents-tz=Asia%2FTokyo");
 
-        // The Server render downloads and initializes the WebAssembly runtime in the
-        // background; the next navigation then uses the browser renderer.
-        await runtimeDownloaded.Task.WaitAsync(TimeSpan.FromSeconds(90), timeout.Token);
+        // The Server render prefetches the whole WebAssembly runtime. Waiting for the
+        // network to settle is the readiness signal the next navigation needs; it avoids
+        // guessing with a delay and makes the reload deterministic.
+        await page.WaitForLoadStateAsync(LoadState.NetworkIdle, new() { Timeout = 120_000 });
+
+        trackReloadSockets = true;
+        await page.ReloadAsync();
         await page.WaitForFunctionAsync(
-            "() => navigator.serviceWorker && navigator.serviceWorker.controller !== null",
+            "() => window.Blazor && Blazor.runtime && Object.keys(Blazor.runtime).length > 0",
             null,
-            new() { Timeout = 30_000 });
+            new() { Timeout = 60_000 });
 
-        var wasmStarted = false;
-        for (var attempt = 0; attempt < 3 && !wasmStarted; attempt++)
-        {
-            socketsAfterReload.Clear();
-            trackReloadSockets = true;
-            await page.ReloadAsync();
-            try
-            {
-                await page.WaitForFunctionAsync(
-                    "() => window.Blazor && Blazor.runtime && Object.keys(Blazor.runtime).length > 0",
-                    null,
-                    new() { Timeout = 20_000 });
-                wasmStarted = true;
-            }
-            catch (TimeoutException)
-            {
-                await page.WaitForTimeoutAsync(3_000);
-            }
-        }
-
-        wasmStarted.ShouldBeTrue($"circuits after reload: {string.Join(", ", socketsAfterReload)}");
         socketsAfterReload.ShouldBeEmpty();
         await AssertTokyoTimeAsync(page);
-        output.WriteLine("A UTC event showed 3:00 AM in Tokyo under both the Server and WebAssembly renderers.");
     }
 
     private static async Task AssertTokyoTimeAsync(IPage page)
@@ -140,8 +138,12 @@ public sealed class TimeZoneHandoffTests(ITestOutputHelper output)
         {
             Has = page.GetByRole(AriaRole.Link, new() { Name = EventTitle, Exact = true }),
         });
-        await card.WaitForAsync();
-        (await card.Locator(".event-when").InnerTextAsync()).ShouldContain("3:00 AM");
+        var when = card.Locator(".event-when");
+        // The fallback case starts at the event's zone and changes here once the
+        // interactive renderer confirms the browser zone.
+        await when.Filter(new() { HasText = "3:00 AM" }).WaitForAsync(new() { Timeout = 30_000 });
+        (await when.InnerTextAsync()).ShouldContain("3:00 AM");
+
         var eventZone = await card.Locator(".event-zone").InnerTextAsync();
         eventZone.ShouldContain("6:00 PM");
         eventZone.ShouldContain("(UTC)");
