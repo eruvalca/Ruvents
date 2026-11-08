@@ -4,7 +4,9 @@ namespace Ruvents.SharedKernel.Events;
 
 /// <summary>
 /// Formats event instants for display and reports where an event sits in time. All-day
-/// events keep their calendar date in UTC; timed events are shown in the supplied zone.
+/// dates are stored and displayed as UTC calendar dates, but the boundaries that decide
+/// their state follow the event's own zone; timed events are displayed in the supplied
+/// zone.
 /// </summary>
 public static class EventTiming
 {
@@ -51,57 +53,46 @@ public static class EventTiming
         string timeZoneId,
         DateTimeOffset nowUtc)
     {
-        if (nowUtc < startUtc)
+        var zone = ResolveTimeZone(timeZoneId);
+
+        // An all-day event's stored instant is the calendar date at UTC midnight, but the
+        // date itself begins and ends in the event's own zone.
+        var startsAtUtc = isAllDay ? StartOfDayUtc(startUtc.UtcDateTime.Date, zone) : startUtc;
+        if (nowUtc < startsAtUtc)
         {
             return EventTimeState.Upcoming;
         }
 
-        return nowUtc >= GetExclusiveEndUtc(startUtc, endUtc, isAllDay, timeZoneId)
-            ? EventTimeState.Past
-            : EventTimeState.InProgress;
+        var endsAtUtc = isAllDay
+            ? StartOfDayUtc((endUtc ?? startUtc).UtcDateTime.Date.AddDays(1), zone)
+            : endUtc ?? EndOfStartDayUtc(startUtc, zone);
+
+        return nowUtc >= endsAtUtc ? EventTimeState.Past : EventTimeState.InProgress;
     }
 
-    private static DateTimeOffset GetExclusiveEndUtc(
-        DateTimeOffset startUtc,
-        DateTimeOffset? endUtc,
-        bool isAllDay,
-        string timeZoneId)
+    private static DateTimeOffset EndOfStartDayUtc(DateTimeOffset startUtc, TimeZoneInfo zone)
     {
-        if (isAllDay)
-        {
-            // All-day instants are stored at UTC midnight and displayed as calendar
-            // dates, so the stored end date is the last day the event covers.
-            var lastDate = (endUtc ?? startUtc).UtcDateTime.Date;
-            return new DateTimeOffset(lastDate.AddDays(1), TimeSpan.Zero);
-        }
-
-        if (endUtc is not null)
-        {
-            return endUtc.Value;
-        }
-
         // A timed event without an end stays current through the end of its start day;
         // otherwise it would read as past the moment it begins.
-        var zone = ResolveTimeZone(timeZoneId);
         var startLocal = TimeZoneInfo.ConvertTime(startUtc, zone);
-        return NextMidnightUtc(startLocal, zone);
+        return StartOfDayUtc(startLocal.Date.AddDays(1), zone);
     }
 
-    private static DateTimeOffset NextMidnightUtc(DateTimeOffset startLocal, TimeZoneInfo zone)
+    private static DateTimeOffset StartOfDayUtc(DateTime date, TimeZoneInfo zone)
     {
-        var nextMidnight = DateTime.SpecifyKind(startLocal.Date.AddDays(1), DateTimeKind.Unspecified);
+        var midnight = DateTime.SpecifyKind(date, DateTimeKind.Unspecified);
 
-        if (!zone.IsInvalidTime(nextMidnight) && !zone.IsAmbiguousTime(nextMidnight))
+        if (!zone.IsInvalidTime(midnight) && !zone.IsAmbiguousTime(midnight))
         {
-            return new DateTimeOffset(nextMidnight, zone.GetUtcOffset(nextMidnight)).ToUniversalTime();
+            return new DateTimeOffset(midnight, zone.GetUtcOffset(midnight)).ToUniversalTime();
         }
 
         // A daylight adjustment can skip midnight or repeat it. The offsets just before
         // and just after the boundary give the two possible instants for that wall time.
-        var before = new DateTimeOffset(nextMidnight, zone.GetUtcOffset(nextMidnight.AddHours(-3)));
-        var after = new DateTimeOffset(nextMidnight, zone.GetUtcOffset(nextMidnight.AddHours(3)));
+        var before = new DateTimeOffset(midnight, zone.GetUtcOffset(midnight.AddHours(-3)));
+        var after = new DateTimeOffset(midnight, zone.GetUtcOffset(midnight.AddHours(3)));
 
-        if (zone.IsInvalidTime(nextMidnight))
+        if (zone.IsInvalidTime(midnight))
         {
             // The clock jumps over midnight, so the date rolls over when the jump happens.
             return (before > after ? before : after).ToUniversalTime();

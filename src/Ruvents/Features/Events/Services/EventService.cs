@@ -212,12 +212,12 @@ internal sealed class EventService(
         const int MaxResults = 10;
 
         var now = timeProvider.GetUtcNow();
-        // A local day can be longer than 24 hours when clocks roll back, and two-hour
-        // rollbacks exist, so the candidate window is 26 hours. A timed event without an
-        // end stays current until the end of its start day, and a multi-day event is
-        // caught by its stored end. Finished candidates are removed before the list is
+        // An all-day date is stored at UTC midnight, so its stored end can trail the real
+        // end of the event by up to 36 hours in the most negative zone; a timed event
+        // without an end can stay current for 26 hours. A two-day window keeps every
+        // still-current candidate, and finished ones are removed before the list is
         // limited so they cannot crowd out later events.
-        var threshold = now.AddHours(-26);
+        var threshold = now.AddHours(-48);
         await using var db = await dbContextFactory.CreateDbContextAsync(cancellationToken);
 
         var results = new List<PlanningEventSummary>(MaxResults);

@@ -86,21 +86,24 @@ public sealed class EventTimingTests : IDisposable
     }
 
     [Fact]
-    public void AllDayEventStaysCurrentThroughItsUtcCalendarDate()
+    public void AllDayEventRunsThroughItsDateInTheEventZone()
     {
-        // Stored at UTC midnight, so a zone west of UTC must not end it early.
+        // New York is four hours behind UTC in June, so 1 June starts at 04:00 UTC and
+        // ends at 04:00 UTC on 2 June.
         var start = new DateTimeOffset(2026, 6, 1, 0, 0, 0, TimeSpan.Zero);
 
-        EventTiming.GetTimeState(start, null, isAllDay: true, WesternZone, start.AddHours(-1))
+        EventTiming.GetTimeState(start, null, isAllDay: true, WesternZone, start.AddHours(3))
             .ShouldBe(EventTimeState.Upcoming);
-        EventTiming.GetTimeState(start, null, isAllDay: true, WesternZone, start.AddHours(23))
+        EventTiming.GetTimeState(start, null, isAllDay: true, WesternZone, start.AddHours(4))
             .ShouldBe(EventTimeState.InProgress);
-        EventTiming.GetTimeState(start, null, isAllDay: true, WesternZone, start.AddDays(1))
+        EventTiming.GetTimeState(start, null, isAllDay: true, WesternZone, start.AddDays(1).AddHours(3))
+            .ShouldBe(EventTimeState.InProgress);
+        EventTiming.GetTimeState(start, null, isAllDay: true, WesternZone, start.AddDays(1).AddHours(4))
             .ShouldBe(EventTimeState.Past);
     }
 
     [Fact]
-    public void AllDayEventKeepsItsStoredEndDateAsTheLastDayItCovers()
+    public void AllDayEventEndsAfterItsLastDateInTheEventZone()
     {
         var start = new DateTimeOffset(2026, 6, 1, 0, 0, 0, TimeSpan.Zero);
         var end = new DateTimeOffset(2026, 6, 3, 0, 0, 0, TimeSpan.Zero);
@@ -108,6 +111,23 @@ public sealed class EventTimingTests : IDisposable
         EventTiming.GetTimeState(start, end, isAllDay: true, WesternZone, end.AddHours(12))
             .ShouldBe(EventTimeState.InProgress);
         EventTiming.GetTimeState(start, end, isAllDay: true, WesternZone, end.AddDays(1))
+            .ShouldBe(EventTimeState.InProgress);
+        EventTiming.GetTimeState(start, end, isAllDay: true, WesternZone, end.AddDays(1).AddHours(4))
+            .ShouldBe(EventTimeState.Past);
+    }
+
+    [Fact]
+    public void AllDayEventStartsEarlyInAZoneAheadOfUtc()
+    {
+        // Tokyo is nine hours ahead, so 6 November starts at 15:00 UTC on 5 November and
+        // ends at 15:00 UTC on 6 November.
+        var start = new DateTimeOffset(2026, 11, 6, 0, 0, 0, TimeSpan.Zero);
+
+        EventTiming.GetTimeState(start, null, isAllDay: true, "Asia/Tokyo", start.AddDays(-1).AddHours(14))
+            .ShouldBe(EventTimeState.Upcoming);
+        EventTiming.GetTimeState(start, null, isAllDay: true, "Asia/Tokyo", start.AddDays(-1).AddHours(15))
+            .ShouldBe(EventTimeState.InProgress);
+        EventTiming.GetTimeState(start, null, isAllDay: true, "Asia/Tokyo", start.AddHours(15))
             .ShouldBe(EventTimeState.Past);
     }
 
