@@ -86,7 +86,30 @@ public sealed class GroupDetailTests
         events.TextContent.ShouldNotContain("Happening now");
     }
 
-    private static BunitContext CreateContext(params PlanningEventSummary[] events)
+    [Fact]
+    public async Task ProvisionalViewerZoneIsConfirmedAndTheCardRerendersAsync()
+    {
+        await using var context = CreateContext(
+            new ConfirmingViewerTimeZone("UTC", "Asia/Tokyo"),
+            UpcomingEvent("Winter Potluck", _now.AddDays(20)));
+
+        var component = Render(context);
+
+        // The first render uses the provisional zone; confirming with the browser moves
+        // the card to Tokyo time and adds the event-zone note.
+        await component.WaitForAssertionAsync(() =>
+        {
+            var events = Section(component, "Events");
+            events.TextContent.ShouldContain("9:00 PM");
+            events.TextContent.ShouldContain("Event time");
+            events.TextContent.ShouldContain("12:00 PM");
+        });
+    }
+
+    private static BunitContext CreateContext(params PlanningEventSummary[] events) =>
+        CreateContext(new UnresolvedViewerTimeZone(), events);
+
+    private static BunitContext CreateContext(IViewerTimeZone viewerTimeZone, params PlanningEventSummary[] events)
     {
         var context = new BunitContext();
         var api = Substitute.For<IPlanningApi>();
@@ -95,8 +118,9 @@ public sealed class GroupDetailTests
         api.ListGroupEventsAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
             .Returns(Task.FromResult<IReadOnlyList<PlanningEventSummary>>(events));
         context.Services.AddSingleton(api);
-        context.Services.AddSingleton<IViewerTimeZone>(new UnresolvedViewerTimeZone());
+        context.Services.AddSingleton(viewerTimeZone);
         context.Services.AddSingleton<TimeProvider>(new FixedTimeProvider(_now));
+        context.Renderer.SetRendererInfo(new RendererInfo("Server", isInteractive: true));
         return context;
     }
 
@@ -130,6 +154,20 @@ public sealed class GroupDetailTests
 
         public ValueTask<string?> ResolveAsync(CancellationToken cancellationToken) =>
             ValueTask.FromResult<string?>(null);
+    }
+
+    private sealed class ConfirmingViewerTimeZone(string provisionalZoneId, string confirmedZoneId) : IViewerTimeZone
+    {
+        public string? ResolvedZoneId { get; private set; } = provisionalZoneId;
+
+        public bool IsConfirmed { get; private set; }
+
+        public ValueTask<string?> ResolveAsync(CancellationToken cancellationToken)
+        {
+            ResolvedZoneId = confirmedZoneId;
+            IsConfirmed = true;
+            return ValueTask.FromResult<string?>(ResolvedZoneId);
+        }
     }
 
     private sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider

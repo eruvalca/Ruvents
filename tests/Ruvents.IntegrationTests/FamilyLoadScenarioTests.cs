@@ -393,6 +393,63 @@ public sealed class FamilyLoadScenarioTests(PostgresAppFixture fixture)
     }
 
     [Fact]
+    public async Task UpcomingPagingSpansATieGroupAcrossBatchesAsync()
+    {
+        await using var scope = fixture.CreateScope();
+        var services = new ScenarioServices(scope.ServiceProvider);
+        var owner = await services.CreateUserAsync("Tie organizer");
+        var groupId = await services.Families.CreateAsync(owner.Id, "Tie Family", null, Token);
+
+        // Thirty events share one start instant, so the first 25-row batch ends inside the
+        // tie. All of them have finished, and five current events follow the group.
+        var tieStart = fixture.Clock.Now.AddHours(-12);
+        for (var index = 0; index < 30; index++)
+        {
+            _ = await services.Events.CreateAsync(
+                new PlanningEventInput(
+                    groupId,
+                    $"Tie {index}",
+                    null,
+                    "Community hall",
+                    null,
+                    null,
+                    tieStart,
+                    tieStart.AddMinutes(30),
+                    false,
+                    "UTC",
+                    null),
+                owner.Id,
+                Token);
+        }
+
+        var liveStart = fixture.Clock.Now.AddHours(-1);
+        for (var index = 0; index < 5; index++)
+        {
+            _ = await services.Events.CreateAsync(
+                new PlanningEventInput(
+                    groupId,
+                    $"Live {index}",
+                    null,
+                    "Community hall",
+                    null,
+                    null,
+                    liveStart,
+                    liveStart.AddHours(2),
+                    false,
+                    "UTC",
+                    null),
+                owner.Id,
+                Token);
+        }
+
+        var upcoming = await services.Events.ListUpcomingAsync(owner.Id, Token);
+
+        upcoming.Count.ShouldBe(5);
+        upcoming.Select(item => item.Id).Distinct().Count().ShouldBe(5);
+        upcoming.ShouldAllBe(item => item.Title.StartsWith("Live", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task AdministrationModeratesAndRemovesALargeFamilyWithoutLeavingOrphans()
     {
         await using var scope = fixture.CreateScope();
