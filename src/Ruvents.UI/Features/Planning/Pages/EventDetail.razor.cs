@@ -35,6 +35,32 @@ public sealed partial class EventDetail
     private string _customItem = string.Empty;
     private string _newSlotName = string.Empty;
     private int _newSlotQuantity = 1;
+    private DateTimeOffset _now;
+    private bool _zoneResolutionAttempted;
+
+    [Inject]
+    private IViewerTimeZone ViewerTimeZone { get; set; } = default!;
+
+    [Inject]
+    private TimeProvider TimeProvider { get; set; } = default!;
+
+    private string DisplayZoneId => ViewerTimeZone.ResolvedZoneId ?? _event?.TimeZoneId ?? "UTC";
+
+    private EventTimeState TimeState =>
+        _event is null
+            ? EventTimeState.Upcoming
+            : EventTiming.GetTimeState(_event.StartUtc, _event.EndUtc, _event.IsAllDay, _event.TimeZoneId, _now);
+
+    private bool IsHappeningNow =>
+        _event is not null
+        && _event.Status != EventStatus.Cancelled
+        && TimeState == EventTimeState.InProgress;
+
+    private bool ShowsEventZone =>
+        _event is not null
+        && !_event.IsAllDay
+        && ViewerTimeZone.ResolvedZoneId is { } zoneId
+        && !string.Equals(zoneId, _event.TimeZoneId, StringComparison.OrdinalIgnoreCase);
 
     [Parameter]
     public Guid EventId { get; set; }
@@ -45,8 +71,25 @@ public sealed partial class EventDetail
         await LoadAsync(operation.Token);
     }
 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (IsDisposed || ViewerTimeZone.IsConfirmed || _zoneResolutionAttempted)
+        {
+            return;
+        }
+
+        _zoneResolutionAttempted = true;
+
+        using var operation = CreateOperation();
+        if (await ViewerTimeZone.ResolveAsync(operation.Token) is not null && !IsDisposed)
+        {
+            StateHasChanged();
+        }
+    }
+
     private async Task LoadAsync(CancellationToken cancellationToken)
     {
+        _now = TimeProvider.GetUtcNow();
         _event = await Api.GetEventAsync(EventId, cancellationToken);
         if (_event is null)
         {

@@ -22,6 +22,7 @@ using Ruvents.Features.Potluck.Contracts;
 using Ruvents.Features.Potluck.Services;
 using Ruvents.ServiceDefaults;
 using Ruvents.Storage;
+using Ruvents.UI.Planning;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -29,6 +30,11 @@ builder.AddServiceDefaults();
 
 // Application code reads the clock from DI so RS0030 can ban direct system-clock access.
 builder.Services.AddSingleton(TimeProvider.System);
+// The server can read the browser zone from the cookie a static request carries, and
+// hands it to the interactive renderer through prerender state.
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<ViewerTimeZone>();
+builder.Services.AddScoped<IViewerTimeZone, ServerViewerTimeZone>();
 // Standard HTTP contracts: problem details for errors and a document for the API surface.
 builder.Services.AddProblemDetails();
 builder.Services.AddOpenApi();
@@ -91,7 +97,7 @@ builder.Services.AddScoped<NotificationService>();
 builder.Services.AddScoped<INotificationPublisher>(provider => provider.GetRequiredService<NotificationService>());
 builder.Services.AddScoped<INotificationQueries>(provider => provider.GetRequiredService<NotificationService>());
 builder.Services.AddScoped<IAdministration, AdministrationService>();
-builder.Services.AddScoped<Ruvents.UI.Planning.IPlanningApi, ServerPlanningApi>();
+builder.Services.AddScoped<IPlanningApi, ServerPlanningApi>();
 
 builder.Services.AddAuthentication(IdentityConstants.ApplicationScheme).AddIdentityCookies();
 

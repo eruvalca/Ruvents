@@ -75,7 +75,18 @@ else
                 {
                     <option value="@zone.Id">@zone.DisplayName</option>
                 }
+                @if (!_zones.Any(zone => string.Equals(zone.Id, _model.TimeZoneId, StringComparison.Ordinal)))
+                {
+                    <option value="@_model.TimeZoneId">@_model.TimeZoneId</option>
+                }
             </select>
+            <p class="muted">
+                Times below are entered in @_model.TimeZoneId.
+                @if (ViewerZoneDiffers)
+                {
+                    <span> Your device is on @ViewerTimeZone.ResolvedZoneId.</span>
+                }
+            </p>
         </div>
         <div class="form-field">
             <label for="start">Starts</label>

@@ -571,6 +571,30 @@ section li ul {
     color: var(--ink-muted);
 }
 
+.event-zone {
+    margin: 0;
+    font-size: 0.82rem;
+    color: var(--ink-muted);
+}
+
+/* ---------- Past events ---------- */
+
+.card-grid > li.is-past {
+    background-image: none;
+    border-style: dashed;
+    box-shadow: none;
+}
+
+.card-grid > li.is-past:hover {
+    transform: none;
+    box-shadow: var(--shadow-sm);
+}
+
+.card-grid > li.is-past .event-title {
+    color: var(--ink-muted);
+    font-weight: 500;
+}
+
 /* ---------- Navigation ---------- */
 
 .nav-shell {

@@ -3,8 +3,10 @@ using System.Globalization;
 namespace Ruvents.SharedKernel.Events;
 
 /// <summary>
-/// Formats event instants for display. All-day events keep their calendar date in UTC;
-/// timed events are shown in the event's own time zone.
+/// Formats event instants for display and reports where an event sits in time. All-day
+/// dates are stored and displayed as UTC calendar dates, but the boundaries that decide
+/// their state follow the event's own zone; timed events are displayed in the supplied
+/// zone.
 /// </summary>
 public static class EventTiming
 {
@@ -42,6 +44,62 @@ public static class EventTiming
             ? end.ToString("h:mm tt", CultureInfo.CurrentCulture)
             : end.ToString("ddd, MMM d, yyyy h:mm tt", CultureInfo.CurrentCulture);
         return $"{result} – {endText}";
+    }
+
+    public static EventTimeState GetTimeState(
+        DateTimeOffset startUtc,
+        DateTimeOffset? endUtc,
+        bool isAllDay,
+        string timeZoneId,
+        DateTimeOffset nowUtc)
+    {
+        var zone = ResolveTimeZone(timeZoneId);
+
+        // An all-day event's stored instant is the calendar date at UTC midnight, but the
+        // date itself begins and ends in the event's own zone.
+        var startsAtUtc = isAllDay ? StartOfDayUtc(startUtc.UtcDateTime.Date, zone) : startUtc;
+        if (nowUtc < startsAtUtc)
+        {
+            return EventTimeState.Upcoming;
+        }
+
+        var endsAtUtc = isAllDay
+            ? StartOfDayUtc((endUtc ?? startUtc).UtcDateTime.Date.AddDays(1), zone)
+            : endUtc ?? EndOfStartDayUtc(startUtc, zone);
+
+        return nowUtc >= endsAtUtc ? EventTimeState.Past : EventTimeState.InProgress;
+    }
+
+    private static DateTimeOffset EndOfStartDayUtc(DateTimeOffset startUtc, TimeZoneInfo zone)
+    {
+        // A timed event without an end stays current through the end of its start day;
+        // otherwise it would read as past the moment it begins.
+        var startLocal = TimeZoneInfo.ConvertTime(startUtc, zone);
+        return StartOfDayUtc(startLocal.Date.AddDays(1), zone);
+    }
+
+    private static DateTimeOffset StartOfDayUtc(DateTime date, TimeZoneInfo zone)
+    {
+        var midnight = DateTime.SpecifyKind(date, DateTimeKind.Unspecified);
+
+        if (!zone.IsInvalidTime(midnight) && !zone.IsAmbiguousTime(midnight))
+        {
+            return new DateTimeOffset(midnight, zone.GetUtcOffset(midnight)).ToUniversalTime();
+        }
+
+        // A daylight adjustment can skip midnight or repeat it. The offsets just before
+        // and just after the boundary give the two possible instants for that wall time.
+        var before = new DateTimeOffset(midnight, zone.GetUtcOffset(midnight.AddHours(-3)));
+        var after = new DateTimeOffset(midnight, zone.GetUtcOffset(midnight.AddHours(3)));
+
+        if (zone.IsInvalidTime(midnight))
+        {
+            // The clock jumps over midnight, so the date rolls over when the jump happens.
+            return (before > after ? before : after).ToUniversalTime();
+        }
+
+        // Midnight happens twice; the date has already rolled over on the first one.
+        return (before < after ? before : after).ToUniversalTime();
     }
 
     public static string FormatDate(DateTimeOffset instant, bool isAllDay, string timeZoneId) =>

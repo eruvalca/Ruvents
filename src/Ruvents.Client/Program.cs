@@ -5,6 +5,8 @@ using Ruvents.UI.Planning;
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 
 builder.Services.AddSingleton(TimeProvider.System);
+// The WebAssembly renderer knows the browser zone from TimeZoneInfo.Local directly.
+builder.Services.AddScoped<IViewerTimeZone, LocalTimeZone>();
 builder.Services.AddAuthorizationCore();
 builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddAuthenticationStateDeserialization();

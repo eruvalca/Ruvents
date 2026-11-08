@@ -289,6 +289,169 @@ public sealed class FamilyLoadScenarioTests(PostgresAppFixture fixture)
     }
 
     [Fact]
+    public async Task FinishedEventsDoNotCrowdOutLaterUpcomingEvents()
+    {
+        await using var scope = fixture.CreateScope();
+        var services = new ScenarioServices(scope.ServiceProvider);
+        var owner = await services.CreateUserAsync("Late planner");
+        var groupId = await services.Families.CreateAsync(owner.Id, "Late Family", null, Token);
+
+        // These started inside the one-day lookback but have already ended, so they must
+        // not consume the limited result slots ahead of the event that is still ahead.
+        for (var index = 0; index < 10; index++)
+        {
+            var start = fixture.Clock.Now.AddHours(-12).AddMinutes(index);
+            _ = await services.Events.CreateAsync(
+                new PlanningEventInput(
+                    groupId,
+                    $"Finished {index}",
+                    null,
+                    "Community hall",
+                    null,
+                    null,
+                    start,
+                    start.AddMinutes(30),
+                    false,
+                    "UTC",
+                    null),
+                owner.Id,
+                Token);
+        }
+
+        var upcomingStart = fixture.Clock.Now.AddDays(2);
+        var upcomingId = await services.Events.CreateAsync(
+            new PlanningEventInput(
+                groupId,
+                "Still ahead",
+                null,
+                "Community hall",
+                null,
+                null,
+                upcomingStart,
+                upcomingStart.AddHours(2),
+                false,
+                "UTC",
+                null),
+            owner.Id,
+            Token);
+
+        var upcoming = await services.Events.ListUpcomingAsync(owner.Id, Token);
+
+        upcoming.Count.ShouldBe(1);
+        upcoming.ShouldContain(item => item.Id == upcomingId);
+    }
+
+    [Fact]
+    public async Task OngoingMultiDayEventsStayInTheDashboardCandidates()
+    {
+        await using var scope = fixture.CreateScope();
+        var services = new ScenarioServices(scope.ServiceProvider);
+        var owner = await services.CreateUserAsync("Multi-day host");
+        var groupId = await services.Families.CreateAsync(owner.Id, "Multi-day Family", null, Token);
+
+        // Started before the one-day lookback but still running, so a start-only cutoff
+        // would drop it while the shared state calculation reports it as in progress.
+        var ongoingStart = fixture.Clock.Now.AddDays(-3);
+        _ = await services.Events.CreateAsync(
+            new PlanningEventInput(
+                groupId,
+                "Still running",
+                null,
+                "Cabin",
+                null,
+                null,
+                ongoingStart,
+                fixture.Clock.Now.AddHours(4),
+                false,
+                "UTC",
+                null),
+            owner.Id,
+            Token);
+
+        var upcomingStart = fixture.Clock.Now.AddDays(2);
+        _ = await services.Events.CreateAsync(
+            new PlanningEventInput(
+                groupId,
+                "Later",
+                null,
+                "Community hall",
+                null,
+                null,
+                upcomingStart,
+                upcomingStart.AddHours(2),
+                false,
+                "UTC",
+                null),
+            owner.Id,
+            Token);
+
+        var upcoming = await services.Events.ListUpcomingAsync(owner.Id, Token);
+
+        upcoming.Count.ShouldBe(2);
+        upcoming[0].Title.ShouldBe("Still running");
+        upcoming[1].Title.ShouldBe("Later");
+    }
+
+    [Fact]
+    public async Task UpcomingPagingSpansATieGroupAcrossBatchesAsync()
+    {
+        await using var scope = fixture.CreateScope();
+        var services = new ScenarioServices(scope.ServiceProvider);
+        var owner = await services.CreateUserAsync("Tie organizer");
+        var groupId = await services.Families.CreateAsync(owner.Id, "Tie Family", null, Token);
+
+        // Thirty events share one start instant, so the first 25-row batch ends inside the
+        // tie. They have no end and started 25 hours ago, so they are finished but still
+        // inside the candidate window; the exact state filter must discard them and the
+        // loop must continue to the live events.
+        var tieStart = fixture.Clock.Now.AddHours(-25);
+        for (var index = 0; index < 30; index++)
+        {
+            _ = await services.Events.CreateAsync(
+                new PlanningEventInput(
+                    groupId,
+                    $"Tie {index}",
+                    null,
+                    "Community hall",
+                    null,
+                    null,
+                    tieStart,
+                    null,
+                    false,
+                    "UTC",
+                    null),
+                owner.Id,
+                Token);
+        }
+
+        var liveStart = fixture.Clock.Now.AddHours(-1);
+        for (var index = 0; index < 5; index++)
+        {
+            _ = await services.Events.CreateAsync(
+                new PlanningEventInput(
+                    groupId,
+                    $"Live {index}",
+                    null,
+                    "Community hall",
+                    null,
+                    null,
+                    liveStart,
+                    liveStart.AddHours(2),
+                    false,
+                    "UTC",
+                    null),
+                owner.Id,
+                Token);
+        }
+
+        var upcoming = await services.Events.ListUpcomingAsync(owner.Id, Token);
+
+        upcoming.Count.ShouldBe(5);
+        upcoming.Select(item => item.Id).Distinct().Count().ShouldBe(5);
+        upcoming.ShouldAllBe(item => item.Title.StartsWith("Live", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task AdministrationModeratesAndRemovesALargeFamilyWithoutLeavingOrphans()
     {
         await using var scope = fixture.CreateScope();

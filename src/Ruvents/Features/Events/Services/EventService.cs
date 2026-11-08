@@ -208,26 +208,98 @@ internal sealed class EventService(
             return [];
         }
 
-        var threshold = timeProvider.GetUtcNow().AddDays(-1);
+        const int BatchSize = 25;
+        const int MaxResults = 10;
+
+        var now = timeProvider.GetUtcNow();
+        // Finished events are excluded in the query so a backlog of expired events cannot
+        // make the paging loop read batch after batch. The bounds cover how far a still-
+        // current event can look expired from its stored instants: 26 hours for a timed
+        // event without an end (a two-hour rollback) and 40 hours for an all-day date in a
+        // zone far behind UTC. The exact zone-aware check still runs on every candidate.
+        var noEndCutoff = now.AddHours(-26);
+        var allDayCutoff = now.AddHours(-40);
         await using var db = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        return await db.Events
-            .Where(calendarEvent => groupIds.Contains(calendarEvent.FamilyGroupId)
-                && calendarEvent.Status == EventStatus.Scheduled
-                && calendarEvent.StartUtc >= threshold)
-            .OrderBy(calendarEvent => calendarEvent.StartUtc)
-            .Take(10)
-            .Select(calendarEvent => new PlanningEventSummary(
-                calendarEvent.Id,
-                calendarEvent.FamilyGroupId,
-                calendarEvent.Title,
-                calendarEvent.StartUtc,
-                calendarEvent.EndUtc,
-                calendarEvent.IsAllDay,
-                calendarEvent.TimeZoneId,
-                calendarEvent.LocationName,
-                calendarEvent.Status,
-                calendarEvent.CoverImageBlobName != null))
-            .ToListAsync(cancellationToken);
+
+        var candidates = db.Events.Where(calendarEvent =>
+            groupIds.Contains(calendarEvent.FamilyGroupId)
+            && calendarEvent.Status == EventStatus.Scheduled
+            && (calendarEvent.StartUtc > now
+                || (calendarEvent.EndUtc != null && calendarEvent.EndUtc > now)
+                || (calendarEvent.EndUtc == null && calendarEvent.StartUtc >= noEndCutoff)
+                || (calendarEvent.IsAllDay
+                    && (calendarEvent.EndUtc ?? calendarEvent.StartUtc) >= allDayCutoff)));
+
+        var results = new List<PlanningEventSummary>(MaxResults);
+        DateTimeOffset? boundary = null;
+        List<Guid> seenAtBoundary = [];
+        while (results.Count < MaxResults)
+        {
+            var query = candidates;
+
+            // Keyset paging instead of an offset: a concurrent insert or delete cannot
+            // shift the window and hide an event. Rows already returned at the boundary
+            // instant are excluded so a tie is read exactly once.
+            if (boundary is { } start)
+            {
+                query = query.Where(calendarEvent => calendarEvent.StartUtc >= start);
+                if (seenAtBoundary.Count > 0)
+                {
+                    var seen = seenAtBoundary;
+                    query = query.Where(calendarEvent => !seen.Contains(calendarEvent.Id));
+                }
+            }
+
+            var batch = await query
+                .OrderBy(calendarEvent => calendarEvent.StartUtc)
+                .ThenBy(calendarEvent => calendarEvent.Id)
+                .Take(BatchSize)
+                .Select(calendarEvent => new PlanningEventSummary(
+                    calendarEvent.Id,
+                    calendarEvent.FamilyGroupId,
+                    calendarEvent.Title,
+                    calendarEvent.StartUtc,
+                    calendarEvent.EndUtc,
+                    calendarEvent.IsAllDay,
+                    calendarEvent.TimeZoneId,
+                    calendarEvent.LocationName,
+                    calendarEvent.Status,
+                    calendarEvent.CoverImageBlobName != null))
+                .ToListAsync(cancellationToken);
+
+            if (batch.Count == 0)
+            {
+                break;
+            }
+
+            var lastStart = batch[^1].StartUtc;
+            if (boundary is null || boundary.Value != lastStart)
+            {
+                boundary = lastStart;
+                seenAtBoundary.Clear();
+            }
+
+            seenAtBoundary.AddRange(batch
+                .Where(calendarEvent => calendarEvent.StartUtc == lastStart)
+                .Select(calendarEvent => calendarEvent.Id));
+
+            var remaining = MaxResults - results.Count;
+            results.AddRange(batch
+                .Where(calendarEvent => EventTiming.GetTimeState(
+                    calendarEvent.StartUtc,
+                    calendarEvent.EndUtc,
+                    calendarEvent.IsAllDay,
+                    calendarEvent.TimeZoneId,
+                    now) is not EventTimeState.Past)
+                .Take(remaining));
+
+            if (batch.Count < BatchSize)
+            {
+                break;
+            }
+        }
+
+        return results;
     }
 
     internal async Task<bool> CanManageAsync(Guid familyGroupId, string createdByUserId, string userId, CancellationToken cancellationToken)

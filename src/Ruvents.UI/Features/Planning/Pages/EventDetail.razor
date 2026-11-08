@@ -33,6 +33,14 @@ else
         {
             <span class="chip" data-tone="muted">All day</span>
         }
+        @if (TimeState == EventTimeState.Past)
+        {
+            <span class="chip" data-tone="muted">Past</span>
+        }
+        else if (IsHappeningNow)
+        {
+            <span class="chip" data-tone="mint">Happening now</span>
+        }
     </p>
 
     @if (_event.HasCoverImage)
@@ -42,7 +50,11 @@ else
 
     <section>
         <h2>Details</h2>
-        <p>@EventTiming.FormatRange(_event.StartUtc, _event.EndUtc, _event.IsAllDay, _event.TimeZoneId)</p>
+        <p>@EventTiming.FormatRange(_event.StartUtc, _event.EndUtc, _event.IsAllDay, DisplayZoneId)</p>
+        @if (ShowsEventZone)
+        {
+            <p class="event-zone">Event time @EventTiming.FormatRange(_event.StartUtc, _event.EndUtc, false, _event.TimeZoneId) (@_event.TimeZoneId)</p>
+        }
         <p>
             @_event.LocationName
             @if (!string.IsNullOrWhiteSpace(_event.LocationAddress))
@@ -60,7 +72,7 @@ else
         }
         @if (_event.RsvpDeadlineUtc is not null)
         {
-            <p>RSVP by @EventTiming.FormatDate(_event.RsvpDeadlineUtc.Value, false, _event.TimeZoneId)</p>
+            <p>RSVP by @EventTiming.FormatDate(_event.RsvpDeadlineUtc.Value, false, DisplayZoneId)</p>
         }
     </section>
 

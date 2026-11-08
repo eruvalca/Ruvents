@@ -31,18 +31,26 @@ else
 
     <section>
         <h2>Events</h2>
-        @if (_events.Count == 0)
+        @if (_upcoming.Count == 0)
         {
-            <p>No events yet.</p>
+            <p>@(_past.Count == 0 ? "No events yet." : "Nothing coming up.")</p>
         }
         else
         {
             <ul class="card-grid">
-                @foreach (var calendarEvent in _events)
+                @foreach (var calendarEvent in _upcoming)
                 {
                     <li>
                         <a class="event-title" href="@($"events/{calendarEvent.Id}")">@calendarEvent.Title</a>
-                        <p class="event-when">@EventTiming.FormatDate(calendarEvent.StartUtc, calendarEvent.IsAllDay, calendarEvent.TimeZoneId)</p>
+                        <p class="event-when">@EventTiming.FormatDate(calendarEvent.StartUtc, calendarEvent.IsAllDay, DisplayZoneId(calendarEvent))</p>
+                        @if (ShowsEventZone(calendarEvent))
+                        {
+                            <p class="event-zone">Event time @EventTiming.FormatDate(calendarEvent.StartUtc, false, calendarEvent.TimeZoneId) (@calendarEvent.TimeZoneId)</p>
+                        }
+                        @if (IsHappeningNow(calendarEvent))
+                        {
+                            <span class="chip" data-tone="mint">Happening now</span>
+                        }
                         @if (calendarEvent.Status == EventStatus.Cancelled)
                         {
                             <span class="chip" data-tone="danger">Cancelled</span>
@@ -52,6 +60,37 @@ else
             </ul>
         }
     </section>
+
+    @if (_past.Count > 0)
+    {
+        <section>
+            <h2>Past events</h2>
+            <ul class="card-grid">
+                @foreach (var calendarEvent in VisiblePast)
+                {
+                    <li class="is-past">
+                        <a class="event-title" href="@($"events/{calendarEvent.Id}")">@calendarEvent.Title</a>
+                        <p class="event-when">@EventTiming.FormatDate(calendarEvent.StartUtc, calendarEvent.IsAllDay, DisplayZoneId(calendarEvent))</p>
+                        @if (ShowsEventZone(calendarEvent))
+                        {
+                            <p class="event-zone">Event time @EventTiming.FormatDate(calendarEvent.StartUtc, false, calendarEvent.TimeZoneId) (@calendarEvent.TimeZoneId)</p>
+                        }
+                        <span class="chip" data-tone="muted">Past</span>
+                        @if (calendarEvent.Status == EventStatus.Cancelled)
+                        {
+                            <span class="chip" data-tone="danger">Cancelled</span>
+                        }
+                    </li>
+                }
+            </ul>
+            @if (_past.Count > PastPreviewCount)
+            {
+                <button type="button" @onclick="TogglePast">
+                    @(_showAllPast ? "Show fewer past events" : $"Show all {_past.Count} past events")
+                </button>
+            }
+        </section>
+    }
 
     <section>
         <h2>Members</h2>
